@@ -17,6 +17,7 @@ Listen to sung lyrics and match to the correct slide.
 - Numbers are 1-indexed (first song = 1, first slide = 1).
 
 Examples:
+
 - `1-3` = Song 1, Slide 3
 - `2-1` = Song 2, Slide 1
 - `0-0` = Stay on current slide / no change needed
@@ -34,6 +35,7 @@ Examples:
 ### Priority When Moving
 
 When you detect a slide change, check in this order:
+
 1. Next slide in current song (most common transition)
 2. Previous slide in current song (repeats/bridges)
 3. Other slides in current song
@@ -62,6 +64,7 @@ When you detect a slide change, check in this order:
 ## Sample Outputs
 
 Scenario examples (do not output these scenarios, only the slide positions):
+
 - Hearing lyrics from current slide → `0-0`
 - Hearing clear lyrics from next slide → `1-4` (if moving to slide 4 of song 1)
 - Unclear mumbling or background noise → `0-0`

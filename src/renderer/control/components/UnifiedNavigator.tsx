@@ -26,7 +26,6 @@ import {
   Search,
   X,
   ChevronLeft,
-  Plus,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -329,11 +328,6 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
     }
   };
 
-  const handleAddSong = () => {
-    setEditingSong(null);
-    setIsEditorOpen(true);
-  };
-
   const handleEditSong = (song: Song) => {
     setEditingSong(song);
     setIsEditorOpen(true);
@@ -404,7 +398,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
       onDrop={handleDrop}
     >
       {/* Header - standardized h-12 */}
-      <div className="h-12 px-4 border-b border-border flex items-center justify-between flex-shrink-0">
+      <div className="h-12 px-4 border-b border-border flex items-center flex-shrink-0">
         <div className="flex items-center gap-2">
           {onBack && (
             <Button
@@ -420,16 +414,6 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
             {t('songList')}
           </h2>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 px-2.5 text-xs font-semibold text-foreground hover:text-foreground hover:bg-muted border-border"
-          onClick={handleAddSong}
-          disabled={!currentSessionId}
-        >
-          <Plus className="w-3.5 h-3.5 mr-1" />
-          {t('add')}
-        </Button>
       </div>
 
       {/* Search input */}
@@ -474,18 +458,12 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
               <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
                 <Music2 className="w-6 h-6 text-muted-foreground" />
               </div>
-              <p className="text-sm text-muted-foreground text-center mb-4 font-medium">
+              <p className="text-sm text-muted-foreground text-center font-medium">
                 {t('noSongs')}
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs font-medium border-border bg-muted text-foreground hover:text-white hover:bg-accent"
-                onClick={handleAddSong}
-              >
-                <Plus className="w-4 h-4 mr-1.5" />
-                {t('addFirstSong')}
-              </Button>
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                {t('dragToAdd')}
+              </p>
             </div>
           ) : (
             <DndContext

@@ -1,6 +1,8 @@
 export const ko = {
   // App
   appName: 'OpenWorship',
+  windowTitleControl: 'OpenWorship - 컨트롤',
+  windowTitleProjection: 'OpenWorship - 프로젝션',
   bibleVerse: '시편 150:6 — 호흡이 있는 자마다 여호와를 찬양할지어다',
 
   // Header

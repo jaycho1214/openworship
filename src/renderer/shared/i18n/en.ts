@@ -1,6 +1,8 @@
 export const en = {
   // App
   appName: 'OpenWorship',
+  windowTitleControl: 'OpenWorship - Control',
+  windowTitleProjection: 'OpenWorship - Projection',
   bibleVerse: 'Psalm 150:6 — Let everything that has breath praise the Lord',
 
   // Header

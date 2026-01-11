@@ -6,7 +6,6 @@ import {
   AlertCircle,
   FileImage,
   Library,
-  ChevronRight,
   BookOpen,
   Copy,
   Upload,
@@ -24,7 +23,6 @@ import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
 import { ScrollArea } from '../../components/ui/scroll-area';
-import { Switch } from '../../components/ui/switch';
 import { parseLyricsToSlides } from '../../shared/utils/lyricsParser';
 import { cn } from '../../lib/utils';
 
@@ -75,18 +73,12 @@ interface AddSongDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Called when songs are added to the library */
   onAddToLibrary: (songs: { title: string; lyrics: string }[]) => Promise<void>;
-  /** Called when songs are added to the current session (if available) */
-  onAddToSession?: (songs: { title: string; lyrics: string }[]) => void;
-  /** Whether a session is currently active */
-  hasActiveSession?: boolean;
 }
 
 export default function AddSongDialog({
   open,
   onOpenChange,
   onAddToLibrary,
-  onAddToSession,
-  hasActiveSession = false,
 }: AddSongDialogProps) {
   const { t } = useTranslation();
 
@@ -99,7 +91,6 @@ export default function AddSongDialog({
     { id: uuidv4(), title: '', lyrics: '' },
   ]);
   const [activeEntryIndex, setActiveEntryIndex] = useState(0);
-  const [addToSession, setAddToSession] = useState(false);
 
   // Duplicate detection state
   const [duplicates, setDuplicates] = useState<
@@ -155,13 +146,12 @@ export default function AddSongDialog({
     if (open) {
       setManualEntries([{ id: uuidv4(), title: '', lyrics: '' }]);
       setActiveEntryIndex(0);
-      setAddToSession(hasActiveSession);
       setError(null);
       setDuplicates({});
       setShowDragOverlay(false);
       dragCounterRef.current = 0;
     }
-  }, [open, hasActiveSession]);
+  }, [open]);
 
   // Check for duplicate title with debounce
   useEffect(() => {
@@ -464,14 +454,7 @@ export default function AddSongDialog({
 
       if (songsToAdd.length === 0) return;
 
-      // Always add to library
       await onAddToLibrary(songsToAdd);
-
-      // Optionally add to session
-      if (addToSession && hasActiveSession && onAddToSession) {
-        onAddToSession(songsToAdd);
-      }
-
       onOpenChange(false);
     } finally {
       setIsSaving(false);
@@ -777,26 +760,7 @@ export default function AddSongDialog({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-border/50 flex items-center justify-between">
-          {/* Add to Session Switch */}
-          {hasActiveSession && onAddToSession && (
-            <div className="flex items-center gap-2">
-              <Switch
-                id="add-to-session"
-                checked={addToSession}
-                onCheckedChange={setAddToSession}
-              />
-              <Label
-                htmlFor="add-to-session"
-                className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1.5"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-                {t('alsoAddToSession')}
-              </Label>
-            </div>
-          )}
-          {!hasActiveSession && <div />}
-
+        <div className="px-6 py-4 border-t border-border/50 flex items-center justify-end">
           <div className="flex gap-2">
             <Button
               variant="ghost"

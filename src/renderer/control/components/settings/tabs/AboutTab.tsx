@@ -8,6 +8,7 @@ import {
   Scale,
   User,
 } from 'lucide-react';
+import { appVersion } from '@/shared/appVersion';
 import selahLogo from '../../../../../../assets/images/selah.png';
 import appLogo from '../../../../../../assets/icon.png';
 
@@ -98,7 +99,7 @@ export function AboutTab() {
               {t('appName')}
             </h2>
             <span className="px-1.5 py-0.5 text-[10px] font-mono text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 rounded border border-zinc-200 dark:border-zinc-700">
-              v1.0.0
+              v{appVersion}
             </span>
           </div>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">

@@ -205,16 +205,6 @@ export default function LibrarySidebar({
     }
   };
 
-  // Add songs to session
-  const handleAddToSession = (
-    songsToAdd: { title: string; lyrics: string }[],
-  ) => {
-    if (!currentSessionId) return;
-    for (const song of songsToAdd) {
-      addSong(song.title, song.lyrics);
-    }
-  };
-
   const hasSession = !!currentSessionId;
 
   return (
@@ -431,8 +421,6 @@ export default function LibrarySidebar({
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         onAddToLibrary={handleAddToLibrary}
-        onAddToSession={handleAddToSession}
-        hasActiveSession={hasSession}
       />
     </>
   );

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppProviders, useSession } from './context';
 import Header from './components/Header';
 import SessionList from './components/SessionList';
@@ -13,6 +14,7 @@ import { cn } from '../lib/utils';
 type NavigationPage = 'sessions' | 'songs';
 
 function AppContent() {
+  const { t } = useTranslation();
   useKeyboardShortcuts();
   const {
     currentSessionId,
@@ -25,6 +27,11 @@ function AppContent() {
   // Page-based navigation state
   const [currentPage, setCurrentPage] = useState<NavigationPage>('sessions');
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+
+  // Update document title based on current language
+  useEffect(() => {
+    document.title = t('windowTitleControl');
+  }, [t]);
 
   // Handle session selection - navigate to songs page
   const handleSelectSession = (sessionId: string) => {

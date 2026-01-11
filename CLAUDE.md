@@ -33,6 +33,7 @@ npm run build:dll        # Build DLL for dev performance
 ## Architecture
 
 ### Dual Window System
+
 - **Control Window** (`src/renderer/control/`) - Editor UI for managing songs, slides, sessions
 - **Projection Window** (`src/renderer/projection/`) - Full-screen display for lyrics output
 - Windows communicate via Electron IPC through the preload bridge
@@ -109,10 +110,12 @@ src/renderer/
 Channels are defined in `preload.ts` and typed in `src/shared/types/ipc.ts`:
 
 **Fire-and-forget (send):**
+
 - `projection:update`, `projection:blank`, `projection:verseHidden`
 - `projection:video`, `projection:font`, `projection:ready`
 
 **Request-response (invoke):**
+
 - Projection: `projection:open`, `projection:close`, `projection:isOpen`
 - Dialog: `dialog:selectFolder`, `dialog:saveFile`, `dialog:openFile`
 - Library: `library:getAll`, `library:search`, `library:add`, `library:update`
@@ -140,16 +143,16 @@ Channels are defined in `preload.ts` and typed in `src/shared/types/ipc.ts`:
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `src/main/main.ts` | App lifecycle and initialization |
-| `src/main/windows/WindowManager.ts` | Window creation and management |
-| `src/main/ipc/index.ts` | IPC handler registration |
-| `src/main/preload.ts` | IPC channel definitions, context bridge |
-| `src/shared/types/index.ts` | Shared type definitions |
-| `src/renderer/control/context/AppContext.tsx` | Global state for control window |
-| `src/renderer/shared/utils/lyricsParser.ts` | Lyrics text to slides conversion |
-| `.erb/configs/webpack.config.*.ts` | Webpack configs for main/renderer |
+| File                                          | Purpose                                 |
+| --------------------------------------------- | --------------------------------------- |
+| `src/main/main.ts`                            | App lifecycle and initialization        |
+| `src/main/windows/WindowManager.ts`           | Window creation and management          |
+| `src/main/ipc/index.ts`                       | IPC handler registration                |
+| `src/main/preload.ts`                         | IPC channel definitions, context bridge |
+| `src/shared/types/index.ts`                   | Shared type definitions                 |
+| `src/renderer/control/context/AppContext.tsx` | Global state for control window         |
+| `src/renderer/shared/utils/lyricsParser.ts`   | Lyrics text to slides conversion        |
+| `.erb/configs/webpack.config.*.ts`            | Webpack configs for main/renderer       |
 
 ## UI Development Rules
 
@@ -167,10 +170,12 @@ Channels are defined in `preload.ts` and typed in `src/shared/types/ipc.ts`:
 ## Internationalization
 
 Translations in `src/renderer/shared/i18n/`:
+
 - `en.ts` - English
 - `ko.ts` - Korean
 
 **Always use `useTranslation` hook** instead of hardcoded text:
+
 ```tsx
 import { useTranslation } from 'react-i18next';
 
