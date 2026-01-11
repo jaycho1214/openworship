@@ -9,6 +9,7 @@ import {
   User,
 } from 'lucide-react';
 import { appVersion } from '@/shared/appVersion';
+import { cn } from '../../../../lib/utils';
 import selahLogo from '../../../../../../assets/images/selah.png';
 import appLogo from '../../../../../../assets/icon.png';
 
@@ -23,22 +24,23 @@ interface CardProps {
 function InfoCard({ icon, title, subtitle, href, accent }: CardProps) {
   const content = (
     <div
-      className={`
-        group relative aspect-square p-4 rounded-xl
-        bg-zinc-50 dark:bg-zinc-900
-        border border-zinc-200 dark:border-zinc-800
-        hover:border-zinc-300 dark:hover:border-zinc-700
-        hover:bg-zinc-100 dark:hover:bg-zinc-800/80
-        transition-all duration-200 ease-out
-        flex flex-col
-      `}
+      className={cn(
+        'group relative aspect-square p-4 rounded-xl',
+        'bg-zinc-50 dark:bg-zinc-900',
+        'border border-zinc-200 dark:border-zinc-800',
+        'hover:border-zinc-300 dark:hover:border-zinc-700',
+        'hover:bg-zinc-100 dark:hover:bg-zinc-800/80',
+        'transition-all duration-200 ease-out',
+        'flex flex-col',
+      )}
     >
       {/* Icon */}
       <div
-        className={`
-          w-9 h-9 rounded-lg flex items-center justify-center mb-auto
-          ${accent || 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'}
-        `}
+        className={cn(
+          'w-9 h-9 rounded-lg flex items-center justify-center mb-auto',
+          accent ||
+            'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400',
+        )}
       >
         {icon}
       </div>
@@ -82,7 +84,7 @@ export function AboutTab() {
   const { t } = useTranslation();
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-ful w-full flex flex-col">
       {/* Hero - Left aligned */}
       <div className="flex items-start gap-4 py-4">
         {/* Logo */}
@@ -160,7 +162,7 @@ export function AboutTab() {
       </div>
 
       {/* Footer */}
-      <div className="pt-3 pb-1 border-t border-zinc-200 dark:border-zinc-800">
+      <div className="py-2 border-t border-zinc-200 dark:border-zinc-800 w-full">
         <p className="text-[11px] text-zinc-400 dark:text-zinc-600 text-center flex items-center justify-center gap-1.5">
           <Code2 className="w-3 h-3" />
           Electron + React + TypeScript
