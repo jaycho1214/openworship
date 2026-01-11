@@ -1,0 +1,314 @@
+export const en = {
+  // App
+  appName: 'OpenWorship',
+  bibleVerse: 'Psalm 150:6 — Let everything that has breath praise the Lord',
+
+  // Header
+  projectionOpen: 'Projection On',
+  openProjection: 'Open Projection',
+  closeProjection: 'Close Projection',
+
+  // Song List
+  songList: 'Song List',
+  songs: 'Songs',
+  addSong: 'Add Song',
+  editSong: 'Edit Song',
+  deleteSong: 'Delete Song',
+  slides: 'Slides',
+  noSongs: 'No songs added',
+  addFirstSong: 'Add First Song',
+
+  // Song Editor
+  songTitle: 'Song Title',
+  songTitlePlaceholder: 'Enter song title',
+  songArtist: 'Artist',
+  lyrics: 'Lyrics',
+  lyricsPlaceholder:
+    'Enter lyrics here...\n\nUse section markers like [Verse], [Chorus]\nto automatically create new slides.',
+  lyricsHint: 'Use [Verse], [Chorus] markers or blank lines to separate slides',
+  slidePreview: 'Slide Preview',
+  noSlides: 'Slides will appear when you enter lyrics',
+
+  // Live Preview
+  livePreview: 'Live Preview',
+  live: 'Live',
+  slide: 'Slide',
+  quickJump: 'Quick Jump',
+  noContent: 'No content to display',
+  projectionClosed: 'Projection is off',
+  selectSong: 'Select a song',
+  verseHidden: 'Verse hidden',
+
+  // Controls
+  controls: 'Controls',
+  navigation: 'Navigation',
+  prev: 'Prev',
+  next: 'Next',
+  prevSong: 'Previous Song',
+  nextSong: 'Next Song',
+  slideKeys: 'Slide Navigation',
+  songKeys: 'Song Navigation',
+  display: 'Display',
+  blankScreen: 'Blank Screen',
+  showScreen: 'Show Screen',
+  hideVerse: 'Hide Verse',
+  showVerse: 'Show Verse',
+  toToggle: 'Toggle',
+  backgroundVideo: 'Background Video',
+
+  // Video
+  selectVideoFolder: 'Select Video Folder',
+  videoFolder: 'Video Folder',
+  noVideosFound: 'No videos found',
+  backgroundVideos: 'Background Videos',
+  addBackgroundVideos: 'Add background videos',
+  addingVideos: 'Adding videos...',
+  dropVideoFiles: 'Drop MP4, WebM, or MOV files here',
+  deleteVideo: 'Delete video',
+
+  // Font
+  selectFontFolder: 'Select Font Folder',
+  fontFolder: 'Font Folder',
+  font: 'Font',
+  noFontsFound: 'No fonts found',
+
+  // Setlist
+  setlist: 'Setlist',
+  saveSetlist: 'Save Setlist',
+  loadSetlist: 'Load Setlist',
+  newSetlist: 'New Setlist',
+  setlistName: 'Setlist Name',
+  save: 'Save',
+  load: 'Load',
+
+  // Actions
+  edit: 'Edit',
+  delete: 'Delete',
+  cancel: 'Cancel',
+  close: 'Close',
+  new: 'New',
+  add: 'Add',
+  show: 'Show',
+  blank: 'Blank',
+  song: 'Song',
+  selectVideo: 'Select Video',
+  shuffle: 'Shuffle',
+  shuffleOn: 'Auto-shuffle On',
+  shuffleOff: 'Auto-shuffle Off',
+
+  // OCR
+  pasteLyricsImage: 'Paste Lyrics Image',
+  pasteImageOrPdf: 'Paste Image or PDF',
+  extractingLyrics: 'Extracting lyrics...',
+  ocrError: 'Error during OCR processing',
+  dragDropOrClick: 'Drag and drop or click to select file',
+  bulkImport: 'Bulk Import',
+  bulkImportImages: 'Bulk Import Images',
+  processingImages: 'Processing images...',
+  processingPdf: 'Converting PDF...',
+  importProgress: 'Progress',
+  importComplete: 'Import Complete',
+  importFailed: 'Some images failed to process',
+  selectAll: 'Select All',
+  selectCount: ' selected',
+  noItemsToImport: 'No items to import',
+  selectItemToEdit: 'Select an item to edit',
+  songsToImport: ' songs to import',
+  selectSongsToImport: 'Select songs to import',
+  convertingPdf: 'Converting PDF to images...',
+  extractingFromPdf: 'Extracting lyrics from PDF...',
+  dropImagesHere: 'Drop images here',
+  releaseToImport: 'Release to extract lyrics',
+  importedImages: 'Imported Images',
+  dragImagesToImport: 'Drag images to extract lyrics',
+  addMoreImages: 'Add more images',
+
+  // Errors
+  error: 'Error',
+  errorOccurred: 'An error occurred',
+  apiKeyMissing: 'API key is not configured',
+  apiKeyRequiredForOcr:
+    'API key required for image OCR. Configure in Settings.',
+  noImageFilesDetected: 'No image files detected',
+  networkError: 'Network Error',
+  fileNotFound: 'File not found',
+
+  // Confirmations
+  confirmDelete: 'Are you sure you want to delete?',
+  confirmDiscard: 'Discard changes?',
+  unsavedChanges: 'You have unsaved changes',
+
+  // Status
+  loading: 'Loading...',
+  saving: 'Saving...',
+  saved: 'Saved',
+  ready: 'Ready',
+
+  // Keyboard Shortcuts
+  shortcuts: 'Shortcuts',
+  nextSlide: 'Next Slide',
+  prevSlide: 'Previous Slide',
+  numberKeysHint: '1-9 Jump to section',
+
+  // Placeholders
+  enterTitle: 'Enter title',
+  enterLyrics: 'Enter lyrics...',
+  searchSongs: 'Search songs...',
+  noSongsYet: 'No songs added yet',
+  dragToReorder: 'Drag to reorder',
+
+  // Previous/Next
+  previous: 'Previous',
+  toggleBlank: 'Toggle Blank',
+
+  // Settings
+  settings: 'Settings',
+  apiSettings: 'API Settings',
+  appearanceSettings: 'Appearance',
+  displaySettings: 'Display',
+  about: 'About',
+  openaiApiKey: 'OpenAI API Key',
+  enterApiKey: 'Enter your API key',
+  testConnection: 'Test Connection',
+  testing: 'Testing...',
+  connectionSuccess: 'Connection successful',
+  connectionFailed: 'Connection failed',
+  language: 'Language',
+  theme: 'Theme',
+  themeLight: 'Light',
+  themeDark: 'Dark',
+  themeSystem: 'System',
+
+  // Song Library
+  library: 'Library',
+  session: 'Session',
+  songLibrary: 'Song Library',
+  addToLibrary: 'Add to Library',
+  addToSession: 'Add to Session',
+  importToSession: 'Import to Session',
+  categories: 'Categories',
+  tags: 'Tags',
+  noLibrarySongs: 'Library is empty',
+  noSongsFound: 'No songs found',
+  searchLibrary: 'Search library...',
+  addSongToLibrary: 'Add Song to Library',
+  manualInput: 'Manual Input',
+  imageImport: 'Image Import',
+  untitledSong: 'Untitled',
+  addAnother: 'Add',
+  alsoAddToSession: 'Also add to current session',
+  existingSongFound: 'Existing song with same title',
+  useExistingLyrics: 'Use existing lyrics',
+
+  // Library Drawer
+  browseLibrary: 'Browse Library',
+  importSelected: 'Import Selected',
+  selectedCount: ' selected',
+  inSession: 'In session',
+  dragToAdd: 'Drag to add',
+  noSessionSelected: 'Select a session first',
+  closeLibrary: 'Close Library',
+
+  // Section Navigation
+  currentSection: 'Current Section',
+  nextSection: 'Next Section',
+  prevSection: 'Previous Section',
+  playFromSection: 'Play from Section',
+  playFromBeginning: 'Play from Beginning',
+  tabToNextSection: 'Tab for section',
+  homeEnd: 'Home/End for first/last',
+
+  // Sessions
+  sessions: 'Sessions',
+  newSession: 'New Session',
+  sessionNamePlaceholder: 'Enter session name...',
+  noSessions: 'No sessions',
+  createFirstSession: 'Create First Session',
+  rename: 'Rename',
+  selectSession: 'Select a session',
+  currentSession: 'Current Session',
+
+  // About Section
+  aboutDescription: 'Open-source worship presentation software',
+  version: 'Version',
+  license: 'License',
+  sourceCode: 'Source Code',
+  viewOnGitHub: 'View on GitHub',
+  reportIssue: 'Report Issue',
+  credits: 'Credits',
+  madeWith: 'Made with',
+  builtWith: 'Built with Electron, React, and Tailwind CSS',
+  feedback: 'Feedback',
+  forWorship: 'for worship',
+  developer: 'Developer',
+  developerName: 'Jay Cho (조재영)',
+  developerProject: "Developer's Project",
+  christianCommunity: 'Christian Community',
+  donate: 'Donate',
+  donateDescription: 'Support development',
+  factoryReset: 'Factory Reset',
+  factoryResetDescription: 'Delete all settings and data',
+  factoryResetConfirm:
+    'Are you sure you want to delete all data? This action cannot be undone.',
+  factoryResetWarning:
+    'This action cannot be undone. All songs, sessions, fonts, background videos, and settings will be permanently deleted.',
+  factoryResetTypeConfirm: 'Type "RESET" to confirm',
+  factoryResetTypePlaceholder: 'RESET',
+  resetting: 'Resetting...',
+  dataSettings: 'Data',
+
+  // API Settings
+  apiKeyDescription:
+    'Required for OCR lyrics parsing and auto-advance features.',
+  apiKeyLabel: 'API Key',
+  enterApiKeyError: 'Please enter an API key',
+  apiKeyValid: 'API key configured and valid',
+  apiKeyInvalid: 'Invalid API key',
+  apiKeyNotSet: 'No API key configured',
+  testAndSave: 'Test Connection & Save',
+  getApiKeyFrom: 'Get your API key from',
+  openaiPlatform: 'OpenAI Platform',
+  storedSecurely: 'Stored securely using system encryption.',
+
+  // Appearance Settings
+  themeDescription: 'Choose color scheme',
+  languageDescription: 'Interface language',
+
+  // Display Settings
+  projectionFont: 'Projection Font',
+  fontForLyrics: 'Font for lyrics display',
+  noFonts: 'No fonts',
+  selectFont: 'Select font',
+  bundledFonts: 'Bundled',
+  customFonts: 'Custom',
+  addingFonts: 'Adding fonts...',
+  addCustomFonts: 'Add custom fonts',
+  dropFontFiles: 'Drop TTF, OTF, or WOFF files here',
+  deleteFont: 'Delete font',
+  systemFont: 'System Default',
+  fontSize: 'Font Size',
+  textPosition: 'Position',
+  textAlignment: 'Text Align',
+  lineGap: 'Line Gap',
+  textPadding: 'Padding',
+  textShadow: 'Text Shadow',
+  backgroundDim: 'Background Dim',
+  slideAnimation: 'Slide Animation',
+  animationNone: 'None',
+  animationFade: 'Fade',
+  animationSlideUp: 'Slide Up',
+  animationSlideLeft: 'Slide Left',
+  displayMode: 'Display Mode',
+  fullscreen: 'Fullscreen',
+  windowed: 'Windowed',
+
+  // Slide editing
+  duplicateSlide: 'Duplicate Slide',
+  slideEdit: 'Edit Slide',
+  slideEditHint: 'Enter to save · Shift+Enter for new line · Esc to cancel',
+  searchLyrics: 'Search lyrics... (⌘F)',
+  slidesFoundCount: '{{count}} slides found',
+  clearSearch: 'Clear search',
+} as const;
+
+export type TranslationKey = keyof typeof en;

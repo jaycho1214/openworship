@@ -1,0 +1,313 @@
+export const ko = {
+  // App
+  appName: 'OpenWorship',
+  bibleVerse: '시편 150:6 — 호흡이 있는 자마다 여호와를 찬양할지어다',
+
+  // Header
+  projectionOpen: '프로젝션 켜짐',
+  openProjection: '프로젝션 열기',
+  closeProjection: '프로젝션 닫기',
+
+  // Song List
+  songList: '곡 목록',
+  songs: '곡 목록',
+  addSong: '곡 추가',
+  editSong: '곡 편집',
+  deleteSong: '곡 삭제',
+  slides: '슬라이드',
+  noSongs: '추가된 곡이 없습니다',
+  addFirstSong: '첫 곡 추가하기',
+
+  // Song Editor
+  songTitle: '곡 제목',
+  songTitlePlaceholder: '곡 제목을 입력하세요',
+  songArtist: '아티스트',
+  lyrics: '가사',
+  lyricsPlaceholder:
+    '가사를 입력하세요...\n\n[Verse], [Chorus] 등의 섹션 마커를 사용하면\n자동으로 새 슬라이드가 생성됩니다.',
+  lyricsHint:
+    '[Verse], [Chorus] 등의 섹션 마커로 슬라이드 구분 | 빈 줄로 슬라이드 구분',
+  slidePreview: '슬라이드 미리보기',
+  noSlides: '가사를 입력하면 슬라이드가 생성됩니다',
+
+  // Live Preview
+  livePreview: '라이브 미리보기',
+  live: '라이브',
+  slide: '슬라이드',
+  quickJump: '빠른 이동',
+  noContent: '표시할 내용이 없습니다',
+  projectionClosed: '프로젝션이 꺼져 있습니다',
+  selectSong: '곡을 선택하세요',
+  verseHidden: '가사 가림',
+
+  // Controls
+  controls: '컨트롤',
+  navigation: '탐색',
+  prev: '이전',
+  next: '다음',
+  prevSong: '이전 곡',
+  nextSong: '다음 곡',
+  slideKeys: '슬라이드 이동',
+  songKeys: '곡 이동',
+  display: '화면',
+  blankScreen: '화면 가리기',
+  showScreen: '화면 보이기',
+  hideVerse: '가사 가리기',
+  showVerse: '가사 보이기',
+  toToggle: '토글',
+  backgroundVideo: '배경 영상',
+
+  // Video
+  selectVideoFolder: '영상 폴더 선택',
+  videoFolder: '영상 폴더',
+  noVideosFound: '영상을 찾을 수 없습니다',
+  backgroundVideos: '배경 영상',
+  addBackgroundVideos: '배경 영상 추가',
+  addingVideos: '영상 추가 중...',
+  dropVideoFiles: 'MP4, WebM, MOV 파일을 여기에 놓으세요',
+  deleteVideo: '영상 삭제',
+
+  // Font
+  selectFontFolder: '폰트 폴더 선택',
+  fontFolder: '폰트 폴더',
+  font: '폰트',
+  noFontsFound: '폰트를 찾을 수 없습니다',
+
+  // Setlist
+  setlist: '세트리스트',
+  saveSetlist: '세트리스트 저장',
+  loadSetlist: '세트리스트 불러오기',
+  newSetlist: '새 세트리스트',
+  setlistName: '세트리스트 이름',
+  save: '저장',
+  load: '불러오기',
+
+  // Actions
+  edit: '편집',
+  delete: '삭제',
+  cancel: '취소',
+  close: '닫기',
+  new: '새로 만들기',
+  add: '추가',
+  show: '표시',
+  blank: '가리기',
+  song: '곡',
+  selectVideo: '영상 선택',
+  shuffle: '무작위',
+  shuffleOn: '자동 영상 변경 켜짐',
+  shuffleOff: '자동 영상 변경 꺼짐',
+
+  // OCR
+  pasteLyricsImage: '가사 이미지 붙여넣기',
+  pasteImageOrPdf: '이미지 또는 PDF 붙여넣기',
+  extractingLyrics: '가사 추출 중...',
+  ocrError: 'OCR 처리 중 오류가 발생했습니다',
+  dragDropOrClick: '드래그 앤 드롭 또는 클릭하여 파일 선택',
+  bulkImport: '일괄 가져오기',
+  bulkImportImages: '이미지 일괄 가져오기',
+  processingImages: '이미지 처리 중...',
+  processingPdf: 'PDF 변환 중...',
+  importProgress: '진행',
+  importComplete: '가져오기 완료',
+  importFailed: '일부 이미지 처리 실패',
+  selectAll: '전체 선택',
+  selectCount: '개 선택됨',
+  noItemsToImport: '가져올 항목이 없습니다',
+  selectItemToEdit: '편집할 항목을 선택하세요',
+  songsToImport: '개의 곡을 가져옵니다',
+  selectSongsToImport: '가져올 곡을 선택하세요',
+  convertingPdf: 'PDF를 이미지로 변환 중...',
+  extractingFromPdf: 'PDF에서 가사 추출 중...',
+  dropImagesHere: '이미지를 여기에 놓으세요',
+  releaseToImport: '놓으면 가사를 추출합니다',
+  importedImages: '가져온 이미지',
+  dragImagesToImport: '이미지를 드래그하여 가사 추출',
+  addMoreImages: '이미지 추가',
+
+  // Errors
+  error: '오류',
+  errorOccurred: '오류가 발생했습니다',
+  apiKeyMissing: 'API 키가 설정되지 않았습니다',
+  apiKeyRequiredForOcr: '이미지 OCR을 사용하려면 설정에서 API 키를 입력하세요',
+  noImageFilesDetected: '이미지 파일이 감지되지 않았습니다',
+  networkError: '네트워크 오류',
+  fileNotFound: '파일을 찾을 수 없습니다',
+
+  // Confirmations
+  confirmDelete: '정말 삭제하시겠습니까?',
+  confirmDiscard: '변경사항을 버리시겠습니까?',
+  unsavedChanges: '저장되지 않은 변경사항이 있습니다',
+
+  // Status
+  loading: '로딩 중...',
+  saving: '저장 중...',
+  saved: '저장됨',
+  ready: '준비됨',
+
+  // Keyboard Shortcuts
+  shortcuts: '단축키',
+  nextSlide: '다음 슬라이드',
+  prevSlide: '이전 슬라이드',
+  numberKeysHint: '1-9 섹션 이동',
+
+  // Placeholders
+  enterTitle: '제목을 입력하세요',
+  enterLyrics: '가사를 입력하세요...',
+  searchSongs: '곡 검색...',
+  noSongsYet: '아직 추가된 곡이 없습니다',
+  dragToReorder: '드래그하여 순서 변경',
+
+  // Previous/Next
+  previous: '이전',
+  toggleBlank: '화면 가리기 토글',
+
+  // Settings
+  settings: '설정',
+  apiSettings: 'API 설정',
+  appearanceSettings: '외관',
+  displaySettings: '디스플레이',
+  about: '정보',
+  openaiApiKey: 'OpenAI API 키',
+  enterApiKey: 'API 키를 입력하세요',
+  testConnection: '연결 테스트',
+  testing: '테스트 중...',
+  connectionSuccess: '연결 성공',
+  connectionFailed: '연결 실패',
+  language: '언어',
+  theme: '테마',
+  themeLight: '라이트',
+  themeDark: '다크',
+  themeSystem: '시스템',
+
+  // Song Library
+  library: '라이브러리',
+  session: '세션',
+  songLibrary: '곡 라이브러리',
+  addToLibrary: '라이브러리에 추가',
+  addToSession: '세션에 추가',
+  importToSession: '세션으로 가져오기',
+  categories: '카테고리',
+  tags: '태그',
+  noLibrarySongs: '라이브러리가 비어 있습니다',
+  noSongsFound: '검색 결과가 없습니다',
+  searchLibrary: '라이브러리 검색...',
+  addSongToLibrary: '라이브러리에 곡 추가',
+  manualInput: '직접 입력',
+  imageImport: '이미지 가져오기',
+  untitledSong: '제목 없음',
+  addAnother: '추가',
+  alsoAddToSession: '현재 세션에도 추가',
+  existingSongFound: '동일한 제목의 곡이 있습니다',
+  useExistingLyrics: '기존 가사 사용',
+
+  // Library Drawer
+  browseLibrary: '라이브러리 탐색',
+  importSelected: '선택한 곡 가져오기',
+  selectedCount: '개 선택됨',
+  inSession: '세션에 포함됨',
+  dragToAdd: '드래그하여 추가',
+  noSessionSelected: '세션을 먼저 선택하세요',
+  closeLibrary: '라이브러리 닫기',
+
+  // Section Navigation
+  currentSection: '현재 섹션',
+  nextSection: '다음 섹션',
+  prevSection: '이전 섹션',
+  playFromSection: '섹션부터 시작',
+  playFromBeginning: '처음부터 시작',
+  tabToNextSection: 'Tab 다음 섹션',
+  homeEnd: 'Home/End 처음/마지막',
+
+  // Sessions
+  sessions: '세션 목록',
+  newSession: '새 세션',
+  sessionNamePlaceholder: '세션 이름 입력...',
+  noSessions: '세션이 없습니다',
+  createFirstSession: '첫 세션 만들기',
+  rename: '이름 변경',
+  selectSession: '세션을 선택하세요',
+  currentSession: '현재 세션',
+
+  // About Section
+  aboutDescription: '오픈소스 예배 프레젠테이션 소프트웨어',
+  version: '버전',
+  license: '라이선스',
+  sourceCode: '소스 코드',
+  viewOnGitHub: 'GitHub에서 보기',
+  reportIssue: '문제 신고',
+  credits: '크레딧',
+  madeWith: '제작',
+  builtWith: 'Electron, React, Tailwind CSS로 제작',
+  feedback: '피드백',
+  forWorship: '예배를 위해',
+  developer: '개발자',
+  developerName: 'Jay Cho (조재영)',
+  developerProject: '개발자의 다른 프로젝트',
+  christianCommunity: '기독교 커뮤니티',
+  donate: '후원하기',
+  donateDescription: '개발 지원하기',
+  factoryReset: '초기화',
+  factoryResetDescription: '모든 설정과 데이터를 삭제합니다',
+  factoryResetConfirm:
+    '정말 모든 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+  factoryResetWarning:
+    '이 작업은 되돌릴 수 없습니다. 모든 곡, 세션, 폰트, 배경 영상, 설정이 영구적으로 삭제됩니다.',
+  factoryResetTypeConfirm: '확인을 위해 "초기화"를 입력하세요',
+  factoryResetTypePlaceholder: '초기화',
+  resetting: '초기화 중...',
+  dataSettings: '데이터',
+
+  // API Settings
+  apiKeyDescription: 'OCR 가사 분석 및 자동 진행 기능에 필요합니다.',
+  apiKeyLabel: 'API 키',
+  enterApiKeyError: 'API 키를 입력하세요',
+  apiKeyValid: 'API 키가 설정되어 있고 유효합니다',
+  apiKeyInvalid: '유효하지 않은 API 키',
+  apiKeyNotSet: 'API 키가 설정되지 않았습니다',
+  testAndSave: '연결 테스트 및 저장',
+  getApiKeyFrom: 'API 키 발급:',
+  openaiPlatform: 'OpenAI Platform',
+  storedSecurely: '시스템 암호화로 안전하게 저장됩니다.',
+
+  // Appearance Settings
+  themeDescription: '색상 테마를 선택하세요',
+  languageDescription: '인터페이스 언어',
+
+  // Display Settings
+  projectionFont: '프로젝션 폰트',
+  fontForLyrics: '가사 표시용 폰트',
+  noFonts: '폰트 없음',
+  selectFont: '폰트 선택',
+  bundledFonts: '기본 폰트',
+  customFonts: '사용자 폰트',
+  addingFonts: '폰트 추가 중...',
+  addCustomFonts: '사용자 폰트 추가',
+  dropFontFiles: 'TTF, OTF, WOFF 파일을 여기에 놓으세요',
+  deleteFont: '폰트 삭제',
+  systemFont: '시스템 기본 폰트',
+  fontSize: '폰트 크기',
+  textPosition: '위치',
+  textAlignment: '텍스트 정렬',
+  lineGap: '줄 간격',
+  textPadding: '여백',
+  textShadow: '텍스트 그림자',
+  backgroundDim: '배경 어둡게',
+  slideAnimation: '슬라이드 애니메이션',
+  animationNone: '없음',
+  animationFade: '페이드',
+  animationSlideUp: '슬라이드 업',
+  animationSlideLeft: '슬라이드 왼쪽',
+  displayMode: '디스플레이 모드',
+  fullscreen: '전체 화면',
+  windowed: '창 모드',
+
+  // Slide editing
+  duplicateSlide: '슬라이드 복제',
+  slideEdit: '슬라이드 편집',
+  slideEditHint: 'Enter 저장 · Shift+Enter 줄바꿈 · Esc 취소',
+  searchLyrics: '가사 검색... (⌘F)',
+  slidesFoundCount: '{{count}}개 슬라이드에서 발견',
+  clearSearch: '검색 지우기',
+} as const;
+
+export type TranslationKey = keyof typeof ko;
