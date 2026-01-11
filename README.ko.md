@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icons/logo.png" alt="OpenWorship" width="100">
+  <img src="assets/icons/logo.png" alt="OpenWorship" width="80">
 </p>
 
 <h1 align="center">OpenWorship</h1>
@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/jaycho1214/openworship/releases/"><img src="https://img.shields.io/github/v/release/jaycho1214/openworship?style=flat-square&color=4a90a4" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-4a90a4?style=flat-square" alt="License"></a>
-  <img src="https://img.shields.io/badge/platform-macOS%20%E2%80%A2%20Windows%20%E2%80%A2%20Linux-4a90a4?style=flat-square" alt="Platform">
+  <img src="https://img.shields.io/badge/platform-macOS%20·%20Windows%20·%20Linux-4a90a4?style=flat-square" alt="Platform">
 </p>
 
 <p align="center">
@@ -20,76 +20,34 @@
 
 <br>
 
+> **후원** — OpenWorship은 무료 오픈소스입니다. 사역에 도움이 되셨다면, 지속적인 개발을 후원해 주세요.
+>
+> <a href="https://github.com/sponsors/jaycho1214"><img src="https://img.shields.io/badge/GitHub%20Sponsors-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="GitHub Sponsors"></a>&nbsp;<a href="https://buymeacoffee.com/jaycho1214"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee"></a>
+
+<br>
+
 <p align="center">
-  <img src="assets/preview.png" alt="OpenWorship 미리보기" width="800">
+  <img src="assets/preview.png" alt="OpenWorship 미리보기" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/jaycho1214/openworship/releases/">
+    <img src="https://img.shields.io/badge/다운로드-최신%20버전-4a90a4?style=for-the-badge" alt="다운로드">
+  </a>
 </p>
 
 <br>
 
-<h2 align="center">
-  <a href="https://github.com/jaycho1214/openworship/releases/">
-    macOS, Windows, Linux 다운로드
-  </a>
-</h2>
-
----
-
 ## 주요 기능
 
-<table>
-<tr>
-<td width="50%">
-
-**듀얼 윈도우 시스템**
-
-노트북에서 조작하면서 프로젝터에 송출합니다. 실시간 미리보기로 성도들이 보는 화면을 정확히 확인하세요.
-
-</td>
-<td width="50%">
-
-**스마트 라이브러리**
-
-영구적인 찬양 컬렉션을 구축하세요. 검색하고, 정리하고, 세션에 드래그하여 즉시 추가하세요.
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**OCR 가져오기**
-
-AI를 사용하여 이미지에서 가사를 자동 추출합니다. 더 이상 악보를 보고 타이핑할 필요가 없습니다.
-
-</td>
-<td width="50%">
-
-**비디오 배경**
-
-아름다운 모션 배경이 기본 제공됩니다. 직접 비디오를 추가하여 전문적인 예배 분위기를 연출하세요.
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**커스텀 타이포그래피**
-
-원하는 폰트를 가져오세요. 크기, 굵기, 그림자, 위치를 세밀하게 조절하여 교회 스타일에 맞추세요.
-
-</td>
-<td width="50%">
-
-**키보드 단축키**
-
-방향키로 이동, B키로 검은 화면, 마우스 없이 모든 것을 조작하세요.
-
-</td>
-</tr>
-</table>
-
-<br>
-
----
+|                         |                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| **듀얼 윈도우 시스템**  | 노트북에서 조작하면서 프로젝터에 송출합니다. 실시간 미리보기로 성도들이 보는 화면을 정확히 확인하세요. |
+| **스마트 라이브러리**   | 영구적인 찬양 컬렉션을 구축하세요. 검색하고, 정리하고, 세션에 드래그하여 즉시 추가하세요.              |
+| **OCR 가져오기**        | AI를 사용하여 이미지에서 가사를 자동 추출합니다. 더 이상 악보를 보고 타이핑할 필요가 없습니다.         |
+| **비디오 배경**         | 아름다운 모션 배경이 기본 제공됩니다. 직접 비디오를 추가하여 전문적인 예배 분위기를 연출하세요.        |
+| **커스텀 타이포그래피** | 원하는 폰트를 가져오세요. 크기, 굵기, 그림자, 위치를 세밀하게 조절하여 교회 스타일에 맞추세요.         |
+| **키보드 단축키**       | 방향키로 이동, B키로 검은 화면, 마우스 없이 모든 것을 조작하세요.                                      |
 
 <br>
 
@@ -104,19 +62,13 @@ AI를 사용하여 이미지에서 가사를 자동 추출합니다. 더 이상 
 
 <br>
 
----
-
-<br>
-
 ## 설치
 
-최신 버전 다운로드:
-
-| 플랫폼      | 파일        |
-| ----------- | ----------- |
-| **macOS**   | `.dmg`      |
-| **Windows** | `.exe`      |
-| **Linux**   | `.AppImage` |
+| 플랫폼  | 파일        |
+| ------- | ----------- |
+| macOS   | `.dmg`      |
+| Windows | `.exe`      |
+| Linux   | `.AppImage` |
 
 <p>
   <a href="https://github.com/jaycho1214/openworship/releases/">
@@ -124,7 +76,10 @@ AI를 사용하여 이미지에서 가사를 자동 추출합니다. 더 이상 
   </a>
 </p>
 
-또는 소스에서 빌드:
+<details>
+<summary>소스에서 빌드</summary>
+
+<br>
 
 ```bash
 git clone https://github.com/jaycho1214/openworship.git
@@ -133,9 +88,7 @@ npm install
 npm start
 ```
 
-<br>
-
----
+</details>
 
 <br>
 
@@ -153,8 +106,6 @@ npm start
 | 세션 삭제      | 우클릭 → 삭제               |
 
 세션은 자동으로 저장됩니다.
-
-<br>
 
 ### 곡 추가하기
 
@@ -189,8 +140,6 @@ npm start
 
 > 설정 → API에서 OpenAI API 키 필요
 
-<br>
-
 ### 키보드 조작
 
 | 키                    | 동작                 |
@@ -203,8 +152,6 @@ npm start
 | `V`                   | 절 표시 토글         |
 | `Esc`                 | 송출 닫기            |
 
-<br>
-
 ### 커스터마이징
 
 **폰트** — 설정 → 외관. `.ttf` `.otf` `.woff` `.woff2` 지원
@@ -215,14 +162,11 @@ npm start
 
 <br>
 
----
-
-<br>
-
 ## 팁
 
 <details>
-<summary><strong>주일 준비하기</strong></summary>
+<summary>주일 준비하기</summary>
+
 <br>
 
 1. 주중에 미리 세션 만들기
@@ -234,7 +178,8 @@ npm start
 </details>
 
 <details>
-<summary><strong>최적의 슬라이드</strong></summary>
+<summary>최적의 슬라이드</summary>
+
 <br>
 
 - 슬라이드당 2-4줄
@@ -245,7 +190,8 @@ npm start
 </details>
 
 <details>
-<summary><strong>다중 모니터 설정</strong></summary>
+<summary>다중 모니터 설정</summary>
+
 <br>
 
 1. 프로젝터를 확장 디스플레이로 연결
@@ -258,10 +204,6 @@ npm start
 
 <br>
 
----
-
-<br>
-
 ## 개발
 
 | 명령어            | 설명           |
@@ -271,7 +213,10 @@ npm start
 | `npm run package` | 설치 파일 생성 |
 | `npm run lint`    | 코드 검사      |
 
-### 아키텍처
+<details>
+<summary>아키텍처</summary>
+
+<br>
 
 ```
 src/
@@ -280,45 +225,15 @@ src/
 └── shared/            # 공용 타입
 ```
 
-### 기술 스택
+**기술 스택** — Electron 35 · React 19 · TypeScript 5.8 · Tailwind CSS 4 · shadcn/ui · better-sqlite3 · OpenAI API
 
-Electron 35 · React 19 · TypeScript 5.8 · Tailwind CSS 4 · shadcn/ui · better-sqlite3 · OpenAI API
-
-<br>
-
----
+</details>
 
 <br>
 
 ## 기여하기
 
 기여를 환영합니다! 포크하고, 기능 브랜치를 만들고, Pull Request를 제출해 주세요.
-
-<br>
-
----
-
-<br>
-
-## 후원
-
-OpenWorship은 무료 오픈소스입니다. 사역에 도움이 되셨다면, 지속적인 개발을 후원해 주세요.
-
-<p>
-  <a href="https://github.com/sponsors/jaycho1214">
-    <img src="https://img.shields.io/badge/GitHub%20Sponsors-후원하기-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="GitHub Sponsors">
-  </a>
-  &nbsp;
-  <a href="https://buymeacoffee.com/jaycho1214">
-    <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-후원하기-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee">
-  </a>
-</p>
-
-<br>
-
----
-
-<br>
 
 ## 라이선스
 
@@ -327,8 +242,6 @@ MIT 라이선스 — 교회나 사역에서 자유롭게 사용하세요.
 <br>
 
 ---
-
-<br>
 
 <p align="center">
   <em>"호흡이 있는 자마다 여호와를 찬양할지어다"</em><br>

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icons/logo.png" alt="OpenWorship" width="100">
+  <img src="assets/icons/logo.png" alt="OpenWorship" width="80">
 </p>
 
 <h1 align="center">OpenWorship</h1>
@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/jaycho1214/openworship/releases/"><img src="https://img.shields.io/github/v/release/jaycho1214/openworship?style=flat-square&color=4a90a4" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-4a90a4?style=flat-square" alt="License"></a>
-  <img src="https://img.shields.io/badge/platform-macOS%20%E2%80%A2%20Windows%20%E2%80%A2%20Linux-4a90a4?style=flat-square" alt="Platform">
+  <img src="https://img.shields.io/badge/platform-macOS%20·%20Windows%20·%20Linux-4a90a4?style=flat-square" alt="Platform">
 </p>
 
 <p align="center">
@@ -20,76 +20,34 @@
 
 <br>
 
+> **Support this project** — OpenWorship is free and open-source. If it has blessed your ministry, consider supporting continued development.
+>
+> <a href="https://github.com/sponsors/jaycho1214"><img src="https://img.shields.io/badge/GitHub%20Sponsors-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="GitHub Sponsors"></a>&nbsp;<a href="https://buymeacoffee.com/jaycho1214"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee"></a>
+
+<br>
+
 <p align="center">
-  <img src="assets/preview.png" alt="OpenWorship Preview" width="800">
+  <img src="assets/preview.png" alt="OpenWorship Preview" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/jaycho1214/openworship/releases/">
+    <img src="https://img.shields.io/badge/Download-Latest%20Release-4a90a4?style=for-the-badge" alt="Download">
+  </a>
 </p>
 
 <br>
 
-<h2 align="center">
-  <a href="https://github.com/jaycho1214/openworship/releases/">
-    Download for macOS, Windows, or Linux
-  </a>
-</h2>
-
----
-
 ## Features
 
-<table>
-<tr>
-<td width="50%">
-
-**Dual-Window System**
-
-Control from your laptop while displaying on the projector. Real-time preview shows exactly what your congregation sees.
-
-</td>
-<td width="50%">
-
-**Smart Library**
-
-Build your permanent song collection. Search, organize, and drag songs into any session instantly.
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**OCR Import**
-
-Extract lyrics from images automatically using AI. No more manual typing from song sheets.
-
-</td>
-<td width="50%">
-
-**Video Backgrounds**
-
-Beautiful motion backgrounds included. Add your own videos for a professional worship atmosphere.
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**Custom Typography**
-
-Import any font. Fine-tune size, weight, shadow, and positioning to match your church's style.
-
-</td>
-<td width="50%">
-
-**Keyboard Shortcuts**
-
-Navigate with arrow keys, blank with B, and control everything without touching the mouse.
-
-</td>
-</tr>
-</table>
-
-<br>
-
----
+|                        |                                                                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Dual-Window System** | Control from your laptop while displaying on the projector. Real-time preview shows exactly what your congregation sees. |
+| **Smart Library**      | Build your permanent song collection. Search, organize, and drag songs into any session instantly.                       |
+| **OCR Import**         | Extract lyrics from images automatically using AI. No more manual typing from song sheets.                               |
+| **Video Backgrounds**  | Beautiful motion backgrounds included. Add your own videos for a professional worship atmosphere.                        |
+| **Custom Typography**  | Import any font. Fine-tune size, weight, shadow, and positioning to match your church's style.                           |
+| **Keyboard Shortcuts** | Navigate with arrow keys, blank with B, and control everything without touching the mouse.                               |
 
 <br>
 
@@ -104,19 +62,13 @@ Navigate with arrow keys, blank with B, and control everything without touching 
 
 <br>
 
----
-
-<br>
-
 ## Installation
 
-Download the latest release:
-
-| Platform    | File        |
-| ----------- | ----------- |
-| **macOS**   | `.dmg`      |
-| **Windows** | `.exe`      |
-| **Linux**   | `.AppImage` |
+| Platform | File        |
+| -------- | ----------- |
+| macOS    | `.dmg`      |
+| Windows  | `.exe`      |
+| Linux    | `.AppImage` |
 
 <p>
   <a href="https://github.com/jaycho1214/openworship/releases/">
@@ -124,7 +76,10 @@ Download the latest release:
   </a>
 </p>
 
-Or build from source:
+<details>
+<summary>Build from source</summary>
+
+<br>
 
 ```bash
 git clone https://github.com/jaycho1214/openworship.git
@@ -133,9 +88,7 @@ npm install
 npm start
 ```
 
-<br>
-
----
+</details>
 
 <br>
 
@@ -153,8 +106,6 @@ A **session** is your worship setlist. Create one for each service.
 | Delete session | Right-click → Delete              |
 
 Sessions save automatically.
-
-<br>
 
 ### Adding Songs
 
@@ -189,8 +140,6 @@ Second verse line two
 
 > Requires OpenAI API key in Settings → API
 
-<br>
-
 ### Keyboard Controls
 
 | Key                   | Action                 |
@@ -203,8 +152,6 @@ Second verse line two
 | `V`                   | Toggle verse indicator |
 | `Esc`                 | Close projection       |
 
-<br>
-
 ### Customization
 
 **Fonts** — Settings → Appearance. Supports `.ttf` `.otf` `.woff` `.woff2`
@@ -215,14 +162,11 @@ Second verse line two
 
 <br>
 
----
-
-<br>
-
 ## Tips
 
 <details>
-<summary><strong>Preparing for Sunday</strong></summary>
+<summary>Preparing for Sunday</summary>
+
 <br>
 
 1. Create session early in the week
@@ -234,7 +178,8 @@ Second verse line two
 </details>
 
 <details>
-<summary><strong>Optimal Slides</strong></summary>
+<summary>Optimal Slides</summary>
+
 <br>
 
 - 2-4 lines per slide
@@ -245,7 +190,8 @@ Second verse line two
 </details>
 
 <details>
-<summary><strong>Multi-Monitor Setup</strong></summary>
+<summary>Multi-Monitor Setup</summary>
+
 <br>
 
 1. Connect projector as extended display
@@ -258,10 +204,6 @@ Second verse line two
 
 <br>
 
----
-
-<br>
-
 ## Development
 
 | Command           | Description      |
@@ -271,7 +213,10 @@ Second verse line two
 | `npm run package` | Create installer |
 | `npm run lint`    | Lint code        |
 
-### Architecture
+<details>
+<summary>Architecture</summary>
+
+<br>
 
 ```
 src/
@@ -280,45 +225,15 @@ src/
 └── shared/            # Shared types
 ```
 
-### Tech Stack
+**Tech Stack** — Electron 35 · React 19 · TypeScript 5.8 · Tailwind CSS 4 · shadcn/ui · better-sqlite3 · OpenAI API
 
-Electron 35 · React 19 · TypeScript 5.8 · Tailwind CSS 4 · shadcn/ui · better-sqlite3 · OpenAI API
-
-<br>
-
----
+</details>
 
 <br>
 
 ## Contributing
 
 Contributions welcome! Fork, create a feature branch, and submit a Pull Request.
-
-<br>
-
----
-
-<br>
-
-## Support
-
-OpenWorship is free and open-source. If it has blessed your ministry, consider supporting continued development.
-
-<p>
-  <a href="https://github.com/sponsors/jaycho1214">
-    <img src="https://img.shields.io/badge/GitHub%20Sponsors-Support-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="GitHub Sponsors">
-  </a>
-  &nbsp;
-  <a href="https://buymeacoffee.com/jaycho1214">
-    <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee">
-  </a>
-</p>
-
-<br>
-
----
-
-<br>
 
 ## License
 
@@ -327,8 +242,6 @@ MIT License — free to use for your church or ministry.
 <br>
 
 ---
-
-<br>
 
 <p align="center">
   <em>"Let everything that has breath praise the Lord."</em><br>
