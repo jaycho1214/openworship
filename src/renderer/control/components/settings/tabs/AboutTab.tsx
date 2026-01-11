@@ -84,9 +84,9 @@ export function AboutTab() {
   const { t } = useTranslation();
 
   return (
-    <div className="h-ful w-full flex flex-col">
+    <div className="h-full w-full flex flex-col">
       {/* Hero - Left aligned */}
-      <div className="flex items-start gap-4 py-4">
+      <div className="flex items-start gap-4 pb-4">
         {/* Logo */}
         <img
           src={appLogo}
@@ -159,14 +159,6 @@ export function AboutTab() {
           href="https://buymeacoffee.com/jaycho1214"
           accent="bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400"
         />
-      </div>
-
-      {/* Footer */}
-      <div className="py-2 border-t border-zinc-200 dark:border-zinc-800 w-full">
-        <p className="text-[11px] text-zinc-400 dark:text-zinc-600 text-center flex items-center justify-center gap-1.5">
-          <Code2 className="w-3 h-3" />
-          Electron + React + TypeScript
-        </p>
       </div>
     </div>
   );
