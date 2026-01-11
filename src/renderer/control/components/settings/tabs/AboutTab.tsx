@@ -114,14 +114,14 @@ export function AboutTab() {
           icon={<Github className="w-4 h-4" />}
           title={t('sourceCode')}
           subtitle="GitHub"
-          href="https://github.com/jjm-the-maker/openworship"
+          href="https://github.com/jaycho1214/openworship"
           accent="bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900"
         />
         <InfoCard
           icon={<AlertCircle className="w-4 h-4" />}
           title={t('reportIssue')}
           subtitle={t('feedback')}
-          href="https://github.com/jjm-the-maker/openworship/issues"
+          href="https://github.com/jaycho1214/openworship/issues"
           accent="bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400"
         />
         <InfoCard
@@ -136,6 +136,7 @@ export function AboutTab() {
           title={t('developer')}
           subtitle={t('developerName')}
           accent="bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400"
+          href="https://github.com/jaycho1214"
         />
         <InfoCard
           icon={
