@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*.*.*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -46,6 +49,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm exec electron-builder -- --publish always --${{ matrix.platform }}
-
 # Based on electron-react-boilerplate
 # https://github.com/electron-react-boilerplate/electron-react-boilerplate
