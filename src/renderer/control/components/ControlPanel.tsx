@@ -164,7 +164,7 @@ export default function ControlPanel() {
                 className={cn(
                   'h-10 gap-2 px-4 font-medium transition-all',
                   isBlank
-                    ? 'bg-red-500/25 border-red-500/50 text-red-200 hover:bg-red-500/35'
+                    ? 'bg-red-500/25 border-red-500/50 text-red-700 dark:text-red-200 hover:bg-red-500/35'
                     : 'bg-muted border-border text-foreground hover:bg-accent',
                 )}
                 aria-label={

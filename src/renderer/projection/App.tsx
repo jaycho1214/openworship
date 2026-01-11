@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import VideoBackground from './components/VideoBackground';
 import LyricsOverlay from './components/LyricsOverlay';
 import BlankScreen from './components/BlankScreen';
@@ -12,6 +13,7 @@ import {
 const SYSTEM_FONT = 'inherit';
 
 export default function App() {
+  const { t } = useTranslation();
   const [currentLines, setCurrentLines] = useState<string[]>([]);
   const [isBlank, setIsBlank] = useState(false);
   const [isVerseHidden, setIsVerseHidden] = useState(false);
@@ -22,6 +24,11 @@ export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const loadedFontsRef = useRef<Set<string>>(new Set());
   const fontsDataRef = useRef<DetectedFont[]>([]);
+
+  // Update document title based on current language
+  useEffect(() => {
+    document.title = t('windowTitleProjection');
+  }, [t]);
 
   // Load projection settings on mount
   useEffect(() => {

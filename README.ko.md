@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icons/logo.png" alt="OpenWorship" width="120">
+  <img src="assets/icons/logo.png" alt="OpenWorship" width="100">
 </p>
 
 <h1 align="center">OpenWorship</h1>
@@ -9,51 +9,30 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg" alt="Platform">
-  <a href="https://electronjs.org"><img src="https://img.shields.io/badge/Electron-35-47848F.svg?logo=electron&logoColor=white" alt="Electron"></a>
-  <a href="https://react.dev"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&logoColor=white" alt="React"></a>
+  <a href="https://github.com/jaycho1214/openworship/releases/"><img src="https://img.shields.io/github/v/release/jaycho1214/openworship?style=flat-square&color=4a90a4" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-4a90a4?style=flat-square" alt="License"></a>
+  <img src="https://img.shields.io/badge/platform-macOS%20%E2%80%A2%20Windows%20%E2%80%A2%20Linux-4a90a4?style=flat-square" alt="Platform">
 </p>
 
 <p align="center">
-  <em>예배 중 찬양 가사를 아름답게 송출하세요.</em><br>
-  <em>심플하고 강력한 교회 전용 프로그램입니다.</em>
+  <a href="./README.md">English</a>
 </p>
+
+<br>
 
 <p align="center">
-  <a href="./README.md">English Documentation</a>
+  <img src="assets/preview.png" alt="OpenWorship 미리보기" width="800">
 </p>
 
 <br>
 
----
-
-<br>
-
-## 프로젝트 후원
-
-OpenWorship은 전 세계 교회를 위해 사랑으로 만들어진 무료 오픈소스 소프트웨어입니다. 이 소프트웨어가 사역에 도움이 되셨다면, 지속적인 개발을 후원해 주세요.
-
-<p>
-  <a href="https://github.com/sponsors/jaycho1214">
-    <img src="https://img.shields.io/badge/GitHub%20Sponsors-후원하기-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="GitHub Sponsors">
+<h2 align="center">
+  <a href="https://github.com/jaycho1214/openworship/releases/">
+    macOS, Windows, Linux 다운로드
   </a>
-  &nbsp;
-  <a href="https://buymeacoffee.com/jaycho1214">
-    <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-후원하기-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee">
-  </a>
-</p>
-
-후원은 다음에 사용됩니다:
-- 지속적인 개발과 새로운 기능
-- 버그 수정 및 유지보수
-- 더 많은 언어와 플랫폼 지원
-
-<br>
+</h2>
 
 ---
-
-<br>
 
 ## 주요 기능
 
@@ -123,8 +102,6 @@ AI를 사용하여 이미지와 PDF에서 가사를 자동 추출합니다. 더 
 4. 방향키 사용        →  슬라이드 이동
 ```
 
-이게 전부입니다. 바로 송출하세요.
-
 <br>
 
 ---
@@ -133,18 +110,24 @@ AI를 사용하여 이미지와 PDF에서 가사를 자동 추출합니다. 더 
 
 ## 설치
 
-사용하는 플랫폼에 맞는 최신 버전을 다운로드하세요:
+최신 버전 다운로드:
 
-| 플랫폼 | 다운로드 |
-|--------|----------|
-| macOS | [OpenWorship.dmg](#) |
-| Windows | [OpenWorship-Setup.exe](#) |
-| Linux | [OpenWorship.AppImage](#) |
+| 플랫폼      | 파일        |
+| ----------- | ----------- |
+| **macOS**   | `.dmg`      |
+| **Windows** | `.exe`      |
+| **Linux**   | `.AppImage` |
+
+<p>
+  <a href="https://github.com/jaycho1214/openworship/releases/">
+    <img src="https://img.shields.io/badge/다운로드-최신%20버전-4a90a4?style=for-the-badge" alt="다운로드">
+  </a>
+</p>
 
 또는 소스에서 빌드:
 
 ```bash
-git clone https://github.com/jljm-christian/openworship.git
+git clone https://github.com/jaycho1214/openworship.git
 cd openworship
 npm install
 npm start
@@ -162,12 +145,12 @@ npm start
 
 **세션**은 예배 셋리스트입니다. 각 예배마다 하나씩 만드세요.
 
-| 동작 | 방법 |
-|------|------|
-| 세션 만들기 | 헤더에서 **"새 세션"** 클릭 |
-| 세션 전환 | 헤더의 드롭다운 사용 |
-| 세션 이름 변경 | 세션 이름 우클릭 |
-| 세션 삭제 | 우클릭 → 삭제 |
+| 동작           | 방법                        |
+| -------------- | --------------------------- |
+| 세션 만들기    | 헤더에서 **"새 세션"** 클릭 |
+| 세션 전환      | 헤더의 드롭다운 사용        |
+| 세션 이름 변경 | 세션 이름 우클릭            |
+| 세션 삭제      | 우클릭 → 삭제               |
 
 세션은 자동으로 저장됩니다.
 
@@ -175,13 +158,14 @@ npm start
 
 ### 곡 추가하기
 
-#### 직접 입력
+**직접 입력**
 
 1. **"+ 추가"** 클릭
 2. 제목과 가사 입력
 3. 저장
 
-**가사 형식:**
+빈 줄로 새 슬라이드를 구분합니다:
+
 ```
 첫 번째 절 첫째 줄
 첫 번째 절 둘째 줄
@@ -190,91 +174,44 @@ npm start
 두 번째 절 둘째 줄
 ```
 
-> 빈 줄이 새 슬라이드를 만듭니다
-
-<br>
-
-#### 라이브러리에서
-
-라이브러리는 영구적인 찬양 모음집입니다.
+**라이브러리에서**
 
 - 라이브러리 사이드바 열기 (왼쪽 가장자리)
 - 곡 검색
-- 세션으로 **드래그**
-- 또는 우클릭 → "세션에 추가"
+- 세션으로 드래그
 
-<br>
-
-#### OCR 가져오기 (이미지/PDF)
-
-사진이나 문서에서 가사를 자동으로 추출합니다.
+**OCR 가져오기**
 
 1. **"+ 추가"** → **"이미지 가져오기"** 클릭
 2. 파일을 드래그하거나 클릭해서 선택
 3. AI가 가사 추출
 4. 검토, 편집, 저장
 
-> **설정 필요:** 설정 → API에서 OpenAI API 키 추가
+> 설정 → API에서 OpenAI API 키 필요
 
 <br>
 
-### 송출하기
+### 키보드 조작
 
-#### 키보드 조작
-
-| 키 | 동작 |
-|----|------|
-| `←` `→` | 이전 / 다음 슬라이드 |
-| `↑` `↓` | 이전 / 다음 슬라이드 |
-| `Page Up` | 이전 곡 |
-| `Page Down` | 다음 곡 |
-| `Home` | 첫 슬라이드 |
-| `End` | 마지막 슬라이드 |
-| `B` | 검은 화면 |
-| `V` | 절 표시 토글 |
-| `Esc` | 송출 닫기 |
-
-<br>
-
-#### 라이브 미리보기
-
-미리보기 패널은 화면에 표시되는 것을 그대로 보여줍니다. 슬라이드를 클릭하면 바로 이동합니다.
+| 키                    | 동작                 |
+| --------------------- | -------------------- |
+| `←` `→`               | 이전 / 다음 슬라이드 |
+| `↑` `↓`               | 이전 / 다음 슬라이드 |
+| `Page Up` `Page Down` | 이전 / 다음 곡       |
+| `Home` `End`          | 첫 / 마지막 슬라이드 |
+| `B`                   | 검은 화면            |
+| `V`                   | 절 표시 토글         |
+| `Esc`                 | 송출 닫기            |
 
 <br>
 
 ### 커스터마이징
 
-#### 폰트
+**폰트** — 설정 → 외관. `.ttf` `.otf` `.woff` `.woff2` 지원
 
-1. 설정 → 외관
-2. **"폰트 추가"**로 커스텀 폰트 가져오기
-3. 드롭다운에서 선택
-4. 크기, 굵기 조정
+**비디오 배경** — 설정 → 디스플레이. `.mp4` `.webm` `.mov` 지원
 
-지원 형식: `.ttf` `.otf` `.woff` `.woff2`
-
-<br>
-
-#### 비디오 배경
-
-1. 설정 → 디스플레이
-2. **"비디오 추가"** 또는 기본 배경 사용
-3. 비디오 선택
-4. 셔플 활성화로 다양하게
-
-지원 형식: `.mp4` `.webm` `.mov`
-
-<br>
-
-#### 텍스트 스타일링
-
-설정 → 디스플레이에서:
-
-- **폰트 크기** — 24px ~ 200px
-- **폰트 굵기** — 얇게 ~ 굵게
-- **텍스트 그림자** — 그림자 강도
-- **위치** — 수직 배치
-- **줄 높이** — 줄 간격
+**텍스트 스타일링** — 폰트 크기, 굵기, 그림자, 위치, 줄 높이 조정
 
 <br>
 
@@ -327,50 +264,25 @@ npm start
 
 ## 개발
 
-### 명령어
-
-| 명령어 | 설명 |
-|--------|------|
-| `npm start` | 개발 모드 |
-| `npm run build` | 프로덕션 빌드 |
+| 명령어            | 설명           |
+| ----------------- | -------------- |
+| `npm start`       | 개발 모드      |
+| `npm run build`   | 프로덕션 빌드  |
 | `npm run package` | 설치 파일 생성 |
-| `npm run lint` | 코드 검사 |
+| `npm run lint`    | 코드 검사      |
 
 ### 아키텍처
 
 ```
 src/
 ├── main/              # Electron 메인 프로세스
-│   ├── main.ts        # 앱 라이프사이클
-│   ├── windows/       # 윈도우 관리
-│   ├── ipc/           # IPC 핸들러
-│   └── services/      # 데이터베이스, 설정 등
-├── renderer/          # React UI
-│   ├── control/       # 컨트롤 윈도우
-│   ├── projection/    # 송출 윈도우
-│   └── components/    # 공용 UI
+├── renderer/          # React UI (컨트롤 + 송출 윈도우)
 └── shared/            # 공용 타입
 ```
 
 ### 기술 스택
 
-| 기술 | 버전 |
-|------|------|
-| Electron | 35 |
-| React | 19 |
-| TypeScript | 5.8 |
-| Tailwind CSS | 4 |
-| shadcn/ui | 최신 |
-| better-sqlite3 | 최신 |
-| OpenAI API | GPT-5.2 |
-
-### 데이터 위치
-
-| 플랫폼 | 경로 |
-|--------|------|
-| macOS | `~/Library/Application Support/OpenWorship/` |
-| Windows | `%APPDATA%/OpenWorship/` |
-| Linux | `~/.config/OpenWorship/` |
+Electron 35 · React 19 · TypeScript 5.8 · Tailwind CSS 4 · shadcn/ui · better-sqlite3 · OpenAI API
 
 <br>
 
@@ -380,13 +292,27 @@ src/
 
 ## 기여하기
 
-기여를 환영합니다! Pull Request를 자유롭게 제출해 주세요.
+기여를 환영합니다! 포크하고, 기능 브랜치를 만들고, Pull Request를 제출해 주세요.
 
-1. 저장소 포크
-2. 기능 브랜치 생성 (`git checkout -b feature/amazing-feature`)
-3. 변경사항 커밋 (`git commit -m 'Add amazing feature'`)
-4. 브랜치에 푸시 (`git push origin feature/amazing-feature`)
-5. Pull Request 열기
+<br>
+
+---
+
+<br>
+
+## 후원
+
+OpenWorship은 무료 오픈소스입니다. 사역에 도움이 되셨다면, 지속적인 개발을 후원해 주세요.
+
+<p>
+  <a href="https://github.com/sponsors/jaycho1214">
+    <img src="https://img.shields.io/badge/GitHub%20Sponsors-후원하기-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="GitHub Sponsors">
+  </a>
+  &nbsp;
+  <a href="https://buymeacoffee.com/jaycho1214">
+    <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-후원하기-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee">
+  </a>
+</p>
 
 <br>
 
@@ -405,11 +331,9 @@ MIT 라이선스 — 교회나 사역에서 자유롭게 사용하세요.
 <br>
 
 <p align="center">
-  <em>"호흡이 있는 자마다 여호와를 찬양할지어다 할렐루야"</em><br>
-  <strong>— 시편 150:6</strong>
+  <em>"호흡이 있는 자마다 여호와를 찬양할지어다"</em><br>
+  <strong>시편 150:6</strong>
 </p>
-
-<br>
 
 <p align="center">
   <sub>전 세계 교회를 위해 믿음으로 만들었습니다</sub>
