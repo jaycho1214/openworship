@@ -1,4 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useCallback,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { EyeOff, MonitorOff } from 'lucide-react';
 import { usePresentation, useProjection, useMedia } from '../context';
@@ -6,6 +12,8 @@ import { cn } from '../../lib/utils';
 
 // Scale factor: preview is approximately this fraction of a 1080p screen
 const PREVIEW_SCALE_BASE = 1080;
+// Crossfade duration matching VideoBackground.tsx
+const CROSSFADE_DURATION = 1000;
 
 export default function LivePreview() {
   const { t } = useTranslation();
@@ -16,8 +24,16 @@ export default function LivePreview() {
 
   const loadedFontsRef = useRef<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [previewScale, setPreviewScale] = useState(0.15);
+
+  // Dual video state for crossfade (matching VideoBackground.tsx)
+  const [activeVideo, setActiveVideo] = useState<'A' | 'B'>('A');
+  const [videoAPath, setVideoAPath] = useState<string | null>(null);
+  const [videoBPath, setVideoBPath] = useState<string | null>(null);
+  const [videoAOpacity, setVideoAOpacity] = useState(1);
+  const [videoBOpacity, setVideoBOpacity] = useState(0);
+  const videoARef = useRef<HTMLVideoElement>(null);
+  const videoBRef = useRef<HTMLVideoElement>(null);
 
   // Load fonts for preview
   useEffect(() => {
@@ -52,10 +68,61 @@ export default function LivePreview() {
     return () => window.removeEventListener('resize', calculateScale);
   }, []);
 
-  // Handle video playback
+  // Crossfade to new video (matching VideoBackground.tsx pattern)
+  const crossfadeToVideo = useCallback(
+    (newPath: string) => {
+      if (activeVideo === 'A') {
+        // Load new video into B, then crossfade
+        setVideoBPath(newPath);
+        const videoB = videoBRef.current;
+        if (videoB) {
+          videoB.load();
+          videoB.play().catch(console.error);
+        }
+
+        // Start crossfade
+        setVideoBOpacity(1);
+        setVideoAOpacity(0);
+
+        // After crossfade completes, switch active video
+        setTimeout(() => {
+          setActiveVideo('B');
+          // Pause inactive video to save resources
+          const videoA = videoARef.current;
+          if (videoA) {
+            videoA.pause();
+          }
+        }, CROSSFADE_DURATION);
+      } else {
+        // Load new video into A, then crossfade
+        setVideoAPath(newPath);
+        const videoA = videoARef.current;
+        if (videoA) {
+          videoA.load();
+          videoA.play().catch(console.error);
+        }
+
+        // Start crossfade
+        setVideoAOpacity(1);
+        setVideoBOpacity(0);
+
+        // After crossfade completes, switch active video
+        setTimeout(() => {
+          setActiveVideo('A');
+          // Pause inactive video to save resources
+          const videoB = videoBRef.current;
+          if (videoB) {
+            videoB.pause();
+          }
+        }, CROSSFADE_DURATION);
+      }
+    },
+    [activeVideo],
+  );
+
+  // Handle video path changes (matching VideoBackground.tsx pattern)
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !currentVideoPath) return;
+    if (!currentVideoPath) return;
 
     // Convert file path to file:// URL
     let videoUrl: string;
@@ -69,13 +136,28 @@ export default function LivePreview() {
       videoUrl = `file://${encodedPath}`;
     }
 
-    if (video.src !== videoUrl) {
-      video.src = videoUrl;
-      video.load();
-      video.play().catch(() => {
-        video.muted = true;
-        video.play().catch(console.error);
-      });
+    // If no video is currently playing, set initial video
+    if (!videoAPath && !videoBPath) {
+      setVideoAPath(videoUrl);
+      setVideoAOpacity(1);
+      setVideoBOpacity(0);
+      setActiveVideo('A');
+      // Small delay to ensure video element is ready (matching VideoBackground.tsx 100ms delay)
+      setTimeout(() => {
+        const videoA = videoARef.current;
+        if (videoA) {
+          videoA.load();
+          videoA.play().catch((e) => {
+            console.error('Video A autoplay failed:', e);
+            // Try again with muted (required for some browsers)
+            videoA.muted = true;
+            videoA.play().catch(console.error);
+          });
+        }
+      }, 100);
+    } else if (videoUrl !== videoAPath && videoUrl !== videoBPath) {
+      // Crossfade to new video only if it's different
+      crossfadeToVideo(videoUrl);
     }
   }, [currentVideoPath]);
 
@@ -153,17 +235,39 @@ export default function LivePreview() {
           ref={containerRef}
           className="relative w-full aspect-video bg-black rounded-lg overflow-hidden border border-border/50 shadow-elevated"
         >
-          {/* Video background */}
+          {/* Video background - dual video crossfade matching VideoBackground.tsx */}
           <div className="absolute inset-0 bg-black">
             {currentVideoPath ? (
-              <video
-                ref={videoRef}
-                className="absolute inset-0 w-full h-full object-cover"
-                loop
-                muted
-                playsInline
-                autoPlay
-              />
+              <>
+                {/* Video A */}
+                <video
+                  ref={videoARef}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={{
+                    opacity: videoAOpacity,
+                    transition: `opacity ${CROSSFADE_DURATION}ms ease-in-out`,
+                  }}
+                  src={videoAPath || undefined}
+                  loop
+                  muted
+                  playsInline
+                  autoPlay
+                />
+                {/* Video B */}
+                <video
+                  ref={videoBRef}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={{
+                    opacity: videoBOpacity,
+                    transition: `opacity ${CROSSFADE_DURATION}ms ease-in-out`,
+                  }}
+                  src={videoBPath || undefined}
+                  loop
+                  muted
+                  playsInline
+                  autoPlay
+                />
+              </>
             ) : (
               <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 to-black" />
             )}

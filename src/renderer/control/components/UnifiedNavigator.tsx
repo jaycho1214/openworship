@@ -52,6 +52,7 @@ interface SlideItemProps {
   slideIndex: number;
   isActive: boolean;
   sectionNumber: number | null;
+  hasSections: boolean;
   onClick: () => void;
 }
 
@@ -60,6 +61,7 @@ function SlideItem({
   slideIndex: _slideIndex,
   isActive,
   sectionNumber,
+  hasSections,
   onClick,
 }: SlideItemProps) {
   return (
@@ -89,6 +91,14 @@ function SlideItem({
             )}
           </div>
           <div className="h-px flex-1 bg-border/50" />
+        </div>
+      )}
+      {/* Shortcut-only indicator when no sections are defined in the song */}
+      {!slide.section && !hasSections && sectionNumber !== null && (
+        <div className="flex items-center gap-1.5 px-1 py-0.5 mt-1.5 first:mt-0">
+          <kbd className="w-4 h-4 flex items-center justify-center text-[9px] font-mono font-bold bg-muted text-muted-foreground rounded">
+            {sectionNumber}
+          </kbd>
         </div>
       )}
 
@@ -159,6 +169,9 @@ function SortableSongGroup({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+
+  // Check if the song has any sections defined
+  const hasSections = song.slides.some((slide) => slide.section);
 
   // Get section number for a slide
   const getSectionNumber = (slideIndex: number): number | null => {
@@ -264,6 +277,7 @@ function SortableSongGroup({
                 slideIndex={slideIndex}
                 isActive={isCurrentSong && slideIndex === currentSlideIndex}
                 sectionNumber={getSectionNumber(slideIndex)}
+                hasSections={hasSections}
                 onClick={() => onSelectSlide(slideIndex)}
               />
             ))}

@@ -46,6 +46,7 @@ interface SortableSlideProps {
   isEditing: boolean;
   isHighlighted: boolean;
   sectionNumber: number | null; // 1-9 for keyboard shortcut, null if not a section start
+  hasSections: boolean; // whether the song has any sections defined
   onClick: () => void;
   onDoubleClick: () => void;
   onEdit: () => void;
@@ -64,6 +65,7 @@ function SortableSlide({
   isEditing,
   isHighlighted,
   sectionNumber,
+  hasSections,
   onClick,
   onDoubleClick,
   onEdit,
@@ -155,6 +157,14 @@ function SortableSlide({
             )}
           </div>
           <div className="h-px flex-1 bg-border" />
+        </div>
+      )}
+      {/* Shortcut-only indicator when no sections are defined in the song */}
+      {!slide.section && !hasSections && sectionNumber !== null && (
+        <div className="flex items-center gap-2 px-1 py-1 mt-2 first:mt-0">
+          <kbd className="w-5 h-5 flex items-center justify-center text-[10px] font-mono font-bold bg-muted text-muted-foreground rounded">
+            {sectionNumber}
+          </kbd>
         </div>
       )}
       <ContextMenu>
@@ -342,6 +352,10 @@ export default function SlideNavigator() {
   // Get section indices for keyboard shortcuts
   const sectionIndices = getSectionIndices();
 
+  // Check if the current song has any sections defined
+  const hasSections =
+    currentSong?.slides.some((slide) => slide.section) ?? false;
+
   // Create a map of slide index -> section number (1-9)
   const getSectionNumber = (slideIndex: number): number | null => {
     const sectionIdx = sectionIndices.indexOf(slideIndex);
@@ -466,6 +480,7 @@ export default function SlideNavigator() {
                     isEditing={editingIndex === index}
                     isHighlighted={isHighlighted}
                     sectionNumber={sectionNumber}
+                    hasSections={hasSections}
                     onClick={() => goToSlide(index)}
                     onDoubleClick={() => startEditing(index)}
                     onEdit={() => startEditing(index)}
