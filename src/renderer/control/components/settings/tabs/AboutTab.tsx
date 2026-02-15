@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
-  Code2,
   ExternalLink,
   Github,
   Heart,

@@ -63,23 +63,14 @@ export function ApiSettingsTab({ isOpen }: ApiSettingsTabProps) {
   };
 
   const handleTestApiKey = async () => {
-    console.log('[ApiSettingsTab] handleTestApiKey called', {
-      apiKey: apiKey ? '***' : 'empty',
-    });
-
     if (!apiKey || apiKey === '••••••••••••••••••••••••') {
-      setApiKeyError('Please enter an API key');
+      setApiKeyError(t('pleaseEnterApiKey'));
       return;
     }
 
     const electron = getElectron();
-    console.log(
-      '[ApiSettingsTab] electron:',
-      electron ? 'available' : 'undefined',
-    );
     if (!electron) {
-      console.error('[ApiSettingsTab] electron is not available!');
-      setApiKeyError('Electron API not available');
+      setApiKeyError(t('electronApiNotAvailable'));
       return;
     }
 
@@ -87,22 +78,18 @@ export function ApiSettingsTab({ isOpen }: ApiSettingsTabProps) {
     setApiKeyError(null);
 
     try {
-      console.log('[ApiSettingsTab] Calling testApiKey...');
       const result = await electron.settings.testApiKey(apiKey);
-      console.log('[ApiSettingsTab] testApiKey result:', result);
       if (result.success) {
-        console.log('[ApiSettingsTab] Calling setApiKey...');
         await electron.settings.setApiKey(apiKey);
         setApiKeyStatus('valid');
         setApiKey('••••••••••••••••••••••••');
       } else {
         setApiKeyStatus('invalid');
-        setApiKeyError(result.error || 'Invalid API key');
+        setApiKeyError(result.error || t('apiKeyInvalid'));
       }
-    } catch (error) {
-      console.error('[ApiSettingsTab] Error:', error);
+    } catch (_error) {
       setApiKeyStatus('invalid');
-      setApiKeyError('Connection failed');
+      setApiKeyError(t('connectionFailed'));
     }
   };
 
@@ -183,10 +170,7 @@ export function ApiSettingsTab({ isOpen }: ApiSettingsTabProps) {
 
         <Button
           type="button"
-          onClick={() => {
-            console.log('[ApiSettingsTab] Button clicked!');
-            handleTestApiKey();
-          }}
+          onClick={handleTestApiKey}
           disabled={
             apiKeyStatus === 'loading' ||
             !apiKey ||

@@ -1,6 +1,46 @@
 // Disable no-unused-vars, broken for spread args
 /* eslint no-unused-vars: off */
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import {
+  contextBridge,
+  ipcRenderer,
+  IpcRendererEvent,
+  webUtils,
+} from 'electron';
+
+// Import shared types instead of redeclaring them
+import type {
+  LibrarySong,
+  LibrarySongInput,
+  DbSession,
+  DbSessionWithSongs,
+  ProjectionSettings,
+  Setlist,
+  ImportPreview,
+  ImportOptions,
+  ImportResult,
+} from '../shared/types';
+import type {
+  Advertisement,
+  AdvertisementCreateInput,
+  AdvertisementUpdateInput,
+  AdvertisementDisplaySettings,
+  ProjectionAdvertisementMessage,
+} from '../shared/types/advertisement';
+import type {
+  BibleTranslation,
+  BibleBook,
+  BibleVerse,
+  BibleDownloadInfo,
+  BibleDisplayMode,
+} from '../shared/types/bible';
+import type { Slide } from '../shared/types/song';
+import type { Frame, FrameSettings } from '../shared/types/frame';
+import type {
+  SetlistItemType,
+  SetlistItemInput,
+  SetlistItem,
+} from '../shared/types/setlistItem';
+import type { RecentItem } from './services/settings';
 
 // Define all IPC channels
 export type Channels =
@@ -8,10 +48,16 @@ export type Channels =
   | 'projection:blank'
   | 'projection:verseHidden'
   | 'projection:video'
+  | 'projection:image'
+  | 'projection:backgroundColor'
   | 'projection:font'
   | 'projection:closed'
   | 'projection:ready'
-  | 'projection:settings';
+  | 'projection:settings'
+  | 'projection:advertisement'
+  | 'projection:frame'
+  | 'file:open'
+  | 'bible:importProgress';
 
 export type InvokeChannels =
   | 'projection:open'
@@ -25,6 +71,9 @@ export type InvokeChannels =
   | 'ocr:parseImage'
   | 'ocr:parseImages'
   | 'videos:getEmbedded'
+  | 'images:getAll'
+  | 'images:add'
+  | 'images:delete'
   | 'fonts:getLyricsFont'
   | 'fonts:getAll'
   | 'fonts:add'
@@ -41,6 +90,9 @@ export type InvokeChannels =
   | 'settings:setTheme'
   | 'settings:getProjection'
   | 'settings:setProjection'
+  | 'settings:getRecentItems'
+  | 'settings:addRecentItem'
+  | 'settings:clearRecentItems'
   | 'settings:factoryReset'
   | 'library:getAll'
   | 'library:getById'
@@ -61,7 +113,49 @@ export type InvokeChannels =
   | 'session:addSong'
   | 'session:removeSong'
   | 'session:reorderSongs'
-  | 'session:getCount';
+  | 'session:getCount'
+  | 'export:song'
+  | 'export:session'
+  | 'export:library'
+  | 'import:preview'
+  | 'import:previewPath'
+  | 'import:execute'
+  | 'ad:getAll'
+  | 'ad:getById'
+  | 'ad:add'
+  | 'ad:update'
+  | 'ad:delete'
+  | 'ad:reorder'
+  | 'ad:getDisplaySettings'
+  | 'ad:setDisplaySettings'
+  // Bible channels
+  | 'bible:getTranslations'
+  | 'bible:getTranslation'
+  | 'bible:getBooks'
+  | 'bible:getVerses'
+  | 'bible:getVersesRange'
+  | 'bible:getVerseCount'
+  | 'bible:searchVerses'
+  | 'bible:versesToSlides'
+  | 'bible:importFromFile'
+  | 'bible:downloadAndImport'
+  | 'bible:deleteTranslation'
+  | 'bible:getAvailableBibles'
+  // Frame channels
+  | 'frame:getAll'
+  | 'frame:getById'
+  | 'frame:add'
+  | 'frame:update'
+  | 'frame:delete'
+  | 'frame:importImage'
+  | 'frame:getSettings'
+  | 'frame:setSettings'
+  // Session item channels (unified setlist)
+  | 'sessionItem:getAll'
+  | 'sessionItem:add'
+  | 'sessionItem:update'
+  | 'sessionItem:delete'
+  | 'sessionItem:reorder';
 
 const electronHandler = {
   ipcRenderer: {
@@ -107,14 +201,33 @@ const electronHandler = {
     isOpen: () => ipcRenderer.invoke('projection:isOpen'),
     setDisplayMode: (mode: 'fullscreen' | 'windowed') =>
       ipcRenderer.invoke('projection:setDisplayMode', mode),
-    update: (data: { lines: string[] }) =>
-      ipcRenderer.send('projection:update', data),
+    update: (data: {
+      lines: string[];
+      fontSize?: number;
+      overrides?: {
+        fontSize?: number;
+        textAlign?: {
+          horizontal?: 'left' | 'center' | 'right';
+          vertical?: 'top' | 'middle' | 'bottom';
+        };
+        padding?: {
+          top?: number;
+          bottom?: number;
+          left?: number;
+          right?: number;
+        };
+      };
+    }) => ipcRenderer.send('projection:update', data),
     setBlank: (isBlank: boolean) =>
       ipcRenderer.send('projection:blank', isBlank),
     setVerseHidden: (isVerseHidden: boolean) =>
       ipcRenderer.send('projection:verseHidden', isVerseHidden),
     setVideo: (videoPath: string) =>
       ipcRenderer.send('projection:video', videoPath),
+    setImage: (imagePath: string) =>
+      ipcRenderer.send('projection:image', imagePath),
+    setBackgroundColor: (color: string) =>
+      ipcRenderer.send('projection:backgroundColor', color),
     setFont: (fontFamily: string) =>
       ipcRenderer.send('projection:font', fontFamily),
     onClosed: (callback: () => void) => {
@@ -132,10 +245,44 @@ const electronHandler = {
       return () => ipcRenderer.removeListener('projection:ready', subscription);
     },
     // For projection window to receive updates
-    onUpdate: (callback: (data: { lines: string[] }) => void) => {
+    onUpdate: (
+      callback: (data: {
+        lines: string[];
+        fontSize?: number;
+        overrides?: {
+          fontSize?: number;
+          textAlign?: {
+            horizontal?: 'left' | 'center' | 'right';
+            vertical?: 'top' | 'middle' | 'bottom';
+          };
+          padding?: {
+            top?: number;
+            bottom?: number;
+            left?: number;
+            right?: number;
+          };
+        };
+      }) => void,
+    ) => {
       const subscription = (
         _event: IpcRendererEvent,
-        data: { lines: string[] },
+        data: {
+          lines: string[];
+          fontSize?: number;
+          overrides?: {
+            fontSize?: number;
+            textAlign?: {
+              horizontal?: 'left' | 'center' | 'right';
+              vertical?: 'top' | 'middle' | 'bottom';
+            };
+            padding?: {
+              top?: number;
+              bottom?: number;
+              left?: number;
+              right?: number;
+            };
+          };
+        },
       ) => callback(data);
       ipcRenderer.on('projection:update', subscription);
       return () =>
@@ -159,6 +306,19 @@ const electronHandler = {
         callback(videoPath);
       ipcRenderer.on('projection:video', subscription);
       return () => ipcRenderer.removeListener('projection:video', subscription);
+    },
+    onImage: (callback: (imagePath: string) => void) => {
+      const subscription = (_event: IpcRendererEvent, imagePath: string) =>
+        callback(imagePath);
+      ipcRenderer.on('projection:image', subscription);
+      return () => ipcRenderer.removeListener('projection:image', subscription);
+    },
+    onBackgroundColor: (callback: (color: string) => void) => {
+      const subscription = (_event: IpcRendererEvent, color: string) =>
+        callback(color);
+      ipcRenderer.on('projection:backgroundColor', subscription);
+      return () =>
+        ipcRenderer.removeListener('projection:backgroundColor', subscription);
     },
     onFont: (callback: (fontFamily: string) => void) => {
       const subscription = (_event: IpcRendererEvent, fontFamily: string) =>
@@ -233,6 +393,25 @@ const electronHandler = {
     }> => ipcRenderer.invoke('videos:delete', filePath),
   },
 
+  // Background images
+  images: {
+    getAll: (): Promise<string[]> => ipcRenderer.invoke('images:getAll'),
+    add: (imageData: {
+      fileName: string;
+      base64: string;
+    }): Promise<{
+      success: boolean;
+      data?: string;
+      error?: string;
+    }> => ipcRenderer.invoke('images:add', imageData),
+    delete: (
+      filePath: string,
+    ): Promise<{
+      success: boolean;
+      error?: string;
+    }> => ipcRenderer.invoke('images:delete', filePath),
+  },
+
   // Fonts
   fonts: {
     getLyricsFont: (): Promise<string | null> =>
@@ -269,17 +448,17 @@ const electronHandler = {
   // Setlist persistence
   setlist: {
     save: (
-      setlist: any,
+      setlist: Setlist,
       filePath?: string,
     ): Promise<{
       success: boolean;
-      filePath?: string;
+      data?: string;
       error?: string;
       canceled?: boolean;
     }> => ipcRenderer.invoke('setlist:save', setlist, filePath),
     load: (): Promise<{
       success: boolean;
-      data?: any;
+      data?: Setlist;
       filePath?: string;
       error?: string;
       canceled?: boolean;
@@ -351,6 +530,9 @@ const electronHandler = {
         vertical: 'top' | 'middle' | 'bottom';
       };
       padding: { top: number; bottom: number; left: number; right: number };
+      backgroundType?: 'video' | 'image' | 'color';
+      backgroundColor?: string;
+      backgroundImagePath?: string;
     }> => ipcRenderer.invoke('settings:getProjection'),
     setProjection: (
       settings: Partial<{
@@ -372,18 +554,37 @@ const electronHandler = {
           vertical: 'top' | 'middle' | 'bottom';
         };
         padding: { top: number; bottom: number; left: number; right: number };
+        backgroundType: 'video' | 'image' | 'color';
+        backgroundColor: string;
+        backgroundImagePath: string;
       }>,
     ): Promise<{ success: boolean }> =>
       ipcRenderer.invoke('settings:setProjection', settings),
-    onProjectionSettings: (callback: (settings: any) => void) => {
-      const subscription = (_event: IpcRendererEvent, settings: any) =>
-        callback(settings);
+    onProjectionSettings: (
+      callback: (settings: ProjectionSettings) => void,
+    ) => {
+      const subscription = (
+        _event: IpcRendererEvent,
+        settings: ProjectionSettings,
+      ) => callback(settings);
       ipcRenderer.on('projection:settings', subscription);
       return () =>
         ipcRenderer.removeListener('projection:settings', subscription);
     },
     factoryReset: (): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('settings:factoryReset'),
+    // Recent items
+    getRecentItems: (): Promise<{
+      success: boolean;
+      data?: RecentItem[];
+      error?: string;
+    }> => ipcRenderer.invoke('settings:getRecentItems'),
+    addRecentItem: (
+      item: Omit<RecentItem, 'addedAt'>,
+    ): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('settings:addRecentItem', item),
+    clearRecentItems: (): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('settings:clearRecentItems'),
   },
 
   // Song Library
@@ -489,38 +690,437 @@ const electronHandler = {
       error?: string;
     }> => ipcRenderer.invoke('session:getCount'),
   },
+
+  // Export/Import
+  export: {
+    song: (
+      songId: string,
+    ): Promise<{
+      success: boolean;
+      filePath?: string;
+      error?: string;
+      canceled?: boolean;
+    }> => ipcRenderer.invoke('export:song', songId),
+    session: (
+      sessionId: string,
+    ): Promise<{
+      success: boolean;
+      filePath?: string;
+      error?: string;
+      canceled?: boolean;
+    }> => ipcRenderer.invoke('export:session', sessionId),
+    library: (): Promise<{
+      success: boolean;
+      filePath?: string;
+      error?: string;
+      canceled?: boolean;
+    }> => ipcRenderer.invoke('export:library'),
+  },
+  import: {
+    preview: (): Promise<{
+      success: boolean;
+      data?: ImportPreview;
+      error?: string;
+      canceled?: boolean;
+    }> => ipcRenderer.invoke('import:preview'),
+    previewPath: (
+      filePath: string,
+    ): Promise<{
+      success: boolean;
+      data?: ImportPreview;
+      error?: string;
+    }> => ipcRenderer.invoke('import:previewPath', filePath),
+    execute: (
+      preview: ImportPreview,
+      options: ImportOptions,
+    ): Promise<{
+      success: boolean;
+      data?: ImportResult;
+      error?: string;
+    }> => ipcRenderer.invoke('import:execute', preview, options),
+  },
+
+  // File association handling
+  onFileOpen: (callback: (filePath: string) => void) => {
+    const subscription = (_event: IpcRendererEvent, filePath: string) =>
+      callback(filePath);
+    ipcRenderer.on('file:open', subscription);
+    return () => ipcRenderer.removeListener('file:open', subscription);
+  },
+
+  // Advertisements
+  advertisement: {
+    getAll: (): Promise<{
+      success: boolean;
+      data?: Advertisement[];
+      error?: string;
+    }> => ipcRenderer.invoke('ad:getAll'),
+    getById: (
+      id: string,
+    ): Promise<{
+      success: boolean;
+      data?: Advertisement;
+      error?: string;
+    }> => ipcRenderer.invoke('ad:getById', id),
+    add: (
+      input: AdvertisementCreateInput,
+    ): Promise<{
+      success: boolean;
+      data?: Advertisement;
+      error?: string;
+    }> => ipcRenderer.invoke('ad:add', input),
+    update: (
+      id: string,
+      updates: AdvertisementUpdateInput,
+    ): Promise<{
+      success: boolean;
+      data?: Advertisement;
+      error?: string;
+    }> => ipcRenderer.invoke('ad:update', id, updates),
+    delete: (
+      id: string,
+    ): Promise<{
+      success: boolean;
+      error?: string;
+    }> => ipcRenderer.invoke('ad:delete', id),
+    reorder: (
+      ids: string[],
+    ): Promise<{
+      success: boolean;
+      error?: string;
+    }> => ipcRenderer.invoke('ad:reorder', ids),
+    getDisplaySettings: (): Promise<{
+      success: boolean;
+      data?: AdvertisementDisplaySettings;
+      error?: string;
+    }> => ipcRenderer.invoke('ad:getDisplaySettings'),
+    setDisplaySettings: (
+      settings: Partial<AdvertisementDisplaySettings>,
+    ): Promise<{
+      success: boolean;
+      data?: AdvertisementDisplaySettings;
+      error?: string;
+    }> => ipcRenderer.invoke('ad:setDisplaySettings', settings),
+    // Send advertisement to projection window
+    show: (ad: Advertisement, displaySettings: AdvertisementDisplaySettings) =>
+      ipcRenderer.send('projection:advertisement', {
+        action: 'show',
+        advertisement: ad,
+        displaySettings,
+      }),
+    hide: () =>
+      ipcRenderer.send('projection:advertisement', { action: 'hide' }),
+    // For projection window to receive advertisement updates
+    onAdvertisement: (
+      callback: (message: ProjectionAdvertisementMessage) => void,
+    ) => {
+      const subscription = (
+        _event: IpcRendererEvent,
+        message: ProjectionAdvertisementMessage,
+      ) => callback(message);
+      ipcRenderer.on('projection:advertisement', subscription);
+      return () =>
+        ipcRenderer.removeListener('projection:advertisement', subscription);
+    },
+  },
 };
 
-// Types for library
-interface LibrarySong {
-  id: string;
-  title: string;
-  lyrics: string;
-  categories: string[];
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-}
+// Add Bible, Frame, and SessionItem handlers to electronHandler
+const extendedElectronHandler = {
+  ...electronHandler,
 
-interface LibrarySongInput {
-  title: string;
-  lyrics: string;
-  categories?: string[];
-  tags?: string[];
-}
+  // Bible operations
+  bible: {
+    getTranslations: (): Promise<{
+      success: boolean;
+      data?: BibleTranslation[];
+      error?: string;
+    }> => ipcRenderer.invoke('bible:getTranslations'),
 
-// Types for sessions
-interface DbSession {
-  id: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-}
+    getTranslation: (
+      id: string,
+    ): Promise<{
+      success: boolean;
+      data?: BibleTranslation | null;
+      error?: string;
+    }> => ipcRenderer.invoke('bible:getTranslation', id),
 
-interface DbSessionWithSongs extends DbSession {
-  songs: LibrarySong[];
-}
+    getBooks: (
+      translationId: string,
+    ): Promise<{
+      success: boolean;
+      data?: BibleBook[];
+      error?: string;
+    }> => ipcRenderer.invoke('bible:getBooks', translationId),
 
-contextBridge.exposeInMainWorld('electron', electronHandler);
+    getVerses: (
+      bookId: string,
+      chapter: number,
+    ): Promise<{
+      success: boolean;
+      data?: BibleVerse[];
+      error?: string;
+    }> => ipcRenderer.invoke('bible:getVerses', bookId, chapter),
 
-export type ElectronHandler = typeof electronHandler;
+    getVersesRange: (
+      bookId: string,
+      chapter: number,
+      startVerse: number,
+      endVerse: number,
+    ): Promise<{
+      success: boolean;
+      data?: BibleVerse[];
+      error?: string;
+    }> =>
+      ipcRenderer.invoke(
+        'bible:getVersesRange',
+        bookId,
+        chapter,
+        startVerse,
+        endVerse,
+      ),
+
+    getVerseCount: (
+      bookId: string,
+      chapter: number,
+    ): Promise<{
+      success: boolean;
+      data?: number;
+      error?: string;
+    }> => ipcRenderer.invoke('bible:getVerseCount', bookId, chapter),
+
+    searchVerses: (
+      translationId: string,
+      query: string,
+      limit?: number,
+    ): Promise<{
+      success: boolean;
+      data?: BibleVerse[];
+      error?: string;
+    }> => ipcRenderer.invoke('bible:searchVerses', translationId, query, limit),
+
+    versesToSlides: (
+      bookId: string,
+      bookName: string,
+      chapter: number,
+      startVerse: number,
+      endVerse: number,
+      displayMode: BibleDisplayMode,
+    ): Promise<{
+      success: boolean;
+      data?: Slide[];
+      error?: string;
+    }> =>
+      ipcRenderer.invoke(
+        'bible:versesToSlides',
+        bookId,
+        bookName,
+        chapter,
+        startVerse,
+        endVerse,
+        displayMode,
+      ),
+
+    importFromFile: (): Promise<{
+      success: boolean;
+      data?: BibleTranslation;
+      error?: string;
+      canceled?: boolean;
+    }> => ipcRenderer.invoke('bible:importFromFile'),
+
+    downloadAndImport: (
+      bibleId: string,
+    ): Promise<{
+      success: boolean;
+      data?: BibleTranslation;
+      error?: string;
+    }> => ipcRenderer.invoke('bible:downloadAndImport', bibleId),
+
+    deleteTranslation: (
+      id: string,
+    ): Promise<{
+      success: boolean;
+      data?: boolean;
+      error?: string;
+    }> => ipcRenderer.invoke('bible:deleteTranslation', id),
+
+    getAvailableBibles: (): Promise<{
+      success: boolean;
+      data?: BibleDownloadInfo[];
+      error?: string;
+    }> => ipcRenderer.invoke('bible:getAvailableBibles'),
+
+    onImportProgress: (
+      callback: (data: { progress: number; message: string }) => void,
+    ) => {
+      const subscription = (
+        _event: IpcRendererEvent,
+        data: { progress: number; message: string },
+      ) => callback(data);
+      ipcRenderer.on('bible:importProgress', subscription);
+      return () =>
+        ipcRenderer.removeListener('bible:importProgress', subscription);
+    },
+  },
+
+  // Frame operations
+  frame: {
+    getAll: (): Promise<{
+      success: boolean;
+      data?: Frame[];
+      error?: string;
+    }> => ipcRenderer.invoke('frame:getAll'),
+
+    getById: (
+      id: string,
+    ): Promise<{
+      success: boolean;
+      data?: Frame | null;
+      error?: string;
+    }> => ipcRenderer.invoke('frame:getById', id),
+
+    add: (input: {
+      type: 'image' | 'css';
+      name: string;
+      imagePath?: string;
+      sliceSize?: number;
+      borderWidth?: number;
+      borderColor?: string;
+      borderRadius?: number;
+      backgroundColor?: string;
+      boxShadow?: string;
+      padding?: { top: number; right: number; bottom: number; left: number };
+    }): Promise<{
+      success: boolean;
+      data?: Frame;
+      error?: string;
+    }> => ipcRenderer.invoke('frame:add', input),
+
+    update: (
+      id: string,
+      updates: {
+        name?: string;
+        sliceSize?: number;
+        borderWidth?: number;
+        borderColor?: string;
+        borderRadius?: number;
+        backgroundColor?: string;
+        boxShadow?: string;
+        padding?: { top: number; right: number; bottom: number; left: number };
+      },
+    ): Promise<{
+      success: boolean;
+      data?: Frame | null;
+      error?: string;
+    }> => ipcRenderer.invoke('frame:update', id, updates),
+
+    delete: (
+      id: string,
+    ): Promise<{
+      success: boolean;
+      data?: boolean;
+      error?: string;
+    }> => ipcRenderer.invoke('frame:delete', id),
+
+    importImage: (): Promise<{
+      success: boolean;
+      data?: string;
+      error?: string;
+      canceled?: boolean;
+    }> => ipcRenderer.invoke('frame:importImage'),
+
+    getSettings: (): Promise<{
+      success: boolean;
+      data?: FrameSettings;
+      error?: string;
+    }> => ipcRenderer.invoke('frame:getSettings'),
+
+    setSettings: (
+      settings: Partial<FrameSettings>,
+    ): Promise<{
+      success: boolean;
+      data?: FrameSettings;
+      error?: string;
+    }> => ipcRenderer.invoke('frame:setSettings', settings),
+
+    // Send frame update to projection window
+    sendToProjection: (frame: Frame | null, itemType: SetlistItemType) =>
+      ipcRenderer.send('projection:frame', { frame, itemType }),
+
+    // Projection window receives frame updates
+    onFrame: (
+      callback: (data: {
+        frame: Frame | null;
+        itemType: SetlistItemType;
+      }) => void,
+    ) => {
+      const subscription = (
+        _event: IpcRendererEvent,
+        data: { frame: Frame | null; itemType: SetlistItemType },
+      ) => callback(data);
+      ipcRenderer.on('projection:frame', subscription);
+      return () => ipcRenderer.removeListener('projection:frame', subscription);
+    },
+  },
+
+  // Session items operations (unified setlist)
+  sessionItem: {
+    getAll: (
+      sessionId: string,
+    ): Promise<{
+      success: boolean;
+      data?: SetlistItem[];
+      error?: string;
+    }> => ipcRenderer.invoke('sessionItem:getAll', sessionId),
+
+    add: (
+      sessionId: string,
+      input: SetlistItemInput,
+    ): Promise<{
+      success: boolean;
+      data?: SetlistItem;
+      error?: string;
+    }> => ipcRenderer.invoke('sessionItem:add', sessionId, input),
+
+    update: (
+      id: string,
+      updates: {
+        title?: string;
+        content?: string;
+        startVerse?: number;
+        endVerse?: number;
+        displayMode?: string;
+      },
+    ): Promise<{
+      success: boolean;
+      data?: SetlistItem;
+      error?: string;
+    }> => ipcRenderer.invoke('sessionItem:update', id, updates),
+
+    delete: (
+      id: string,
+    ): Promise<{
+      success: boolean;
+      data?: boolean;
+      error?: string;
+    }> => ipcRenderer.invoke('sessionItem:delete', id),
+
+    reorder: (
+      sessionId: string,
+      itemIds: string[],
+    ): Promise<{
+      success: boolean;
+      data?: boolean;
+      error?: string;
+    }> => ipcRenderer.invoke('sessionItem:reorder', sessionId, itemIds),
+  },
+
+  // Utilities
+  utils: {
+    getPathForFile: (file: File): string => webUtils.getPathForFile(file),
+  },
+};
+
+contextBridge.exposeInMainWorld('electron', extendedElectronHandler);
+
+export type ElectronHandler = typeof extendedElectronHandler;

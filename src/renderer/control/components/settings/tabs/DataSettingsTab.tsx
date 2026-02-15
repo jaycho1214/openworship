@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, RotateCcw, AlertTriangle } from 'lucide-react';
+import {
+  Loader2,
+  RotateCcw,
+  AlertTriangle,
+  Upload,
+  Download,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +17,7 @@ import { Input } from '../../../../components/ui/input';
 import { Button } from '../../../../components/ui/button';
 import { Label } from '../../../../components/ui/label';
 import { SettingsRow } from '../components/SettingsRow';
+import ImportDialog from '../../ImportDialog';
 
 // Helper to safely access electron API
 const getElectron = () => (window as any).electron;
@@ -17,11 +25,34 @@ const getElectron = () => (window as any).electron;
 export function DataSettingsTab() {
   const { t, i18n } = useTranslation();
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [isResetting, setIsResetting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const expectedText = i18n.language === 'ko' ? '초기화' : 'RESET';
   const isConfirmValid = confirmText === expectedText;
+
+  const handleExportLibrary = async () => {
+    const electron = getElectron();
+    if (!electron) return;
+
+    setIsExporting(true);
+    try {
+      const result = await electron.export.library();
+      if (result.canceled) return;
+      if (result.success) {
+        toast.success(t('exportSuccess'));
+      } else {
+        toast.error(result.error || t('exportFailed'));
+      }
+    } catch (err) {
+      console.error('[DataSettings] Export error:', err);
+      toast.error(t('exportFailed'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleFactoryReset = async () => {
     if (!isConfirmValid) return;
@@ -49,6 +80,36 @@ export function DataSettingsTab() {
 
   return (
     <div className="space-y-3 animate-in fade-in duration-200">
+      {/* Export Library */}
+      <SettingsRow title={t('exportLibrary')} description={t('exportLibrary')}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportLibrary}
+          disabled={isExporting}
+        >
+          {isExporting ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4 mr-2" />
+          )}
+          {t('exportLibrary')}
+        </Button>
+      </SettingsRow>
+
+      {/* Import File */}
+      <SettingsRow title={t('importFile')} description={t('importFile')}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsImportDialogOpen(true)}
+        >
+          <Upload className="w-4 h-4 mr-2" />
+          {t('importFile')}
+        </Button>
+      </SettingsRow>
+
+      {/* Factory Reset */}
       <SettingsRow
         title={t('factoryReset')}
         description={t('factoryResetDescription')}
@@ -115,6 +176,15 @@ export function DataSettingsTab() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Import Dialog */}
+      <ImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onImportComplete={() => {
+          // Optionally refresh data after import
+        }}
+      />
     </div>
   );
 }

@@ -4,16 +4,21 @@ import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   ReactNode,
 } from 'react';
 import { DetectedFont } from '../../../shared/types/song';
 import { usePresentation } from '../presentation/PresentationContext';
+import type { BackgroundType } from '../../../../shared/types';
 
-// Helper to safely access electron API
-const getElectron = () => (window as any).electron;
+import { getElectron } from '../../../shared/hooks/useElectron';
 
 interface MediaContextType {
+  // Background type and settings
+  backgroundType: BackgroundType;
+  setBackgroundType: (type: BackgroundType, color?: string) => void;
+
   // Videos
   embeddedVideos: string[];
   currentVideoPath: string | null;
@@ -21,6 +26,16 @@ interface MediaContextType {
   selectVideo: (path: string) => void;
   toggleVideoShuffle: () => void;
   loadVideos: () => Promise<void>;
+
+  // Images
+  availableImages: string[];
+  currentImagePath: string | null;
+  selectImage: (path: string) => void;
+  loadImages: () => Promise<void>;
+
+  // Background color
+  backgroundColor: string;
+  setBackgroundColor: (color: string) => void;
 
   // Fonts
   fontFamily: string;
@@ -48,11 +63,23 @@ interface MediaProviderProps {
 export function MediaProvider({ children }: MediaProviderProps) {
   const { presentationState } = usePresentation();
 
+  // Background type state
+  const [backgroundType, setBackgroundTypeState] =
+    useState<BackgroundType>('video');
+
   // Video state
   const [embeddedVideos, setEmbeddedVideos] = useState<string[]>([]);
   const [currentVideoPath, setCurrentVideoPath] = useState<string | null>(null);
   const [isVideoShuffleEnabled, setIsVideoShuffleEnabled] = useState(true);
   const prevSongIndexRef = useRef<number>(0);
+
+  // Image state
+  const [availableImages, setAvailableImages] = useState<string[]>([]);
+  const [currentImagePath, setCurrentImagePath] = useState<string | null>(null);
+
+  // Background color state
+  const [backgroundColor, setBackgroundColorState] =
+    useState<string>('#000000');
 
   // Font state
   const [fontFamily, setFontFamilyState] = useState<string>('inherit');
@@ -65,13 +92,17 @@ export function MediaProvider({ children }: MediaProviderProps) {
     const electron = getElectron();
     if (!electron?.videos) return;
 
-    const videos = await electron.videos.getEmbedded();
-    console.log('Loaded embedded videos:', videos);
-    setEmbeddedVideos(videos);
-    // Select initial random video if none selected
-    if (videos.length > 0 && !currentVideoPath) {
-      const randomVideo = videos[Math.floor(Math.random() * videos.length)];
-      setCurrentVideoPath(randomVideo);
+    try {
+      const videos = await electron.videos.getEmbedded();
+      console.log('Loaded embedded videos:', videos);
+      setEmbeddedVideos(videos);
+      // Select initial random video if none selected
+      if (videos.length > 0 && !currentVideoPath) {
+        const randomVideo = videos[Math.floor(Math.random() * videos.length)];
+        setCurrentVideoPath(randomVideo);
+      }
+    } catch (error) {
+      console.error('Failed to load videos:', error);
     }
   }, [currentVideoPath]);
 
@@ -80,12 +111,38 @@ export function MediaProvider({ children }: MediaProviderProps) {
     loadVideos();
   }, []);
 
-  // Select random video when song changes (if shuffle enabled)
+  // FIX: Load background settings on mount
+  useEffect(() => {
+    const electron = getElectron();
+    if (!electron) return;
+
+    const loadBackgroundSettings = async () => {
+      try {
+        const settings = await electron.settings.getProjection();
+        if (settings.backgroundType) {
+          setBackgroundTypeState(settings.backgroundType);
+        }
+        if (settings.backgroundColor) {
+          setBackgroundColorState(settings.backgroundColor);
+        }
+      } catch (error) {
+        console.error('Failed to load background settings:', error);
+      }
+    };
+    loadBackgroundSettings();
+  }, []);
+
+  // Select random video when song changes (if shuffle enabled and using video background)
   useEffect(() => {
     if (presentationState.currentSongIndex !== prevSongIndexRef.current) {
       prevSongIndexRef.current = presentationState.currentSongIndex;
 
-      if (isVideoShuffleEnabled && embeddedVideos.length > 0) {
+      // Only shuffle when background type is video
+      if (
+        isVideoShuffleEnabled &&
+        backgroundType === 'video' &&
+        embeddedVideos.length > 0
+      ) {
         const electron = getElectron();
         let availableVids = embeddedVideos.filter(
           (v) => v !== currentVideoPath,
@@ -106,6 +163,7 @@ export function MediaProvider({ children }: MediaProviderProps) {
     embeddedVideos,
     currentVideoPath,
     isVideoShuffleEnabled,
+    backgroundType,
   ]);
 
   const selectVideo = useCallback((path: string) => {
@@ -119,6 +177,80 @@ export function MediaProvider({ children }: MediaProviderProps) {
   const toggleVideoShuffle = useCallback(() => {
     setIsVideoShuffleEnabled((prev) => !prev);
   }, []);
+
+  // Load images
+  const loadImages = useCallback(async (): Promise<void> => {
+    const electron = getElectron();
+    if (!electron?.images) return;
+
+    try {
+      const images = await electron.images.getAll();
+      console.log('Loaded images:', images);
+      setAvailableImages(images);
+    } catch (error) {
+      console.error('Failed to load images:', error);
+    }
+  }, []);
+
+  // Load images on mount
+  useEffect(() => {
+    loadImages();
+  }, []);
+
+  // Select image
+  const selectImage = useCallback((path: string) => {
+    setCurrentImagePath(path);
+    const electron = getElectron();
+    if (electron) {
+      electron.projection.setImage(path);
+    }
+  }, []);
+
+  // Set background type
+  const setBackgroundType = useCallback(
+    (type: BackgroundType, color?: string) => {
+      setBackgroundTypeState(type);
+      const electron = getElectron();
+
+      // When switching to color, auto-disable shuffle and optionally set color
+      if (type === 'color') {
+        setIsVideoShuffleEnabled(false);
+        if (color) {
+          setBackgroundColorState(color);
+        }
+      }
+
+      // Send appropriate background to projection based on type
+      if (electron) {
+        if (type === 'video' && currentVideoPath) {
+          electron.projection.setVideo(currentVideoPath);
+        } else if (type === 'image' && currentImagePath) {
+          electron.projection.setImage(currentImagePath);
+        } else if (type === 'color') {
+          // Use provided color or current backgroundColor
+          electron.projection.setBackgroundColor(color || backgroundColor);
+        }
+        // FIX: Persist background type to settings
+        electron.settings.setProjection({
+          backgroundType: type,
+          backgroundColor: color || backgroundColor,
+        });
+      }
+    },
+    [currentVideoPath, currentImagePath, backgroundColor],
+  );
+
+  // Set background color
+  const setBackgroundColor = useCallback(
+    (color: string) => {
+      setBackgroundColorState(color);
+      const electron = getElectron();
+      if (electron && backgroundType === 'color') {
+        electron.projection.setBackgroundColor(color);
+      }
+    },
+    [backgroundType],
+  );
 
   // Load fonts
   const loadFonts = useCallback(async () => {
@@ -158,23 +290,55 @@ export function MediaProvider({ children }: MediaProviderProps) {
     }
   }, []);
 
+  const contextValue = useMemo(
+    () => ({
+      backgroundType,
+      setBackgroundType,
+      embeddedVideos,
+      currentVideoPath,
+      isVideoShuffleEnabled,
+      selectVideo,
+      toggleVideoShuffle,
+      loadVideos,
+      availableImages,
+      currentImagePath,
+      selectImage,
+      loadImages,
+      backgroundColor,
+      setBackgroundColor,
+      fontFamily,
+      availableFonts,
+      detectedFonts,
+      fontsLoading,
+      setFontFamily,
+      loadFonts,
+    }),
+    [
+      backgroundType,
+      setBackgroundType,
+      embeddedVideos,
+      currentVideoPath,
+      isVideoShuffleEnabled,
+      selectVideo,
+      toggleVideoShuffle,
+      loadVideos,
+      availableImages,
+      currentImagePath,
+      selectImage,
+      loadImages,
+      backgroundColor,
+      setBackgroundColor,
+      fontFamily,
+      availableFonts,
+      detectedFonts,
+      fontsLoading,
+      setFontFamily,
+      loadFonts,
+    ],
+  );
+
   return (
-    <MediaContext.Provider
-      value={{
-        embeddedVideos,
-        currentVideoPath,
-        isVideoShuffleEnabled,
-        selectVideo,
-        toggleVideoShuffle,
-        loadVideos,
-        fontFamily,
-        availableFonts,
-        detectedFonts,
-        fontsLoading,
-        setFontFamily,
-        loadFonts,
-      }}
-    >
+    <MediaContext.Provider value={contextValue}>
       {children}
     </MediaContext.Provider>
   );

@@ -1,12 +1,19 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import type { BackgroundType } from '../../../shared/types';
 
 interface VideoBackgroundProps {
   videoPath: string | null;
+  imagePath?: string | null;
+  backgroundColor?: string;
+  backgroundType?: BackgroundType;
   crossfadeDuration?: number;
 }
 
 export default function VideoBackground({
   videoPath,
+  imagePath,
+  backgroundColor = '#000000',
+  backgroundType = 'video',
   crossfadeDuration = 1000,
 }: VideoBackgroundProps) {
   const [activeVideo, setActiveVideo] = useState<'A' | 'B'>('A');
@@ -14,6 +21,13 @@ export default function VideoBackground({
   const [videoBPath, setVideoBPath] = useState<string | null>(null);
   const [videoAOpacity, setVideoAOpacity] = useState(1);
   const [videoBOpacity, setVideoBOpacity] = useState(0);
+
+  // Image state for crossfade
+  const [activeImage, setActiveImage] = useState<'A' | 'B'>('A');
+  const [imageAPath, setImageAPath] = useState<string | null>(null);
+  const [imageBPath, setImageBPath] = useState<string | null>(null);
+  const [imageAOpacity, setImageAOpacity] = useState(1);
+  const [imageBOpacity, setImageBOpacity] = useState(0);
 
   const videoARef = useRef<HTMLVideoElement>(null);
   const videoBRef = useRef<HTMLVideoElement>(null);
@@ -74,18 +88,20 @@ export default function VideoBackground({
     console.log('VideoBackground received path:', videoPath);
     if (!videoPath) return;
 
-    // Convert file path to file:// URL for Electron
-    // Properly encode the path to handle spaces and special characters
+    // Convert file path to app://media/ URL for Electron
+    // Uses the custom app:// protocol which works in both dev and prod modes
+    // (file:// URLs are blocked when renderer loads from http://localhost in dev)
+    // Must use explicit hostname (e.g. "media") because standard scheme URLs
+    // treat app:///Path as hostname="path" (lowercased), corrupting the file path
     let videoUrl: string;
-    if (videoPath.startsWith('file://')) {
+    if (videoPath.startsWith('app://') || videoPath.startsWith('file://')) {
       videoUrl = videoPath;
     } else {
-      // Encode path components but keep slashes
       const encodedPath = videoPath
         .split('/')
         .map((part) => encodeURIComponent(part))
         .join('/');
-      videoUrl = `file://${encodedPath}`;
+      videoUrl = `app://media${encodedPath}`;
     }
 
     console.log('Video URL:', videoUrl);
@@ -116,7 +132,7 @@ export default function VideoBackground({
       console.log('Crossfading to new video');
       crossfadeToVideo(videoUrl);
     }
-  }, [videoPath]);
+  }, [videoPath, crossfadeToVideo]);
 
   const handleVideoError =
     (videoName: string) =>
@@ -134,43 +150,132 @@ export default function VideoBackground({
     console.log(`Video ${videoName} loaded successfully`);
   };
 
+  // Crossfade to new image
+  const crossfadeToImage = useCallback(
+    (newPath: string) => {
+      if (activeImage === 'A') {
+        setImageBPath(newPath);
+        setImageBOpacity(1);
+        setImageAOpacity(0);
+
+        setTimeout(() => {
+          setActiveImage('B');
+        }, crossfadeDuration);
+      } else {
+        setImageAPath(newPath);
+        setImageAOpacity(1);
+        setImageBOpacity(0);
+
+        setTimeout(() => {
+          setActiveImage('A');
+        }, crossfadeDuration);
+      }
+    },
+    [activeImage, crossfadeDuration],
+  );
+
+  // Handle image path changes
+  useEffect(() => {
+    console.log('VideoBackground received image path:', imagePath);
+    if (!imagePath) return;
+
+    // Convert file path to app://media/ URL for Electron
+    let imageUrl: string;
+    if (imagePath.startsWith('app://') || imagePath.startsWith('file://')) {
+      imageUrl = imagePath;
+    } else {
+      const encodedPath = imagePath
+        .split('/')
+        .map((part) => encodeURIComponent(part))
+        .join('/');
+      imageUrl = `app://media${encodedPath}`;
+    }
+
+    console.log('Image URL:', imageUrl);
+
+    // If no image is currently showing, set initial image
+    if (!imageAPath && !imageBPath) {
+      console.log('Setting initial image A');
+      setImageAPath(imageUrl);
+      setImageAOpacity(1);
+      setImageBOpacity(0);
+      setActiveImage('A');
+    } else if (imageUrl !== imageAPath && imageUrl !== imageBPath) {
+      // Crossfade to new image only if it's different
+      console.log('Crossfading to new image');
+      crossfadeToImage(imageUrl);
+    }
+  }, [imagePath, crossfadeToImage]);
+
   return (
     <div className="absolute inset-0 bg-black">
-      {/* Video A */}
-      <video
-        ref={videoARef}
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{
-          opacity: videoAOpacity,
-          transition: `opacity ${crossfadeDuration}ms ease-in-out`,
-        }}
-        src={videoAPath || undefined}
-        loop
-        muted
-        playsInline
-        autoPlay
-        onError={handleVideoError('A')}
-        onLoadedData={handleVideoLoaded('A')}
-        onCanPlay={() => console.log('Video A can play')}
-      />
+      {/* Solid Color Background */}
+      {backgroundType === 'color' && (
+        <div className="absolute inset-0" style={{ backgroundColor }} />
+      )}
 
-      {/* Video B */}
-      <video
-        ref={videoBRef}
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{
-          opacity: videoBOpacity,
-          transition: `opacity ${crossfadeDuration}ms ease-in-out`,
-        }}
-        src={videoBPath || undefined}
-        loop
-        muted
-        playsInline
-        autoPlay
-        onError={handleVideoError('B')}
-        onLoadedData={handleVideoLoaded('B')}
-        onCanPlay={() => console.log('Video B can play')}
-      />
+      {/* Image Background with crossfade */}
+      {backgroundType === 'image' && (
+        <>
+          <div
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+            style={{
+              backgroundImage: imageAPath ? `url(${imageAPath})` : undefined,
+              opacity: imageAOpacity,
+              transition: `opacity ${crossfadeDuration}ms ease-in-out`,
+            }}
+          />
+          <div
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+            style={{
+              backgroundImage: imageBPath ? `url(${imageBPath})` : undefined,
+              opacity: imageBOpacity,
+              transition: `opacity ${crossfadeDuration}ms ease-in-out`,
+            }}
+          />
+        </>
+      )}
+
+      {/* Video Background with crossfade */}
+      {backgroundType === 'video' && (
+        <>
+          {/* Video A */}
+          <video
+            ref={videoARef}
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{
+              opacity: videoAOpacity,
+              transition: `opacity ${crossfadeDuration}ms ease-in-out`,
+            }}
+            src={videoAPath || undefined}
+            loop
+            muted
+            playsInline
+            autoPlay
+            onError={handleVideoError('A')}
+            onLoadedData={handleVideoLoaded('A')}
+            onCanPlay={() => console.log('Video A can play')}
+          />
+
+          {/* Video B */}
+          <video
+            ref={videoBRef}
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{
+              opacity: videoBOpacity,
+              transition: `opacity ${crossfadeDuration}ms ease-in-out`,
+            }}
+            src={videoBPath || undefined}
+            loop
+            muted
+            playsInline
+            autoPlay
+            onError={handleVideoError('B')}
+            onLoadedData={handleVideoLoaded('B')}
+            onCanPlay={() => console.log('Video B can play')}
+          />
+        </>
+      )}
     </div>
   );
 }

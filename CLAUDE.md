@@ -40,97 +40,68 @@ npm run build:dll        # Build DLL for dev performance
 
 ### Main Process (`src/main/`)
 
-The main process is organized into modular components:
+IPC handlers in `src/main/ipc/`:
+- `projectionHandlers.ts` - projection window control
+- `dialogHandlers.ts` - file dialogs
+- `libraryHandlers.ts` - song library CRUD
+- `sessionHandlers.ts` - session management
+- `sessionItemHandlers.ts` - unified setlist items (songs, bible, announcements)
+- `settingsHandlers.ts` - app settings
+- `fontHandlers.ts`, `videoHandlers.ts`, `imageHandlers.ts` - media assets
+- `bibleHandlers.ts` - bible translations and verses
+- `frameHandlers.ts` - custom frames/borders
+- `advertisementHandlers.ts` - advertisement management
+- `exportHandlers.ts` - import/export functionality
+- `ocrHandlers.ts` - OCR lyrics extraction
 
-```
-src/main/
-├── main.ts                    # App lifecycle only (~85 lines)
-├── preload.ts                 # Security bridge, IPC channel definitions
-├── windows/
-│   └── WindowManager.ts       # Window creation and management
-├── ipc/
-│   ├── index.ts               # Register all handlers
-│   ├── projectionHandlers.ts  # projection:* handlers
-│   ├── dialogHandlers.ts      # dialog:* handlers
-│   ├── libraryHandlers.ts     # library:* handlers
-│   ├── sessionHandlers.ts     # session:* handlers
-│   ├── settingsHandlers.ts    # settings:* handlers
-│   ├── fontHandlers.ts        # fonts:* handlers
-│   ├── videoHandlers.ts       # videos:* handlers
-│   ├── setlistHandlers.ts     # setlist:* handlers
-│   └── ocrHandlers.ts         # ocr:* handlers
-├── services/
-│   ├── database.ts            # SQLite operations (better-sqlite3)
-│   ├── settings.ts            # Persistent settings (electron-store)
-│   ├── openaiService.ts       # GPT Vision API for OCR
-│   ├── FontService.ts         # Font management
-│   └── VideoService.ts        # Video management
-└── utils/
-    ├── ipcUtils.ts            # IPC response helpers
-    └── fontUtils.ts           # Font file utilities
-```
+Services in `src/main/services/`:
+- `database.ts` - SQLite operations (better-sqlite3)
+- `settings.ts` - Persistent settings (electron-store)
+- `BibleService.ts` - Bible translation management
+- `ExportService.ts` - Import/export .oworship files
+- `AdvertisementService.ts` - Advertisement scheduling
+- `FontService.ts`, `VideoService.ts`, `ImageService.ts` - Media management
+- `openaiService.ts` - GPT Vision API for OCR
 
 ### Shared Types (`src/shared/types/`)
 
-Centralized type definitions used by both main and renderer:
+All types used by both main and renderer. Key files:
+- `index.ts` - Re-exports all types (always import from here)
+- `song.ts` - Song, Slide, Setlist
+- `settings.ts` - ProjectionSettings, AppSettings
+- `setlistItem.ts` - Unified SetlistItem (songs, bible, announcements)
+- `bible.ts` - Bible translations, verses, references
+- `frame.ts` - Custom frames/borders
+- `ipc.ts` - IPC channel definitions
+
+### Renderer Context Architecture
+
+The control window uses a **multi-context architecture** with strict dependency ordering. All providers are composed in `src/renderer/control/context/index.tsx`:
 
 ```
-src/shared/types/
-├── index.ts        # Re-exports all types
-├── song.ts         # Song, Slide, Setlist, PresentationState
-├── settings.ts     # ProjectionSettings, AppSettings
-├── library.ts      # LibrarySong, DbSession
-├── ipc.ts          # IPC channels, response types
-└── errors.ts       # Error codes and utilities
+SessionProvider      → Session management (no deps)
+BibleProvider        → Bible translations/verses (no deps)
+FrameProvider        → Custom frames (no deps)
+SetlistProvider      → Setlist items (depends on Session)
+PresentationProvider → Current slide state (depends on Setlist)
+MediaProvider        → Fonts, videos, images (depends on Presentation)
+ProjectionProvider   → Projection window control (depends on Presentation, Media, Frame)
+AdvertisementProvider → Ads overlay (no deps)
 ```
 
-### Renderer Processes (`src/renderer/`)
-
-```
-src/renderer/
-├── control/                    # Control window
-│   ├── App.tsx
-│   ├── context/AppContext.tsx  # Central state management
-│   ├── components/             # UI components
-│   └── hooks/                  # Custom hooks
-├── projection/                 # Projection window
-│   ├── App.tsx
-│   └── components/
-├── shared/
-│   ├── types/song.ts           # Legacy types (use src/shared/types instead)
-│   ├── utils/lyricsParser.ts   # Lyrics to slides conversion
-│   └── i18n/                   # Internationalization
-├── components/ui/              # shadcn/ui components
-├── lib/utils.ts                # Utility functions
-└── styles/                     # Global CSS
+**Use the hooks from `src/renderer/control/context/index.tsx`:**
+```tsx
+import { useSession, useSetlist, usePresentation, useProjection, useMedia, useBible, useFrame, useAdvertisement } from '@/control/context';
 ```
 
-### IPC Communication
+### Setlist Item System
 
-Channels are defined in `preload.ts` and typed in `src/shared/types/ipc.ts`:
+The app uses a **unified setlist item system** that supports multiple content types:
+- **Song items** - Traditional lyrics with slides
+- **Bible items** - Bible verses with book/chapter/verse references
+- **Announcement items** - Custom text slides
 
-**Fire-and-forget (send):**
-
-- `projection:update`, `projection:blank`, `projection:verseHidden`
-- `projection:video`, `projection:font`, `projection:ready`
-
-**Request-response (invoke):**
-
-- Projection: `projection:open`, `projection:close`, `projection:isOpen`
-- Dialog: `dialog:selectFolder`, `dialog:saveFile`, `dialog:openFile`
-- Library: `library:getAll`, `library:search`, `library:add`, `library:update`
-- Session: `session:create`, `session:getById`, `session:delete`
-- Settings: `settings:getAll`, `settings:setApiKey`, `settings:getProjection`
-- Media: `fonts:getAll`, `fonts:add`, `videos:getEmbedded`, `videos:add`
-- OCR: `ocr:parseImage`, `ocr:parseImages`
-
-### Data Flow
-
-1. User edits lyrics in SongEditor
-2. LyricsParser converts to Slide[] (blank lines = slide separators)
-3. AppContext updates state
-4. IPC sends update to projection window
-5. SQLite persists songs/sessions
+All items implement `SetlistItem` interface with type guards: `isSongItem()`, `isBibleItem()`, `isAnnouncementItem()`
 
 ## Tech Stack
 
@@ -143,28 +114,45 @@ Channels are defined in `preload.ts` and typed in `src/shared/types/ipc.ts`:
 
 ## Key Files
 
-| File                                          | Purpose                                 |
-| --------------------------------------------- | --------------------------------------- |
-| `src/main/main.ts`                            | App lifecycle and initialization        |
-| `src/main/windows/WindowManager.ts`           | Window creation and management          |
-| `src/main/ipc/index.ts`                       | IPC handler registration                |
-| `src/main/preload.ts`                         | IPC channel definitions, context bridge |
-| `src/shared/types/index.ts`                   | Shared type definitions                 |
-| `src/renderer/control/context/AppContext.tsx` | Global state for control window         |
-| `src/renderer/shared/utils/lyricsParser.ts`   | Lyrics text to slides conversion        |
-| `.erb/configs/webpack.config.*.ts`            | Webpack configs for main/renderer       |
+| File | Purpose |
+| ---- | ------- |
+| `src/main/preload.ts` | IPC channel definitions, context bridge |
+| `src/shared/types/index.ts` | All shared type definitions |
+| `src/renderer/control/context/index.tsx` | Context providers and hooks |
+| `src/renderer/shared/utils/lyricsParser.ts` | Lyrics text to slides conversion |
+
+## CRITICAL RULES
+
+### Always Use `/frontend-design` Skill for Frontend Work
+
+**MANDATORY**: When designing, building, or modifying ANY frontend interface, ALWAYS use the `/frontend-design` skill first. This applies to:
+- Creating new components
+- Modifying existing UI
+- Adding new features with UI elements
+- Styling changes
+- Layout adjustments
+
+### Always Verify Frontend Accessibility for New Features
+
+**MANDATORY**: When implementing ANY new feature (backend service, IPC handler, database change), ALWAYS verify that:
+1. The feature is accessible from the frontend (UI exists to trigger it)
+2. The IPC channel is exposed in `preload.ts`
+3. A context hook or component can call the feature
+4. The user has a way to interact with the feature
+
+A feature is NOT complete until users can access it through the UI.
 
 ## UI Development Rules
 
-1. **Always use shadcn/ui components** from `src/renderer/components/ui/`
-2. **Never edit shadcn components directly** - they are managed by the shadcn CLI
-3. **Read the shadcn component first** before using it to understand its props and variants
+1. **Always use shadcn/ui components** from `src/renderer/components/ui/` - prefer shadcn over custom components whenever possible
+2. **Always read the shadcn component first** before using it to understand its props, variants, and API
+3. **Never edit shadcn components directly** - they are managed by the shadcn CLI
 4. **Always use `/frontend-design` skill** when designing or building frontend interfaces
 
 ## Configuration
 
 - **TypeScript**: ES2022 target, strict mode enabled, path alias `@/*` → `src/renderer/*`
-- **Database**: SQLite with tables `songs`, `sessions`, `session_songs`
+- **Database**: SQLite with tables for songs, sessions, setlist_items, bible_translations, bible_verses, frames, advertisements
 - **Build**: Type checking enabled in webpack (transpileOnly: false)
 
 ## Internationalization
@@ -184,18 +172,16 @@ const { t } = useTranslation();
 // Not: "hardcoded string" or ko.key.path
 ```
 
-Language preference persists via settings service.
-
 ## Error Handling
 
 Use the standardized IPC response format from `src/shared/types/ipc.ts`:
 
 ```typescript
-import { IpcResponse, getErrorMessage } from '../../shared/types';
+import { successResponse, errorResponse, getErrorMessage } from '../../shared/types';
 
 // In IPC handlers:
-return { success: true, data: result };
-return { success: false, error: getErrorMessage(error) };
+return successResponse(result);
+return errorResponse(getErrorMessage(error));
 ```
 
 ## Adding New IPC Handlers
@@ -204,3 +190,30 @@ return { success: false, error: getErrorMessage(error) };
 2. Add handler definition in `src/main/preload.ts`
 3. Create handler in appropriate file in `src/main/ipc/`
 4. Register in `src/main/ipc/index.ts`
+
+## Adding New Content Types
+
+To add a new setlist item type (like Bible or Announcement):
+1. Add type definition in `src/shared/types/setlistItem.ts`
+2. Add type guard function (e.g., `isNewItemType()`)
+3. Update `getItemLabel()` and `getItemSlides()` utilities
+4. Create service in `src/main/services/`
+5. Create IPC handlers in `src/main/ipc/`
+6. **Expose IPC channels in `src/main/preload.ts`**
+7. Create context provider in `src/renderer/control/context/`
+8. Add provider to composition order in `context/index.tsx`
+9. **Create UI components to access the feature (use `/frontend-design`)**
+10. **Verify users can access the feature through the UI**
+
+## Feature Implementation Checklist
+
+Before considering ANY feature complete, verify:
+
+- [ ] Backend service/logic implemented
+- [ ] IPC handlers created and registered
+- [ ] IPC channels exposed in `preload.ts`
+- [ ] Types defined in `src/shared/types/`
+- [ ] Context/hooks created for frontend access
+- [ ] **UI component exists to trigger the feature**
+- [ ] **User can access and use the feature from the control window**
+- [ ] Translations added for any new UI text

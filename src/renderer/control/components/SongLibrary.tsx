@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Search,
   Plus,
@@ -10,6 +10,7 @@ import {
   X,
   BookOpen,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -18,6 +19,7 @@ import { cn } from '../../lib/utils';
 import SongEditor from './SongEditor';
 import { Song } from '../../shared/types/song';
 import { parseLyricsToSlides } from '../../shared/utils/lyricsParser';
+import { useSetlist } from '../context';
 
 // Types
 interface LibrarySong {
@@ -39,6 +41,8 @@ export default function SongLibrary({
   onImportSong,
   className,
 }: SongLibraryProps) {
+  const { t } = useTranslation();
+  const { refreshSongFromLibrary } = useSetlist();
   const [songs, setSongs] = useState<LibrarySong[]>([]);
   const [filteredSongs, setFilteredSongs] = useState<LibrarySong[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,22 +73,39 @@ export default function SongLibrary({
     loadSongs();
   }, [loadSongs]);
 
-  // Search
+  // Debounced search to reduce re-renders during fast typing
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
+    // Clear any pending search
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Immediate update for empty search
     if (!searchQuery.trim()) {
       setFilteredSongs(songs);
       return;
     }
 
-    const query = searchQuery.toLowerCase();
-    const filtered = songs.filter(
-      (song) =>
-        song.title.toLowerCase().includes(query) ||
-        song.lyrics.toLowerCase().includes(query) ||
-        song.categories.some((c) => c.toLowerCase().includes(query)) ||
-        song.tags.some((t) => t.toLowerCase().includes(query)),
-    );
-    setFilteredSongs(filtered);
+    // Debounce search by 300ms
+    searchTimeoutRef.current = setTimeout(() => {
+      const query = searchQuery.toLowerCase();
+      const filtered = songs.filter(
+        (song) =>
+          song.title.toLowerCase().includes(query) ||
+          song.lyrics.toLowerCase().includes(query) ||
+          song.categories.some((c) => c.toLowerCase().includes(query)) ||
+          song.tags.some((tag) => tag.toLowerCase().includes(query)),
+      );
+      setFilteredSongs(filtered);
+    }, 300);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, [searchQuery, songs]);
 
   // Delete song
@@ -114,8 +135,8 @@ export default function SongLibrary({
       title: song.title,
       rawLyrics: song.lyrics,
       slides: parseLyricsToSlides(song.lyrics),
-      createdAt: new Date(song.createdAt),
-      updatedAt: new Date(song.updatedAt),
+      createdAt: song.createdAt,
+      updatedAt: song.updatedAt,
     };
     setEditingSong(songForEditor);
     setIsEditorOpen(true);
@@ -134,6 +155,8 @@ export default function SongLibrary({
         lyrics: songData.lyrics,
       });
       loadSongs();
+      // FIX: Refresh the song in the current setlist if it's there
+      refreshSongFromLibrary(editingLibrarySong.id);
     } catch (error) {
       console.error('Failed to save song:', error);
     }
@@ -145,8 +168,8 @@ export default function SongLibrary({
       <div className="p-4 border-b border-border space-y-3">
         <div className="flex items-center gap-2">
           <Library className="w-4 h-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">
-            Song Library
+          <h2 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+            {t('songLibrary')}
           </h2>
           <Badge variant="secondary" className="text-[10px]">
             {songs.length}
@@ -159,7 +182,7 @@ export default function SongLibrary({
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search songs..."
+            placeholder={t('searchSongs')}
             className="h-8 pl-8 text-xs bg-muted/30"
           />
           {searchQuery && (
@@ -183,12 +206,12 @@ export default function SongLibrary({
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
             <BookOpen className="w-10 h-10 text-muted-foreground/30 mb-3" />
             <p className="text-sm text-muted-foreground">
-              {searchQuery ? 'No songs found' : 'Library is empty'}
+              {searchQuery ? t('noSongsFound') : t('libraryEmpty')}
             </p>
             <p className="text-xs text-muted-foreground/60 mt-1">
               {searchQuery
-                ? 'Try a different search'
-                : 'Songs added in Session are saved here'}
+                ? t('tryDifferentSearch')
+                : t('songsAddedInSessionSavedHere')}
             </p>
           </div>
         ) : (
@@ -199,7 +222,7 @@ export default function SongLibrary({
                 className={cn(
                   'group p-3 rounded-lg border transition-all duration-150 cursor-pointer',
                   selectedSong?.id === song.id
-                    ? 'bg-muted border-foreground/20'
+                    ? 'bg-active border-active-border-subtle'
                     : 'bg-transparent border-transparent hover:bg-muted/50 hover:border-border',
                 )}
                 onClick={() => setSelectedSong(song)}
@@ -221,7 +244,7 @@ export default function SongLibrary({
                           <Badge
                             key={cat}
                             variant="outline"
-                            className="text-[9px] px-1.5 py-0"
+                            className="text-[10px] px-1.5 py-0"
                           >
                             {cat}
                           </Badge>
@@ -230,7 +253,7 @@ export default function SongLibrary({
                           <Badge
                             key={tag}
                             variant="secondary"
-                            className="text-[9px] px-1.5 py-0"
+                            className="text-[10px] px-1.5 py-0"
                           >
                             {tag}
                           </Badge>
@@ -249,7 +272,7 @@ export default function SongLibrary({
                         e.stopPropagation();
                         handleImportToSession(song);
                       }}
-                      title="Import to session"
+                      title={t('importToSession')}
                     >
                       <Plus className="w-3 h-3" />
                     </Button>
@@ -261,7 +284,7 @@ export default function SongLibrary({
                         e.stopPropagation();
                         handleEditSong(song);
                       }}
-                      title="Edit"
+                      title={t('edit')}
                     >
                       <Edit2 className="w-3 h-3" />
                     </Button>
@@ -273,7 +296,7 @@ export default function SongLibrary({
                         e.stopPropagation();
                         handleDeleteSong(song.id);
                       }}
-                      title="Delete"
+                      title={t('delete')}
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>
@@ -287,7 +310,7 @@ export default function SongLibrary({
 
       {/* Selected Song Preview */}
       {selectedSong && (
-        <div className="border-t border-border p-4 space-y-3">
+        <div className="border-t border-border p-3 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-foreground truncate">
               {selectedSong.title}
@@ -298,7 +321,7 @@ export default function SongLibrary({
               className="h-7 text-xs"
             >
               <Plus className="w-3 h-3 mr-1" />
-              Add to Session
+              {t('addToSession')}
             </Button>
           </div>
           <ScrollArea className="h-24">

@@ -3,8 +3,11 @@ import {
   useContext,
   useState,
   useCallback,
+  useMemo,
   ReactNode,
 } from 'react';
+
+import { getElectron } from '../../../shared/hooks/useElectron';
 
 interface DbSession {
   id: string;
@@ -31,9 +34,6 @@ export function useSession() {
   }
   return context;
 }
-
-// Helper to safely access electron API
-const getElectron = () => (window as any).electron;
 
 interface SessionProviderProps {
   children: ReactNode;
@@ -121,17 +121,27 @@ export function SessionProvider({ children }: SessionProviderProps) {
     [],
   );
 
+  const contextValue = useMemo(
+    () => ({
+      currentSessionId,
+      setCurrentSessionId,
+      createSession,
+      loadSession,
+      deleteSession,
+      renameSession,
+    }),
+    [
+      currentSessionId,
+      setCurrentSessionId,
+      createSession,
+      loadSession,
+      deleteSession,
+      renameSession,
+    ],
+  );
+
   return (
-    <SessionContext.Provider
-      value={{
-        currentSessionId,
-        setCurrentSessionId,
-        createSession,
-        loadSession,
-        deleteSession,
-        renameSession,
-      }}
-    >
+    <SessionContext.Provider value={contextValue}>
       {children}
     </SessionContext.Provider>
   );

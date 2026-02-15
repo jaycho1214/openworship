@@ -64,6 +64,12 @@ export const addVideo = (
     ensureVideosDir();
 
     // Generate unique filename if already exists
+    // Path traversal protection
+    const resolvedBase = path.resolve(userVideosPath, fileName);
+    if (!resolvedBase.startsWith(path.resolve(userVideosPath))) {
+      return { success: false, error: 'Invalid file name' };
+    }
+
     let finalFileName = fileName;
     let filePath = path.join(userVideosPath, finalFileName);
     let counter = 1;
@@ -96,7 +102,7 @@ export const deleteVideo = (filePath: string): IpcResponse<void> => {
     const userVideosPath = getUserVideosPath();
 
     // Security check: only allow deleting from user videos folder
-    if (!filePath.startsWith(userVideosPath)) {
+    if (!path.resolve(filePath).startsWith(path.resolve(userVideosPath))) {
       log.warn(
         '[VideoService] Attempted to delete video outside user folder:',
         filePath,

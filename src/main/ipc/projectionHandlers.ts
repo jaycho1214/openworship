@@ -11,80 +11,100 @@ import {
   closeProjectionWindow,
 } from '../windows/WindowManager';
 import { settingsService } from '../services/settings';
+import {
+  successResponse,
+  errorResponse,
+  getErrorMessage,
+} from '../../shared/types';
 
 export const registerProjectionHandlers = (): void => {
   // Open projection window
   ipcMain.handle('projection:open', () => {
-    const projectionWindow = getProjectionWindow();
-    if (!projectionWindow) {
-      createProjectionWindow();
-      return true;
+    try {
+      const projectionWindow = getProjectionWindow();
+      if (!projectionWindow) {
+        createProjectionWindow();
+        return successResponse(true);
+      }
+      projectionWindow.show();
+      return successResponse(true);
+    } catch (error) {
+      const message = getErrorMessage(error);
+      log.error('[Projection] Error opening projection:', message);
+      return errorResponse(message);
     }
-    projectionWindow.show();
-    return true;
   });
 
   // Close projection window
   ipcMain.handle('projection:close', () => {
-    return closeProjectionWindow();
+    try {
+      closeProjectionWindow();
+      return successResponse(true);
+    } catch (error) {
+      const message = getErrorMessage(error);
+      log.error('[Projection] Error closing projection:', message);
+      return errorResponse(message);
+    }
   });
 
   // Check if projection is open
   ipcMain.handle('projection:isOpen', () => {
-    return isProjectionOpen();
+    try {
+      return successResponse(isProjectionOpen());
+    } catch (error) {
+      const message = getErrorMessage(error);
+      log.error('[Projection] Error checking projection status:', message);
+      return errorResponse(message);
+    }
   });
 
   // Set display mode (fullscreen or windowed)
   ipcMain.handle(
     'projection:setDisplayMode',
     (_event, mode: 'fullscreen' | 'windowed') => {
-      settingsService.setProjectionSettings({ displayMode: mode });
+      try {
+        settingsService.setProjectionSettings({ displayMode: mode });
 
-      // If projection is open, recreate it with new mode
-      if (isProjectionOpen()) {
-        closeProjectionWindow();
-        createProjectionWindow();
+        // If projection is open, recreate it with new mode
+        if (isProjectionOpen()) {
+          closeProjectionWindow();
+          createProjectionWindow();
+        }
+        return successResponse(true);
+      } catch (error) {
+        const message = getErrorMessage(error);
+        log.error('[Projection] Error setting display mode:', message);
+        return errorResponse(message);
       }
-      return true;
     },
   );
 
-  // Forward messages from control to projection
-  ipcMain.on('projection:update', (_event, data) => {
-    const projectionWindow = getProjectionWindow();
-    if (projectionWindow && !projectionWindow.isDestroyed()) {
-      projectionWindow.webContents.send('projection:update', data);
-    }
-  });
+  // Forward messages from control to projection window.
+  // Each channel is forwarded with the same name to the projection window.
+  const forwardToProjection = (channel: string) => {
+    ipcMain.on(channel, (_event, data) => {
+      const projectionWindow = getProjectionWindow();
+      if (projectionWindow && !projectionWindow.isDestroyed()) {
+        projectionWindow.webContents.send(channel, data);
+      }
+    });
+  };
 
-  ipcMain.on('projection:blank', (_event, isBlank) => {
-    const projectionWindow = getProjectionWindow();
-    if (projectionWindow && !projectionWindow.isDestroyed()) {
-      projectionWindow.webContents.send('projection:blank', isBlank);
-    }
-  });
+  // Simple forwarding channels (control -> projection)
+  const forwardChannels = [
+    'projection:update',
+    'projection:blank',
+    'projection:verseHidden',
+    'projection:video',
+    'projection:font',
+    'projection:image',
+    'projection:backgroundColor',
+    'projection:advertisement',
+    'projection:frame',
+  ];
+  forwardChannels.forEach(forwardToProjection);
 
-  ipcMain.on('projection:verseHidden', (_event, isVerseHidden) => {
-    const projectionWindow = getProjectionWindow();
-    if (projectionWindow && !projectionWindow.isDestroyed()) {
-      projectionWindow.webContents.send(
-        'projection:verseHidden',
-        isVerseHidden,
-      );
-    }
-  });
-
-  ipcMain.on('projection:video', (_event, videoPath) => {
-    log.info('[Projection] Setting video:', videoPath);
-    const projectionWindow = getProjectionWindow();
-    if (projectionWindow && !projectionWindow.isDestroyed()) {
-      projectionWindow.webContents.send('projection:video', videoPath);
-    } else {
-      log.warn('[Projection] Window not available for video');
-    }
-  });
-
-  // Forward ready signal from projection to control window
+  // Forward ready signal from projection to control window (reverse direction)
   ipcMain.on('projection:ready', () => {
     log.info('[Projection] Window is ready');
     const controlWindow = getControlWindow();
@@ -93,21 +113,22 @@ export const registerProjectionHandlers = (): void => {
     }
   });
 
-  ipcMain.on('projection:font', (_event, fontFamily) => {
-    const projectionWindow = getProjectionWindow();
-    if (projectionWindow && !projectionWindow.isDestroyed()) {
-      projectionWindow.webContents.send('projection:font', fontFamily);
-    }
-  });
-
   // Get available displays info
   ipcMain.handle('displays:getAll', () => {
-    const primaryDisplay = screen.getPrimaryDisplay();
-    return screen.getAllDisplays().map((display) => ({
-      id: display.id,
-      bounds: display.bounds,
-      isPrimary: display.id === primaryDisplay.id,
-    }));
+    try {
+      const primaryDisplay = screen.getPrimaryDisplay();
+      return successResponse(
+        screen.getAllDisplays().map((display) => ({
+          id: display.id,
+          bounds: display.bounds,
+          isPrimary: display.id === primaryDisplay.id,
+        })),
+      );
+    } catch (error) {
+      const message = getErrorMessage(error);
+      log.error('[Projection] Error getting displays:', message);
+      return errorResponse(message);
+    }
   });
 
   log.info('[IPC] Projection handlers registered');

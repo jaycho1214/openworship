@@ -50,7 +50,7 @@ const configuration: webpack.Configuration = {
             loader: 'css-loader',
             options: {
               modules: true,
-              sourceMap: true,
+              sourceMap: false,
               importLoaders: 1,
             },
           },
@@ -103,6 +103,9 @@ const configuration: webpack.Configuration = {
   optimization: {
     minimize: true,
     minimizer: [new TerserPlugin(), new CssMinimizerPlugin()],
+    splitChunks: {
+      chunks: 'all',
+    },
   },
 
   plugins: [
@@ -121,7 +124,7 @@ const configuration: webpack.Configuration = {
     }),
 
     new MiniCssExtractPlugin({
-      filename: 'style.css',
+      filename: '[name].style.css',
     }),
 
     new BundleAnalyzerPlugin({

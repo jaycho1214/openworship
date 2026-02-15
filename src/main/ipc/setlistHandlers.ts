@@ -5,7 +5,11 @@ import fs from 'fs';
 import { ipcMain, dialog } from 'electron';
 import log from 'electron-log';
 import type { Setlist } from '../../shared/types';
-import { getErrorMessage } from '../../shared/types';
+import {
+  successResponse,
+  errorResponse,
+  getErrorMessage,
+} from '../../shared/types';
 
 export const registerSetlistHandlers = (): void => {
   // Save setlist to JSON file
@@ -28,11 +32,11 @@ export const registerSetlistHandlers = (): void => {
 
         fs.writeFileSync(savePath, JSON.stringify(setlist, null, 2), 'utf-8');
         log.info('[Setlist] Saved to:', savePath);
-        return { success: true, filePath: savePath };
+        return successResponse(savePath);
       } catch (error) {
         const message = getErrorMessage(error);
         log.error('[Setlist] Error saving:', message);
-        return { success: false, error: message };
+        return errorResponse(message);
       }
     },
   );
@@ -54,11 +58,11 @@ export const registerSetlistHandlers = (): void => {
       const content = fs.readFileSync(filePath, 'utf-8');
       const setlist = JSON.parse(content) as Setlist;
       log.info('[Setlist] Loaded from:', filePath);
-      return { success: true, data: setlist, filePath };
+      return successResponse(setlist);
     } catch (error) {
       const message = getErrorMessage(error);
       log.error('[Setlist] Error loading:', message);
-      return { success: false, error: message };
+      return errorResponse(message);
     }
   });
 

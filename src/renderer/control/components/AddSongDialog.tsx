@@ -9,6 +9,8 @@ import {
   BookOpen,
   Copy,
   Upload,
+  FolderPlus,
+  FolderOpen,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { v4 as uuidv4 } from 'uuid';
@@ -23,6 +25,14 @@ import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
 import { ScrollArea } from '../../components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { parseLyricsToSlides } from '../../shared/utils/lyricsParser';
 import { cn } from '../../lib/utils';
 
@@ -68,17 +78,33 @@ interface ExistingSong {
   updatedAt: string;
 }
 
+// Type for session
+interface SessionOption {
+  id: string;
+  name: string;
+}
+
+// Session target options
+type SessionTarget = 'library-only' | 'new-session' | string; // string = existing session ID
+
 interface AddSongDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Called when songs are added to the library */
-  onAddToLibrary: (songs: { title: string; lyrics: string }[]) => Promise<void>;
+  onAddToLibrary: (
+    songs: { title: string; lyrics: string }[],
+    sessionTarget: SessionTarget,
+    newSessionName?: string,
+  ) => Promise<void>;
+  /** Current session ID if any */
+  currentSessionId?: string | null;
 }
 
 export default function AddSongDialog({
   open,
   onOpenChange,
   onAddToLibrary,
+  currentSessionId,
 }: AddSongDialogProps) {
   const { t } = useTranslation();
 
@@ -100,6 +126,13 @@ export default function AddSongDialog({
     null,
   );
 
+  // Session selection state
+  const [sessions, setSessions] = useState<SessionOption[]>([]);
+  const [sessionTarget, setSessionTarget] =
+    useState<SessionTarget>('library-only');
+  const [newSessionName, setNewSessionName] = useState('');
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+
   // Shared state
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState({
@@ -113,21 +146,42 @@ export default function AddSongDialog({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Check if API key is set on mount
+  // Check if API key is set and load sessions on mount
   useEffect(() => {
     if (open) {
       const electron = getElectron();
       if (electron) {
+        // Check API key
         electron.settings
           .hasApiKey()
           .then((has: boolean) => {
             setHasApiKey(has);
+            return null;
           })
           .catch(() => {
             setHasApiKey(false);
           });
+
+        // Load sessions
+        setIsLoadingSessions(true);
+        // eslint-disable-next-line promise/catch-or-return
+        electron.session
+          .getAll()
+          .then((result: { success: boolean; data?: SessionOption[] }) => {
+            if (result.success && result.data) {
+              setSessions(result.data);
+            }
+            return null;
+          })
+          .catch(() => {
+            setSessions([]);
+          })
+          .finally(() => {
+            setIsLoadingSessions(false);
+          });
       } else {
         setHasApiKey(false);
+        setSessions([]);
       }
     }
   }, [open]);
@@ -150,8 +204,11 @@ export default function AddSongDialog({
       setDuplicates({});
       setShowDragOverlay(false);
       dragCounterRef.current = 0;
+      // Default to current session if there is one, otherwise library-only
+      setSessionTarget(currentSessionId || 'library-only');
+      setNewSessionName('');
     }
-  }, [open]);
+  }, [open, currentSessionId]);
 
   // Check for duplicate title with debounce
   useEffect(() => {
@@ -445,6 +502,12 @@ export default function AddSongDialog({
 
   // Save all songs
   const handleSave = async () => {
+    // Validate new session name if creating new session
+    if (sessionTarget === 'new-session' && !newSessionName.trim()) {
+      setError(t('sessionNameRequired'));
+      return;
+    }
+
     setIsSaving(true);
     try {
       const songsToAdd = validManualEntries.map((e) => ({
@@ -454,14 +517,20 @@ export default function AddSongDialog({
 
       if (songsToAdd.length === 0) return;
 
-      await onAddToLibrary(songsToAdd);
+      await onAddToLibrary(
+        songsToAdd,
+        sessionTarget,
+        sessionTarget === 'new-session' ? newSessionName.trim() : undefined,
+      );
       onOpenChange(false);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const canSave = validManualEntries.length > 0;
+  const canSave =
+    validManualEntries.length > 0 &&
+    (sessionTarget !== 'new-session' || newSessionName.trim());
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -760,8 +829,62 @@ export default function AddSongDialog({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-border/50 flex items-center justify-end">
-          <div className="flex gap-2">
+        <div className="px-6 py-4 border-t border-border/50 flex items-center justify-between gap-4">
+          {/* Session Selection */}
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">
+              {t('addTo')}:
+            </Label>
+            <Select
+              value={sessionTarget}
+              onValueChange={(value) =>
+                setSessionTarget(value as SessionTarget)
+              }
+              disabled={isLoadingSessions}
+            >
+              <SelectTrigger className="h-8 text-xs w-48">
+                <SelectValue placeholder={t('selectDestination')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="library-only">
+                  <span className="flex items-center gap-2">
+                    <Library className="w-3.5 h-3.5" />
+                    {t('libraryOnly')}
+                  </span>
+                </SelectItem>
+                <SelectItem value="new-session">
+                  <span className="flex items-center gap-2">
+                    <FolderPlus className="w-3.5 h-3.5" />
+                    {t('createNewSession')}
+                  </span>
+                </SelectItem>
+                {sessions.length > 0 && <SelectSeparator />}
+                {sessions.map((session) => (
+                  <SelectItem key={session.id} value={session.id}>
+                    <span className="flex items-center gap-2">
+                      <FolderOpen className="w-3.5 h-3.5" />
+                      <span className="truncate max-w-[140px]">
+                        {session.name}
+                      </span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* New session name input */}
+            {sessionTarget === 'new-session' && (
+              <Input
+                value={newSessionName}
+                onChange={(e) => setNewSessionName(e.target.value)}
+                placeholder={t('newSessionName')}
+                className="h-8 text-xs w-40"
+              />
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 shrink-0">
             <Button
               variant="ghost"
               onClick={() => onOpenChange(false)}

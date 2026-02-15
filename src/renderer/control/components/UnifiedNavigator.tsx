@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   DndContext,
@@ -26,6 +26,10 @@ import {
   Search,
   X,
   ChevronLeft,
+  BookOpen,
+  Megaphone,
+  Plus,
+  Copy,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -42,10 +46,47 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '../../components/ui/context-menu';
-import { useSession, useSetlist, usePresentation } from '../context';
-import { Song, Slide } from '../../shared/types/song';
+import {
+  useSession,
+  useSetlist,
+  usePresentation,
+  useProjection,
+} from '../context';
+import { Song, Slide, SlideOverrides } from '../../shared/types/song';
+import {
+  SetlistItem,
+  isSongItem,
+  isBibleItem,
+  isAnnouncementItem,
+} from '../../../shared/types/setlistItem';
+import {
+  getItemSlides,
+  getItemTitle,
+} from '../../shared/utils/setlistItemUtils';
 import { cn } from '../../lib/utils';
 import SongEditor from './SongEditor';
+import { AddContentDialog } from './AddContentDialog';
+import SlideSettingsDialog from './SlideSettingsDialog';
+
+// Constants for item type icons - hoisted to module scope to prevent recreation
+const ITEM_TYPE_ICONS = {
+  song: { icon: Music2, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+  bible: { icon: BookOpen, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+  announcement: {
+    icon: Megaphone,
+    color: 'text-green-500',
+    bg: 'bg-green-500/10',
+  },
+  default: { icon: Music2, color: 'text-muted-foreground', bg: 'bg-muted' },
+} as const;
+
+// Get icon and color for item type - pure function hoisted to module scope
+function getItemTypeIcon(item: SetlistItem) {
+  if (isSongItem(item)) return ITEM_TYPE_ICONS.song;
+  if (isBibleItem(item)) return ITEM_TYPE_ICONS.bible;
+  if (isAnnouncementItem(item)) return ITEM_TYPE_ICONS.announcement;
+  return ITEM_TYPE_ICONS.default;
+}
 
 interface SlideItemProps {
   slide: Slide;
@@ -54,15 +95,25 @@ interface SlideItemProps {
   sectionNumber: number | null;
   hasSections: boolean;
   onClick: () => void;
+  onOpenSettings: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+  canDelete: boolean;
+  t: (key: string) => string;
 }
 
-function SlideItem({
+const SlideItem = memo(function SlideItem({
   slide,
   slideIndex: _slideIndex,
   isActive,
   sectionNumber,
   hasSections,
   onClick,
+  onOpenSettings,
+  onDuplicate,
+  onDelete,
+  canDelete,
+  t,
 }: SlideItemProps) {
   return (
     <div>
@@ -102,60 +153,106 @@ function SlideItem({
         </div>
       )}
 
-      {/* Slide content - simplified */}
-      <button
-        onClick={onClick}
-        className={cn(
-          'w-full text-left py-1.5 px-2 rounded transition-all duration-100',
-          isActive ? 'bg-active' : 'hover:bg-muted/50',
-        )}
-      >
-        {slide.lines.map((line, lineIndex) => (
-          <p
-            key={lineIndex}
+      {/* Slide content with context menu */}
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <button
+            onClick={onClick}
+            onDoubleClick={onOpenSettings}
             className={cn(
-              'text-xs leading-relaxed truncate',
-              isActive
-                ? 'text-active-foreground font-medium'
-                : 'text-foreground',
-              lineIndex > 0 && 'opacity-60',
+              'w-full text-left py-1.5 px-2 rounded transition-all duration-100',
+              isActive ? 'bg-active' : 'hover:bg-muted/50',
             )}
           >
-            {line || '\u00A0'}
-          </p>
-        ))}
-      </button>
+            {slide.lines.map((line, lineIndex) => (
+              <p
+                key={lineIndex}
+                className={cn(
+                  'text-xs leading-relaxed truncate',
+                  isActive
+                    ? 'text-active-foreground font-medium'
+                    : 'text-foreground',
+                  lineIndex > 0 && 'opacity-60',
+                )}
+              >
+                {line || '\u00A0'}
+              </p>
+            ))}
+          </button>
+        </ContextMenuTrigger>
+        <ContextMenuContent className="w-48">
+          <ContextMenuItem onClick={onOpenSettings} className="gap-2">
+            <Pencil className="w-4 h-4" />
+            {t('slideSettings')}
+          </ContextMenuItem>
+          <ContextMenuItem onClick={onDuplicate} className="gap-2">
+            <Copy className="w-4 h-4" />
+            {t('duplicateSlide')}
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onClick={onDelete}
+            disabled={!canDelete}
+            className={cn(
+              'gap-2',
+              canDelete &&
+                'text-red-400 focus:text-red-300 focus:bg-red-500/20',
+            )}
+          >
+            <Trash2 className="w-4 h-4" />
+            {t('deleteSlide')}
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     </div>
   );
-}
+});
 
-interface SortableSongGroupProps {
-  song: Song;
-  songIndex: number;
-  isCurrentSong: boolean;
+interface SortableItemGroupProps {
+  item: SetlistItem;
+  itemIndex: number;
+  isCurrentItem: boolean;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   currentSlideIndex: number;
   sectionIndices: number[];
+  defaultFontSize: number;
   onSelectSlide: (slideIndex: number) => void;
-  onEdit: () => void;
+  onEdit?: () => void;
   onDelete: () => void;
+  onSaveSlide: (
+    slideIndex: number,
+    lines: string[],
+    section?: string,
+    overrides?: SlideOverrides,
+  ) => void;
+  onDuplicateSlide: (slideIndex: number) => void;
+  onDeleteSlide: (slideIndex: number) => void;
   t: (key: string) => string;
 }
 
-function SortableSongGroup({
-  song,
-  songIndex,
-  isCurrentSong,
+const SortableItemGroup = memo(function SortableItemGroup({
+  item,
+  itemIndex,
+  isCurrentItem,
   isOpen,
   onOpenChange,
   currentSlideIndex,
   sectionIndices,
+  defaultFontSize,
   onSelectSlide,
   onEdit,
   onDelete,
+  onSaveSlide,
+  onDuplicateSlide,
+  onDeleteSlide,
   t,
-}: SortableSongGroupProps) {
+}: SortableItemGroupProps) {
+  const [settingsSlide, setSettingsSlide] = useState<{
+    slide: Slide;
+    index: number;
+  } | null>(null);
+
   const {
     attributes,
     listeners,
@@ -163,15 +260,19 @@ function SortableSongGroup({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: song.id });
+  } = useSortable({ id: item.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   };
 
-  // Check if the song has any sections defined
-  const hasSections = song.slides.some((slide) => slide.section);
+  const slides = getItemSlides(item);
+  const { icon: Icon, color, bg } = getItemTypeIcon(item);
+  const title = getItemTitle(item, t);
+
+  // Check if the item has any sections defined
+  const hasSections = slides.some((slide) => slide.section);
 
   // Get section number for a slide
   const getSectionNumber = (slideIndex: number): number | null => {
@@ -194,56 +295,72 @@ function SortableSongGroup({
             <div
               className={cn(
                 'group flex items-center gap-1 rounded-md transition-all',
-                isCurrentSong ? 'bg-active' : 'hover:bg-muted/50',
+                isCurrentItem ? 'bg-active' : 'hover:bg-muted/50',
               )}
             >
-              {/* Drag handle */}
+              {/* Drag handle - always visible with subtle styling */}
               <button
-                className="touch-none p-1.5 opacity-30 hover:opacity-100 transition-all cursor-grab active:cursor-grabbing"
+                className="touch-none p-1.5 opacity-50 hover:opacity-100 transition-all cursor-grab active:cursor-grabbing flex-shrink-0"
                 {...attributes}
                 {...listeners}
+                aria-label={t('dragToReorder')}
               >
                 <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
               </button>
 
-              {/* Song number */}
+              {/* Item number */}
               <span
                 className={cn(
                   'text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded shrink-0',
-                  isCurrentSong
+                  isCurrentItem
                     ? 'text-active-foreground'
                     : 'text-muted-foreground',
                 )}
               >
-                {songIndex + 1}
+                {itemIndex + 1}
               </span>
+
+              {/* Type icon */}
+              <div
+                className={cn(
+                  'w-5 h-5 rounded flex items-center justify-center shrink-0',
+                  isCurrentItem ? 'bg-active-foreground/10' : bg,
+                )}
+              >
+                <Icon
+                  className={cn(
+                    'w-3 h-3',
+                    isCurrentItem ? 'text-active-foreground' : color,
+                  )}
+                />
+              </div>
 
               {/* Collapsible trigger - only toggles open/close */}
               <CollapsibleTrigger className="flex-1 flex items-center gap-2 py-2 pr-2 min-w-0">
                 <p
                   className={cn(
                     'text-sm truncate flex-1 text-left',
-                    isCurrentSong
+                    isCurrentItem
                       ? 'text-active-foreground font-semibold'
                       : 'text-foreground font-medium',
                   )}
                 >
-                  {song.title}
+                  {title}
                 </p>
                 <span
                   className={cn(
                     'text-[10px] shrink-0',
-                    isCurrentSong
+                    isCurrentItem
                       ? 'text-active-foreground/60'
                       : 'text-muted-foreground',
                   )}
                 >
-                  {song.slides.length}
+                  {slides.length}
                 </span>
                 <ChevronRight
                   className={cn(
                     'w-3.5 h-3.5 shrink-0 transition-transform duration-200',
-                    isCurrentSong
+                    isCurrentItem
                       ? 'text-active-foreground/60'
                       : 'text-muted-foreground',
                     isOpen && 'rotate-90',
@@ -253,40 +370,66 @@ function SortableSongGroup({
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent className="w-48">
-            <ContextMenuItem onClick={onEdit} className="gap-2">
-              <Pencil className="w-4 h-4" />
-              {t('editSong')}
-            </ContextMenuItem>
-            <ContextMenuSeparator />
+            {onEdit && isSongItem(item) && (
+              <>
+                <ContextMenuItem onClick={onEdit} className="gap-2">
+                  <Pencil className="w-4 h-4" />
+                  {t('editSong')}
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+              </>
+            )}
             <ContextMenuItem
               onClick={onDelete}
               className="gap-2 text-red-400 focus:text-red-300 focus:bg-red-500/20"
             >
               <Trash2 className="w-4 h-4" />
-              {t('deleteSong')}
+              {t('delete')}
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
 
         <CollapsibleContent>
           <div className="pl-4 pr-1 pb-2 pt-1 space-y-0.5">
-            {song.slides.map((slide, slideIndex) => (
+            {slides.map((slide, slideIndex) => (
               <SlideItem
                 key={slide.id}
                 slide={slide}
                 slideIndex={slideIndex}
-                isActive={isCurrentSong && slideIndex === currentSlideIndex}
+                isActive={isCurrentItem && slideIndex === currentSlideIndex}
                 sectionNumber={getSectionNumber(slideIndex)}
                 hasSections={hasSections}
                 onClick={() => onSelectSlide(slideIndex)}
+                onOpenSettings={() =>
+                  setSettingsSlide({ slide, index: slideIndex })
+                }
+                onDuplicate={() => onDuplicateSlide(slideIndex)}
+                onDelete={() => onDeleteSlide(slideIndex)}
+                canDelete={slides.length > 1}
+                t={t}
               />
             ))}
           </div>
         </CollapsibleContent>
       </div>
+
+      {/* Slide Settings Dialog */}
+      <SlideSettingsDialog
+        open={settingsSlide !== null}
+        onOpenChange={(open) => {
+          if (!open) setSettingsSlide(null);
+        }}
+        slide={settingsSlide?.slide ?? null}
+        defaultFontSize={defaultFontSize}
+        onSave={(lines, section, overrides) => {
+          if (settingsSlide !== null) {
+            onSaveSlide(settingsSlide.index, lines, section, overrides);
+          }
+        }}
+      />
     </Collapsible>
   );
-}
+});
 
 interface UnifiedNavigatorProps {
   onBack?: () => void;
@@ -295,26 +438,61 @@ interface UnifiedNavigatorProps {
 export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
   const { t } = useTranslation();
   const { currentSessionId } = useSession();
-  const { currentSetlist, addSong, deleteSong, reorderSongs } = useSetlist();
-  const { currentSong, presentationState, goToPosition, getSectionIndices } =
-    usePresentation();
+  const {
+    currentSetlist,
+    addSong,
+    reorderItems,
+    deleteItem,
+    addItem,
+    duplicateSlide,
+    deleteSlide,
+    updateSlide,
+  } = useSetlist();
+  const {
+    currentItem,
+    currentItemIndex,
+    presentationState,
+    goToItem,
+    getSectionIndices,
+  } = usePresentation();
+  const { projectionSettings } = useProjection();
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [openSongIds, setOpenSongIds] = useState<Set<string>>(new Set());
+  const [openItemIds, setOpenItemIds] = useState<Set<string>>(new Set());
+  const [isAddContentOpen, setIsAddContentOpen] = useState(false);
+  const [addContentDefaultTab, setAddContentDefaultTab] = useState<
+    'song' | 'bible' | 'announcement'
+  >('song');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const prevItemsLengthRef = useRef<number>(0);
 
-  // Auto-open current song (add to open set, don't replace)
+  const items = currentSetlist?.items ?? [];
+
+  // Auto-open current item
   useEffect(() => {
-    if (currentSong) {
-      setOpenSongIds((prev) => {
-        if (prev.has(currentSong.id)) return prev;
-        return new Set([...prev, currentSong.id]);
+    if (currentItem && currentSetlist) {
+      setOpenItemIds((prev) => {
+        if (prev.has(currentItem.id)) return prev;
+        return new Set([...prev, currentItem.id]);
       });
     }
-  }, [currentSong?.id]);
+  }, [currentItem?.id, currentSetlist]);
+
+  // Auto-expand newly added items
+  useEffect(() => {
+    if (items.length > prevItemsLengthRef.current && items.length > 0) {
+      // A new item was added - expand the last item
+      const lastItem = items[items.length - 1];
+      setOpenItemIds((prev) => {
+        if (prev.has(lastItem.id)) return prev;
+        return new Set([...prev, lastItem.id]);
+      });
+    }
+    prevItemsLengthRef.current = items.length;
+  }, [items]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -327,19 +505,24 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
     }),
   );
 
-  const songs = currentSetlist?.songs ?? [];
-
-  // Get the current song's section indices
-  const sectionIndices = currentSong ? getSectionIndices() : [];
+  // Get the current item's section indices
+  const sectionIndices = currentItem ? getSectionIndices() : [];
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (over && active.id !== over.id) {
-      const oldIndex = songs.findIndex((s) => s.id === active.id);
-      const newIndex = songs.findIndex((s) => s.id === over.id);
-      reorderSongs(oldIndex, newIndex);
+    if (!over || active.id === over.id) {
+      return;
     }
+
+    const oldIndex = items.findIndex((i) => i.id === active.id);
+    const newIndex = items.findIndex((i) => i.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      return;
+    }
+
+    reorderItems(oldIndex, newIndex);
   };
 
   const handleEditSong = (song: Song) => {
@@ -377,29 +560,68 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
     }
   };
 
-  // Filter songs based on search
-  const filteredSongs = songs.filter((song) => {
+  // Filter items based on search
+  const filteredItems = items.filter((item) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
-    return (
-      song.title.toLowerCase().includes(query) ||
-      song.slides.some((slide) =>
-        slide.lines.some((line) => line.toLowerCase().includes(query)),
-      )
+    const title = getItemTitle(item, t).toLowerCase();
+    if (title.includes(query)) return true;
+
+    // Also search in slides content
+    const slides = getItemSlides(item);
+    return slides.some((slide) =>
+      slide.lines.some((line) => line.toLowerCase().includes(query)),
     );
   });
 
-  // Keyboard shortcut for search
+  // Keyboard shortcuts for search and quick add
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in input fields
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Cmd/Ctrl+F for search
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         e.preventDefault();
         searchInputRef.current?.focus();
+        return;
+      }
+
+      // Quick add shortcuts (only when session is active)
+      if (!currentSessionId) return;
+
+      switch (e.key.toLowerCase()) {
+        case 's':
+          e.preventDefault();
+          setAddContentDefaultTab('song');
+          setIsAddContentOpen(true);
+          break;
+        case 'i':
+          e.preventDefault();
+          setAddContentDefaultTab('bible');
+          setIsAddContentOpen(true);
+          break;
+        case 'a':
+          e.preventDefault();
+          setAddContentDefaultTab('announcement');
+          setIsAddContentOpen(true);
+          break;
+        default:
+          break;
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [currentSessionId]);
+
+  // Current item index comes directly from presentation context now
 
   return (
     <div
@@ -412,7 +634,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
       onDrop={handleDrop}
     >
       {/* Header - standardized h-12 */}
-      <div className="h-12 px-4 border-b border-border flex items-center flex-shrink-0">
+      <div className="h-12 px-4 border-b border-border flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           {onBack && (
             <Button
@@ -425,13 +647,23 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
             </Button>
           )}
           <h2 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-            {t('songList')}
+            {t('setlist')}
           </h2>
         </div>
+        {currentSessionId && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => setIsAddContentOpen(true)}
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       {/* Search input */}
-      {currentSessionId && songs.length > 0 && (
+      {currentSessionId && items.length > 0 && (
         <div className="px-3 py-2 border-b border-border">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -466,8 +698,8 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
                 {t('selectSession')}
               </p>
             </div>
-          ) : songs.length === 0 ? (
-            /* Session selected but no songs */
+          ) : items.length === 0 ? (
+            /* Session selected but no items */
             <div className="flex flex-col items-center justify-center py-12 px-4">
               <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
                 <Music2 className="w-6 h-6 text-muted-foreground" />
@@ -478,6 +710,15 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
               <p className="text-xs text-muted-foreground text-center mt-2">
                 {t('dragToAdd')}
               </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => setIsAddContentOpen(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {t('addContent')}
+              </Button>
             </div>
           ) : (
             <DndContext
@@ -486,42 +727,62 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={filteredSongs.map((s) => s.id)}
+                items={filteredItems.map((i) => i.id)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-0.5">
-                  {filteredSongs.map((song) => {
-                    const originalIndex = songs.findIndex(
-                      (s) => s.id === song.id,
+                  {filteredItems.map((item) => {
+                    const originalIndex = items.findIndex(
+                      (i) => i.id === item.id,
                     );
-                    const isCurrentSong =
-                      originalIndex === presentationState.currentSongIndex;
+                    const isCurrentItem = originalIndex === currentItemIndex;
+
+                    // Get song for editing if it's a song item
+                    // eslint-disable-next-line no-underscore-dangle
+                    const song = isSongItem(item) ? item._song : undefined;
 
                     return (
-                      <SortableSongGroup
-                        key={song.id}
-                        song={song}
-                        songIndex={originalIndex}
-                        isCurrentSong={isCurrentSong}
-                        isOpen={openSongIds.has(song.id)}
+                      <SortableItemGroup
+                        key={item.id}
+                        item={item}
+                        itemIndex={originalIndex}
+                        isCurrentItem={isCurrentItem}
+                        isOpen={openItemIds.has(item.id)}
                         onOpenChange={(open) =>
-                          setOpenSongIds((prev) => {
+                          setOpenItemIds((prev) => {
                             const next = new Set(prev);
                             if (open) {
-                              next.add(song.id);
+                              next.add(item.id);
                             } else {
-                              next.delete(song.id);
+                              next.delete(item.id);
                             }
                             return next;
                           })
                         }
                         currentSlideIndex={presentationState.currentSlideIndex}
-                        sectionIndices={isCurrentSong ? sectionIndices : []}
-                        onSelectSlide={(slideIndex) =>
-                          goToPosition(originalIndex, slideIndex)
+                        sectionIndices={isCurrentItem ? sectionIndices : []}
+                        defaultFontSize={projectionSettings.fontSize}
+                        onSelectSlide={(slideIndex) => {
+                          // Navigate to the item and slide using item index
+                          goToItem(originalIndex, slideIndex);
+                        }}
+                        onEdit={song ? () => handleEditSong(song) : undefined}
+                        onDelete={() => deleteItem(item.id)}
+                        onSaveSlide={(slideIndex, lines, section, overrides) =>
+                          updateSlide(
+                            originalIndex,
+                            slideIndex,
+                            lines,
+                            section,
+                            overrides,
+                          )
                         }
-                        onEdit={() => handleEditSong(song)}
-                        onDelete={() => deleteSong(song.id)}
+                        onDuplicateSlide={(slideIndex) =>
+                          duplicateSlide(originalIndex, slideIndex)
+                        }
+                        onDeleteSlide={(slideIndex) =>
+                          deleteSlide(originalIndex, slideIndex)
+                        }
                         t={t}
                       />
                     );
@@ -537,6 +798,13 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
         open={isEditorOpen}
         onOpenChange={setIsEditorOpen}
         song={editingSong}
+      />
+
+      <AddContentDialog
+        open={isAddContentOpen}
+        onOpenChange={setIsAddContentOpen}
+        onAddItem={addItem}
+        defaultTab={addContentDefaultTab}
       />
     </div>
   );

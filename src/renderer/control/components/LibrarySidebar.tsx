@@ -30,6 +30,16 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '../../components/ui/hover-card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 import { cn } from '../../lib/utils';
 import SongEditor from './SongEditor';
 import AddSongDialog from './AddSongDialog';
@@ -59,7 +69,7 @@ export default function LibrarySidebar({
 }: LibrarySidebarProps) {
   const { t } = useTranslation();
   const { currentSessionId } = useSession();
-  const { currentSetlist, addSong } = useSetlist();
+  const { currentSetlist, addSong, addItem } = useSetlist();
 
   const [songs, setSongs] = useState<LibrarySong[]>([]);
   const [filteredSongs, setFilteredSongs] = useState<LibrarySong[]>([]);
@@ -71,6 +81,7 @@ export default function LibrarySidebar({
   const [editingLibrarySong, setEditingLibrarySong] =
     useState<LibrarySong | null>(null);
   const [draggedSong, setDraggedSong] = useState<LibrarySong | null>(null);
+  const [songToDelete, setSongToDelete] = useState<string | null>(null);
 
   // Get IDs of songs already in session
   const sessionSongIds = useMemo(() => {
@@ -118,16 +129,18 @@ export default function LibrarySidebar({
     setFilteredSongs(filtered);
   }, [searchQuery, songs]);
 
-  // Delete song
-  const handleDeleteSong = async (id: string) => {
+  // Delete song with confirmation
+  const handleConfirmDelete = async () => {
+    if (!songToDelete) return;
     try {
-      const result = await window.electron.library.delete(id);
+      const result = await window.electron.library.delete(songToDelete);
       if (result.success) {
         loadSongs();
       }
     } catch (error) {
       console.error('Failed to delete song:', error);
     }
+    setSongToDelete(null);
   };
 
   // Import single song to session
@@ -144,8 +157,8 @@ export default function LibrarySidebar({
       title: song.title,
       rawLyrics: song.lyrics,
       slides: parseLyricsToSlides(song.lyrics),
-      createdAt: new Date(song.createdAt),
-      updatedAt: new Date(song.updatedAt),
+      createdAt: song.createdAt,
+      updatedAt: song.updatedAt,
     };
     setEditingSong(songForEditor);
     setIsEditorOpen(true);
@@ -186,20 +199,72 @@ export default function LibrarySidebar({
     setDraggedSong(null);
   };
 
-  // Add songs to library
+  // Add songs to library and optionally to a session
   const handleAddToLibrary = async (
     songsToAdd: { title: string; lyrics: string }[],
+    sessionTarget: 'library-only' | 'new-session' | string,
+    newSessionName?: string,
   ) => {
     try {
+      const addedSongIds: string[] = [];
+
+      // Add songs to library
       for (const song of songsToAdd) {
-        await window.electron.library.add({
+        const result = await window.electron.library.add({
           title: song.title,
           lyrics: song.lyrics,
           categories: [],
           tags: [],
         });
+
+        // Collect the song ID if successfully added
+        if (result.success && result.data?.id) {
+          addedSongIds.push(result.data.id);
+        }
       }
+
       loadSongs();
+
+      // Handle session target
+      if (sessionTarget === 'library-only' || addedSongIds.length === 0) {
+        // Just library, no session
+        return;
+      }
+
+      let targetSessionId: string | null = null;
+
+      if (sessionTarget === 'new-session' && newSessionName) {
+        // Create a new session
+        const createResult =
+          await window.electron.session.create(newSessionName);
+        if (createResult.success && createResult.data?.id) {
+          targetSessionId = createResult.data.id;
+        }
+      } else if (
+        sessionTarget !== 'library-only' &&
+        sessionTarget !== 'new-session'
+      ) {
+        // Use existing session ID
+        targetSessionId = sessionTarget;
+      }
+
+      // Add songs to the target session
+      if (targetSessionId) {
+        // If target is the current session, use context method
+        if (targetSessionId === currentSessionId) {
+          for (const songId of addedSongIds) {
+            await addItem({ type: 'song', songId });
+          }
+        } else {
+          // Add to a different session via IPC
+          for (const songId of addedSongIds) {
+            await window.electron.sessionItem.add(targetSessionId, {
+              type: 'song',
+              songId,
+            });
+          }
+        }
+      }
     } catch (error) {
       console.error('Failed to add songs to library:', error);
     }
@@ -369,7 +434,7 @@ export default function LibrarySidebar({
                             {t('editSong')}
                           </ContextMenuItem>
                           <ContextMenuItem
-                            onClick={() => handleDeleteSong(song.id)}
+                            onClick={() => setSongToDelete(song.id)}
                             className="gap-2 text-red-400 focus:text-red-300 focus:bg-red-500/20"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -421,7 +486,34 @@ export default function LibrarySidebar({
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         onAddToLibrary={handleAddToLibrary}
+        currentSessionId={currentSessionId}
       />
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog
+        open={songToDelete !== null}
+        onOpenChange={(dialogOpen) => {
+          if (!dialogOpen) setSongToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('confirmDeleteSong')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('confirmDeleteSongDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleConfirmDelete}
+            >
+              {t('delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

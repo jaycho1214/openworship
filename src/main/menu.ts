@@ -6,6 +6,13 @@ import {
   MenuItemConstructorOptions,
 } from 'electron';
 
+// Store projection window reference for dev tools toggle
+let projectionWindowRef: BrowserWindow | null = null;
+
+export const setProjectionWindowRef = (win: BrowserWindow | null) => {
+  projectionWindowRef = win;
+};
+
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
   selector?: string;
   submenu?: DarwinMenuItemConstructorOptions[] | Menu;
@@ -37,34 +44,26 @@ export default class MenuBuilder {
     return menu;
   }
 
+  // eslint-disable-next-line class-methods-use-this
   setupDevelopmentEnvironment(): void {
-    this.mainWindow.webContents.on('context-menu', (_, props) => {
-      const { x, y } = props;
-
-      Menu.buildFromTemplate([
-        {
-          label: 'Inspect element',
-          click: () => {
-            this.mainWindow.webContents.inspectElement(x, y);
-          },
-        },
-      ]).popup({ window: this.mainWindow });
-    });
+    // Don't override right-click context menu - let Radix ContextMenu work
+    // Developers can use Alt+Cmd+I (Mac) or Alt+Ctrl+I (Windows/Linux) to open DevTools
+    // and can inspect elements from there using the element selector tool
   }
 
   buildDarwinTemplate(): MenuItemConstructorOptions[] {
     const subMenuAbout: DarwinMenuItemConstructorOptions = {
-      label: 'Electron',
+      label: 'OpenWorship',
       submenu: [
         {
-          label: 'About ElectronReact',
+          label: 'About OpenWorship',
           selector: 'orderFrontStandardAboutPanel:',
         },
         { type: 'separator' },
         { label: 'Services', submenu: [] },
         { type: 'separator' },
         {
-          label: 'Hide ElectronReact',
+          label: 'Hide OpenWorship',
           accelerator: 'Command+H',
           selector: 'hide:',
         },
@@ -124,6 +123,16 @@ export default class MenuBuilder {
             this.mainWindow.webContents.toggleDevTools();
           },
         },
+        { type: 'separator' },
+        {
+          label: 'Toggle Projection Developer Tools',
+          accelerator: 'Alt+Command+P',
+          click: () => {
+            if (projectionWindowRef && !projectionWindowRef.isDestroyed()) {
+              projectionWindowRef.webContents.toggleDevTools();
+            }
+          },
+        },
       ],
     };
     const subMenuViewProd: MenuItemConstructorOptions = {
@@ -157,27 +166,31 @@ export default class MenuBuilder {
         {
           label: 'Learn More',
           click() {
-            shell.openExternal('https://electronjs.org');
+            shell.openExternal('https://github.com/jaycho1214/openworship');
           },
         },
         {
           label: 'Documentation',
           click() {
             shell.openExternal(
-              'https://github.com/electron/electron/tree/main/docs#readme',
+              'https://github.com/jaycho1214/openworship/wiki',
             );
           },
         },
         {
           label: 'Community Discussions',
           click() {
-            shell.openExternal('https://www.electronjs.org/community');
+            shell.openExternal(
+              'https://github.com/jaycho1214/openworship/discussions',
+            );
           },
         },
         {
           label: 'Search Issues',
           click() {
-            shell.openExternal('https://github.com/electron/electron/issues');
+            shell.openExternal(
+              'https://github.com/jaycho1214/openworship/issues',
+            );
           },
         },
       ],
@@ -192,8 +205,8 @@ export default class MenuBuilder {
     return [subMenuAbout, subMenuEdit, subMenuView, subMenuWindow, subMenuHelp];
   }
 
-  buildDefaultTemplate() {
-    const templateDefault = [
+  buildDefaultTemplate(): MenuItemConstructorOptions[] {
+    const templateDefault: MenuItemConstructorOptions[] = [
       {
         label: '&File',
         submenu: [
@@ -239,6 +252,18 @@ export default class MenuBuilder {
                     this.mainWindow.webContents.toggleDevTools();
                   },
                 },
+                {
+                  label: 'Toggle &Projection Developer Tools',
+                  accelerator: 'Alt+Ctrl+P',
+                  click: () => {
+                    if (
+                      projectionWindowRef &&
+                      !projectionWindowRef.isDestroyed()
+                    ) {
+                      projectionWindowRef.webContents.toggleDevTools();
+                    }
+                  },
+                },
               ]
             : [
                 {
@@ -258,27 +283,31 @@ export default class MenuBuilder {
           {
             label: 'Learn More',
             click() {
-              shell.openExternal('https://electronjs.org');
+              shell.openExternal('https://github.com/jaycho1214/openworship');
             },
           },
           {
             label: 'Documentation',
             click() {
               shell.openExternal(
-                'https://github.com/electron/electron/tree/main/docs#readme',
+                'https://github.com/jaycho1214/openworship/wiki',
               );
             },
           },
           {
             label: 'Community Discussions',
             click() {
-              shell.openExternal('https://www.electronjs.org/community');
+              shell.openExternal(
+                'https://github.com/jaycho1214/openworship/discussions',
+              );
             },
           },
           {
             label: 'Search Issues',
             click() {
-              shell.openExternal('https://github.com/electron/electron/issues');
+              shell.openExternal(
+                'https://github.com/jaycho1214/openworship/issues',
+              );
             },
           },
         ],

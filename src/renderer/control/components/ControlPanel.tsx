@@ -1,3 +1,4 @@
+import { useState, useMemo, useRef } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -7,8 +8,19 @@ import {
   Eye,
   EyeClosedIcon,
   Video,
+  Image,
+  Palette,
   ChevronDown,
   Shuffle,
+  Megaphone,
+  Play,
+  Square,
+  Type,
+  ImageIcon,
+  Settings,
+  Undo2,
+  Redo2,
+  Pipette,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/button';
@@ -17,6 +29,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '../../components/ui/dropdown-menu';
 import {
   Tooltip,
@@ -25,41 +39,233 @@ import {
   TooltipTrigger,
 } from '../../components/ui/tooltip';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog';
+import {
   useSetlist,
   usePresentation,
   useProjection,
   useMedia,
+  useAdvertisement,
+  useUndo,
 } from '../context';
 import { cn } from '../../lib/utils';
+import AdvertisementPanel from './AdvertisementPanel';
 
 export default function ControlPanel() {
   const { t } = useTranslation();
   const { currentSetlist } = useSetlist();
   const {
     currentSong,
+    currentItemIndex,
     presentationState,
     nextSlide,
     prevSlide,
     nextSong,
     prevSong,
+    goToItem,
   } = usePresentation();
   const { isBlank, isVerseHidden, toggleBlank, toggleVerseHidden } =
     useProjection();
   const {
+    backgroundType,
+    setBackgroundType,
     embeddedVideos,
     currentVideoPath,
     selectVideo,
     isVideoShuffleEnabled,
     toggleVideoShuffle,
+    availableImages,
+    currentImagePath,
+    selectImage,
+    backgroundColor,
   } = useMedia();
+  const {
+    advertisements,
+    isAdVisible,
+    currentAd,
+    showAdvertisement,
+    hideAdvertisement,
+    isRotating,
+    startRotation,
+    stopRotation,
+  } = useAdvertisement();
+  const { canUndo, canRedo, undo, redo, pushState } = useUndo();
+
+  const [isAdManageOpen, setIsAdManageOpen] = useState(false);
+  const colorInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle undo action
+  const handleUndo = () => {
+    if (!canUndo) return;
+    const state = undo();
+    if (state) {
+      goToItem(state.itemIndex, state.slideIndex);
+    }
+  };
+
+  // Handle redo action
+  const handleRedo = () => {
+    if (!canRedo) return;
+    const state = redo();
+    if (state) {
+      goToItem(state.itemIndex, state.slideIndex);
+    }
+  };
+
+  // Push state before navigation actions from buttons
+  const handlePrevSlide = () => {
+    pushState({
+      itemIndex: currentItemIndex,
+      slideIndex: presentationState.currentSlideIndex,
+      isBlank,
+      isVerseHidden,
+    });
+    prevSlide();
+  };
+
+  const handleNextSlide = () => {
+    pushState({
+      itemIndex: currentItemIndex,
+      slideIndex: presentationState.currentSlideIndex,
+      isBlank,
+      isVerseHidden,
+    });
+    nextSlide();
+  };
+
+  const handlePrevSong = () => {
+    pushState({
+      itemIndex: currentItemIndex,
+      slideIndex: presentationState.currentSlideIndex,
+      isBlank,
+      isVerseHidden,
+    });
+    prevSong();
+  };
+
+  const handleNextSong = () => {
+    pushState({
+      itemIndex: currentItemIndex,
+      slideIndex: presentationState.currentSlideIndex,
+      isBlank,
+      isVerseHidden,
+    });
+    nextSong();
+  };
 
   const canNavigate = currentSong && currentSong.slides.length > 0;
-  const currentVideoName =
-    currentVideoPath?.split('/').pop() || t('selectVideo');
+
+  // Memoized disabled states to prevent unnecessary re-renders
+  const isPrevDisabled = useMemo(
+    () =>
+      !canNavigate ||
+      (presentationState.currentSlideIndex === 0 &&
+        presentationState.currentSongIndex === 0),
+    [
+      canNavigate,
+      presentationState.currentSlideIndex,
+      presentationState.currentSongIndex,
+    ],
+  );
+
+  const isNextDisabled = useMemo(
+    () =>
+      !canNavigate ||
+      (presentationState.currentSlideIndex >=
+        (currentSong?.slides.length ?? 0) - 1 &&
+        presentationState.currentSongIndex >=
+          (currentSetlist?.items.length ?? 0) - 1),
+    [
+      canNavigate,
+      presentationState.currentSlideIndex,
+      presentationState.currentSongIndex,
+      currentSong?.slides.length,
+      currentSetlist?.items.length,
+    ],
+  );
+
+  const isPrevSongDisabled = presentationState.currentSongIndex === 0;
+  const isNextSongDisabled =
+    presentationState.currentSongIndex >=
+    (currentSetlist?.items.length ?? 0) - 1;
+
+  // Get the current background display name
+  const getBackgroundDisplayName = () => {
+    if (backgroundType === 'video') {
+      return currentVideoPath?.split('/').pop() || t('selectVideo');
+    }
+    if (backgroundType === 'image') {
+      return currentImagePath?.split('/').pop() || t('selectImage');
+    }
+    // Color
+    const colorName = {
+      '#000000': t('colorBlack'),
+      '#FFFFFF': t('colorWhite'),
+      '#00FF00': t('colorGreen'),
+      '#0000FF': t('colorBlue'),
+    }[backgroundColor];
+    return colorName || backgroundColor;
+  };
+
+  const currentBackgroundName = getBackgroundDisplayName();
+
+  // Get icon for current background type
+  const BackgroundIcon =
+    backgroundType === 'video'
+      ? Video
+      : backgroundType === 'image'
+        ? Image
+        : Palette;
 
   return (
     <TooltipProvider>
-      <div className="h-16 px-4 border-t border-border bg-card/50 flex items-center gap-4 flex-shrink-0">
+      <div className="h-16 px-4 border-t border-border bg-card/50 flex items-center gap-4 flex-shrink-0 overflow-x-auto overflow-y-hidden scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+        {/* Undo/Redo */}
+        <div className="flex items-center gap-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleUndo}
+                disabled={!canUndo}
+                className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40"
+                aria-label={`${t('undo')} (⌘Z)`}
+              >
+                <Undo2 className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>{t('undo')} (⌘Z)</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleRedo}
+                disabled={!canRedo}
+                className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40"
+                aria-label={`${t('redo')} (⌘⇧Z)`}
+              >
+                <Redo2 className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>{t('redo')} (⌘⇧Z)</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+
+        {/* Divider */}
+        <div className="h-8 w-px bg-border" />
+
         {/* Slide Navigation */}
         <div className="flex items-center gap-1">
           <Tooltip>
@@ -67,12 +273,8 @@ export default function ControlPanel() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={prevSlide}
-                disabled={
-                  !canNavigate ||
-                  (presentationState.currentSlideIndex === 0 &&
-                    presentationState.currentSongIndex === 0)
-                }
+                onClick={handlePrevSlide}
+                disabled={isPrevDisabled}
                 className="h-10 w-10 bg-muted border-border disabled:opacity-40"
                 aria-label={`${t('prev')} (←)`}
               >
@@ -89,14 +291,8 @@ export default function ControlPanel() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={nextSlide}
-                disabled={
-                  !canNavigate ||
-                  (presentationState.currentSlideIndex >=
-                    (currentSong?.slides.length ?? 0) - 1 &&
-                    presentationState.currentSongIndex >=
-                      (currentSetlist?.songs.length ?? 0) - 1)
-                }
+                onClick={handleNextSlide}
+                disabled={isNextDisabled}
                 className="h-10 w-10 bg-muted border-border disabled:opacity-40"
                 aria-label={`${t('next')} (→)`}
               >
@@ -116,8 +312,8 @@ export default function ControlPanel() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={prevSong}
-                disabled={presentationState.currentSongIndex === 0}
+                onClick={handlePrevSong}
+                disabled={isPrevSongDisabled}
                 className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40"
                 aria-label={`${t('prevSong')} (↑)`}
               >
@@ -134,11 +330,8 @@ export default function ControlPanel() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={nextSong}
-                disabled={
-                  presentationState.currentSongIndex >=
-                  (currentSetlist?.songs.length ?? 0) - 1
-                }
+                onClick={handleNextSong}
+                disabled={isNextSongDisabled}
                 className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40"
                 aria-label={`${t('nextSong')} (↓)`}
               >
@@ -164,7 +357,7 @@ export default function ControlPanel() {
                 className={cn(
                   'h-10 gap-2 px-4 font-medium transition-all',
                   isBlank
-                    ? 'bg-red-500/25 border-red-500/50 text-red-700 dark:text-red-200 hover:bg-red-500/35'
+                    ? 'bg-red-500/20 border-red-500/50 text-red-700 dark:text-red-200 hover:bg-red-500/30'
                     : 'bg-muted border-border text-foreground hover:bg-accent',
                 )}
                 aria-label={
@@ -224,7 +417,7 @@ export default function ControlPanel() {
         {/* Divider */}
         <div className="h-8 w-px bg-border" />
 
-        {/* Video Selector */}
+        {/* Background Selector */}
         <div className="flex items-center gap-1">
           <DropdownMenu>
             <Tooltip>
@@ -234,19 +427,26 @@ export default function ControlPanel() {
                     variant="outline"
                     className="h-10 gap-2 px-3 max-w-[200px] bg-muted border-border"
                   >
-                    <Video className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
-                    <span className="text-xs truncate">{currentVideoName}</span>
+                    <BackgroundIcon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                    <span className="text-xs truncate">
+                      {currentBackgroundName}
+                    </span>
                     <ChevronDown className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
               <TooltipContent side="top">
-                <p>{t('backgroundVideo')}</p>
+                <p>{t('background')}</p>
               </TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="start" className="w-64">
+              {/* Videos Section */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-2">
+                <Video className="w-3.5 h-3.5" />
+                {t('videos')}
+              </DropdownMenuLabel>
               {embeddedVideos.length === 0 ? (
-                <div className="px-3 py-4 text-center">
+                <div className="px-3 py-2 text-center">
                   <p className="text-xs text-muted-foreground">
                     {t('noVideosFound')}
                   </p>
@@ -254,11 +454,16 @@ export default function ControlPanel() {
               ) : (
                 embeddedVideos.map((videoPath) => {
                   const filename = videoPath.split('/').pop() || videoPath;
-                  const isSelected = currentVideoPath === videoPath;
+                  const isSelected =
+                    backgroundType === 'video' &&
+                    currentVideoPath === videoPath;
                   return (
                     <DropdownMenuItem
                       key={videoPath}
-                      onClick={() => selectVideo(videoPath)}
+                      onClick={() => {
+                        selectVideo(videoPath);
+                        setBackgroundType('video');
+                      }}
                       className={cn(
                         'gap-2 cursor-pointer',
                         isSelected && 'bg-active text-active-foreground',
@@ -272,6 +477,115 @@ export default function ControlPanel() {
                   );
                 })
               )}
+
+              <DropdownMenuSeparator />
+
+              {/* Images Section */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-2">
+                <Image className="w-3.5 h-3.5" />
+                {t('images')}
+              </DropdownMenuLabel>
+              {availableImages.length === 0 ? (
+                <div className="px-3 py-2 text-center">
+                  <p className="text-xs text-muted-foreground">
+                    {t('noImagesFound')}
+                  </p>
+                </div>
+              ) : (
+                availableImages.map((imagePath) => {
+                  const filename = imagePath.split('/').pop() || imagePath;
+                  const isSelected =
+                    backgroundType === 'image' &&
+                    currentImagePath === imagePath;
+                  return (
+                    <DropdownMenuItem
+                      key={imagePath}
+                      onClick={() => {
+                        selectImage(imagePath);
+                        setBackgroundType('image');
+                      }}
+                      className={cn(
+                        'gap-2 cursor-pointer',
+                        isSelected && 'bg-active text-active-foreground',
+                      )}
+                    >
+                      <Image className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="text-xs truncate flex-1">
+                        {filename}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })
+              )}
+
+              <DropdownMenuSeparator />
+
+              {/* Colors Section */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-2">
+                <Palette className="w-3.5 h-3.5" />
+                {t('colors')}
+              </DropdownMenuLabel>
+              {[
+                { color: '#000000', name: t('colorBlack') },
+                { color: '#FFFFFF', name: t('colorWhite') },
+                { color: '#00FF00', name: t('colorGreen') },
+                { color: '#0000FF', name: t('colorBlue') },
+              ].map(({ color, name }) => {
+                const isSelected =
+                  backgroundType === 'color' && backgroundColor === color;
+                return (
+                  <DropdownMenuItem
+                    key={color}
+                    onClick={() => {
+                      setBackgroundType('color', color);
+                    }}
+                    className={cn(
+                      'gap-2 cursor-pointer',
+                      isSelected && 'bg-active text-active-foreground',
+                    )}
+                  >
+                    <div
+                      className="w-3.5 h-3.5 rounded-sm border border-border flex-shrink-0"
+                      style={{ backgroundColor: color }}
+                    />
+                    <span className="text-xs truncate flex-1">{name}</span>
+                  </DropdownMenuItem>
+                );
+              })}
+
+              {/* Custom Color Picker */}
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault();
+                  colorInputRef.current?.click();
+                }}
+                className="gap-2 cursor-pointer"
+              >
+                <Pipette className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="text-xs truncate flex-1">
+                  {t('customColor')}
+                </span>
+                {backgroundType === 'color' &&
+                  !['#000000', '#FFFFFF', '#00FF00', '#0000FF'].includes(
+                    backgroundColor,
+                  ) && (
+                    <div
+                      className="w-3.5 h-3.5 rounded-sm border border-border flex-shrink-0"
+                      style={{ backgroundColor }}
+                    />
+                  )}
+              </DropdownMenuItem>
+
+              {/* Hidden color input */}
+              <input
+                ref={colorInputRef}
+                type="color"
+                value={backgroundColor}
+                onChange={(e) => {
+                  setBackgroundType('color', e.target.value);
+                }}
+                className="sr-only"
+              />
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -281,17 +595,21 @@ export default function ControlPanel() {
                 variant={isVideoShuffleEnabled ? 'default' : 'ghost'}
                 size="icon"
                 onClick={toggleVideoShuffle}
-                disabled={embeddedVideos.length <= 1}
+                disabled={
+                  backgroundType !== 'video' || embeddedVideos.length <= 1
+                }
                 className={cn(
                   'h-10 w-10 transition-all disabled:opacity-40',
-                  isVideoShuffleEnabled
+                  isVideoShuffleEnabled && backgroundType === 'video'
                     ? 'bg-active text-active-foreground hover:bg-active-hover'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
                 aria-label={
                   isVideoShuffleEnabled ? t('shuffleOn') : t('shuffleOff')
                 }
-                aria-pressed={isVideoShuffleEnabled}
+                aria-pressed={
+                  isVideoShuffleEnabled && backgroundType === 'video'
+                }
               >
                 <Shuffle className="w-4 h-4" />
               </Button>
@@ -302,6 +620,129 @@ export default function ControlPanel() {
           </Tooltip>
         </div>
 
+        {/* Divider */}
+        <div className="h-8 w-px bg-border" />
+
+        {/* Advertisement Controls */}
+        <div className="flex items-center gap-1">
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'h-10 gap-2 px-3 bg-muted border-border',
+                      isAdVisible &&
+                        'bg-amber-500/25 border-amber-500/50 text-amber-700 dark:text-amber-200',
+                    )}
+                  >
+                    <Megaphone className="w-4 h-4 flex-shrink-0" />
+                    <span className="text-xs">
+                      {isAdVisible
+                        ? currentAd?.type === 'text'
+                          ? currentAd.content.substring(0, 15) +
+                            (currentAd.content.length > 15 ? '...' : '')
+                          : currentAd?.content
+                              .split('/')
+                              .pop()
+                              ?.substring(0, 15)
+                        : t('advertisements')}
+                    </span>
+                    <ChevronDown className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>{t('advertisements')} (A)</p>
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="start" className="w-64">
+              {/* Hide current ad */}
+              {isAdVisible && (
+                <>
+                  <DropdownMenuItem
+                    onClick={hideAdvertisement}
+                    className="gap-2 cursor-pointer text-amber-600 dark:text-amber-400"
+                  >
+                    <EyeOff className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="text-xs">{t('adHide')}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+
+              {/* Rotation control */}
+              <DropdownMenuItem
+                onClick={isRotating ? stopRotation : startRotation}
+                disabled={advertisements.length === 0}
+                className="gap-2 cursor-pointer"
+              >
+                {isRotating ? (
+                  <>
+                    <Square className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="text-xs">{t('adStopRotation')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="text-xs">{t('adStartRotation')}</span>
+                  </>
+                )}
+              </DropdownMenuItem>
+
+              {/* Manage advertisements */}
+              <DropdownMenuItem
+                onClick={() => setIsAdManageOpen(true)}
+                className="gap-2 cursor-pointer"
+              >
+                <Settings className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="text-xs">{t('adManage')}</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              {/* Advertisements list */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                {t('advertisements')}
+              </DropdownMenuLabel>
+              {advertisements.length === 0 ? (
+                <div className="px-3 py-2 text-center">
+                  <p className="text-xs text-muted-foreground">
+                    {t('noAdvertisements')}
+                  </p>
+                </div>
+              ) : (
+                advertisements.map((ad) => {
+                  const isSelected = currentAd?.id === ad.id && isAdVisible;
+                  return (
+                    <DropdownMenuItem
+                      key={ad.id}
+                      onClick={() => showAdvertisement(ad)}
+                      className={cn(
+                        'gap-2 cursor-pointer',
+                        isSelected && 'bg-active text-active-foreground',
+                      )}
+                    >
+                      {ad.type === 'text' ? (
+                        <Type className="w-3.5 h-3.5 flex-shrink-0" />
+                      ) : (
+                        <ImageIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                      )}
+                      <span className="text-xs truncate flex-1">
+                        {ad.type === 'text'
+                          ? ad.content.substring(0, 30) +
+                            (ad.content.length > 30 ? '...' : '')
+                          : ad.content.split('/').pop()}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         {/* Spacer */}
         <div className="flex-1" />
 
@@ -309,9 +750,22 @@ export default function ControlPanel() {
         <div className="text-[10px] text-muted-foreground font-medium hidden lg:block">
           <span className="font-bold">← →</span> {t('slide')} ·{' '}
           <span className="font-bold">↑ ↓</span> {t('song')} ·{' '}
-          <span className="font-bold">B</span> {t('blank')}
+          <span className="font-bold">B</span> {t('blank')} ·{' '}
+          <span className="font-bold">⌘Z</span> {t('undo')}
         </div>
       </div>
+
+      {/* Advertisement Management Dialog */}
+      <Dialog open={isAdManageOpen} onOpenChange={setIsAdManageOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] p-0 overflow-hidden">
+          <DialogHeader className="px-4 pt-4 pb-2">
+            <DialogTitle>{t('adManage')}</DialogTitle>
+          </DialogHeader>
+          <div className="h-[60vh] overflow-hidden">
+            <AdvertisementPanel />
+          </div>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }

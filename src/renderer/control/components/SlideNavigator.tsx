@@ -25,10 +25,13 @@ import {
   X,
   Link2,
 } from 'lucide-react';
-import { usePresentation, useSetlist } from '../context';
+import { usePresentation, useSetlist, useProjection } from '../context';
 import { cn } from '../../lib/utils';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { Input } from '../../components/ui/input';
+import { Slider } from '../../components/ui/slider';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Label } from '../../components/ui/label';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -47,12 +50,13 @@ interface SortableSlideProps {
   isHighlighted: boolean;
   sectionNumber: number | null; // 1-9 for keyboard shortcut, null if not a section start
   hasSections: boolean; // whether the song has any sections defined
+  defaultFontSize: number; // Global default font size from settings
   onClick: () => void;
   onDoubleClick: () => void;
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
-  onSave: (lines: string[], section?: string) => void;
+  onSave: (lines: string[], section?: string, fontSize?: number) => void;
   onCancelEdit: () => void;
   canDelete: boolean;
   slideRef?: React.RefObject<HTMLDivElement | null>;
@@ -65,7 +69,8 @@ function SortableSlide({
   isEditing,
   isHighlighted,
   sectionNumber,
-  hasSections,
+  hasSections: _hasSections,
+  defaultFontSize,
   onClick,
   onDoubleClick,
   onEdit,
@@ -78,6 +83,10 @@ function SortableSlide({
 }: SortableSlideProps) {
   const { t } = useTranslation();
   const [editText, setEditText] = useState('');
+  const [editFontSize, setEditFontSize] = useState<number | undefined>(
+    undefined,
+  );
+  const [useCustomFontSize, setUseCustomFontSize] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const {
@@ -94,16 +103,18 @@ function SortableSlide({
     transition,
   };
 
-  // Initialize edit text when entering edit mode
+  // Initialize edit text and font size when entering edit mode
   useEffect(() => {
     if (isEditing) {
       setEditText(slide.lines.join('\n'));
+      setEditFontSize(slide.fontSize ?? defaultFontSize);
+      setUseCustomFontSize(slide.fontSize !== undefined);
       setTimeout(() => {
         textareaRef.current?.focus();
         textareaRef.current?.select();
       }, 0);
     }
-  }, [isEditing, slide.lines]);
+  }, [isEditing, slide.lines, slide.fontSize, defaultFontSize]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -120,7 +131,9 @@ function SortableSlide({
       .map((line) => line.trim())
       .filter((line) => line !== '');
     if (lines.length > 0) {
-      onSave(lines, slide.section);
+      // Only pass fontSize if custom is enabled, otherwise pass undefined to clear it
+      const fontSizeToSave = useCustomFontSize ? editFontSize : undefined;
+      onSave(lines, slide.section, fontSizeToSave);
     }
     onCancelEdit();
   };
@@ -135,14 +148,17 @@ function SortableSlide({
 
   return (
     <div ref={slideRef}>
-      {/* Section header with keyboard shortcut */}
-      {slide.section && sectionNumber !== null && (
+      {/* Section header with label (when slide has section defined) */}
+      {slide.section && (
         <div className="flex items-center gap-2 px-1 py-2.5 mt-4 first:mt-0">
           <div className="h-px flex-1 bg-border" />
           <div className="flex items-center gap-2">
-            <kbd className="w-5 h-5 flex items-center justify-center text-[10px] font-mono font-bold bg-foreground text-background rounded">
-              {sectionNumber}
-            </kbd>
+            {/* FIX: Always show keyboard shortcut badge for first 9 slides */}
+            {sectionNumber !== null && (
+              <kbd className="w-5 h-5 flex items-center justify-center text-[10px] font-mono font-bold bg-foreground text-background rounded">
+                {sectionNumber}
+              </kbd>
+            )}
             {slide.sectionRef ? (
               <div className="flex items-center gap-1.5">
                 <Link2 className="w-3 h-3 text-blue-500" />
@@ -159,8 +175,8 @@ function SortableSlide({
           <div className="h-px flex-1 bg-border" />
         </div>
       )}
-      {/* Shortcut-only indicator when no sections are defined in the song */}
-      {!slide.section && !hasSections && sectionNumber !== null && (
+      {/* FIX: Always show keyboard shortcut badge for first 9 slides (even when sections exist) */}
+      {!slide.section && sectionNumber !== null && (
         <div className="flex items-center gap-2 px-1 py-1 mt-2 first:mt-0">
           <kbd className="w-5 h-5 flex items-center justify-center text-[10px] font-mono font-bold bg-muted text-muted-foreground rounded">
             {sectionNumber}
@@ -168,13 +184,12 @@ function SortableSlide({
         </div>
       )}
       <ContextMenu>
-        <ContextMenuTrigger asChild disabled={isEditing}>
+        <ContextMenuTrigger asChild>
           <div
             ref={setNodeRef}
             style={style}
-            onDoubleClick={isEditing ? undefined : onDoubleClick}
             className={cn(
-              'w-full relative rounded-lg p-3.5 text-left transition-all duration-150',
+              'w-full relative rounded-lg p-3 text-left transition-all duration-150',
               'border-2 mr-1 group',
               isDragging && 'opacity-50 z-50',
               isEditing && 'ring-2 ring-ring',
@@ -195,14 +210,45 @@ function SortableSlide({
               </div>
             )}
 
-            {/* Drag handle - hidden when editing */}
+            {/* Edit button and font size indicator - top right */}
+            {!isEditing && !slide.sectionRef && (
+              <div className="absolute right-2 top-2 flex items-center gap-1">
+                {/* Font size indicator when custom size is set */}
+                {slide.fontSize && (
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                    {slide.fontSize}px
+                  </span>
+                )}
+                {/* Edit button - shows on hover */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                  className={cn(
+                    'p-1 rounded',
+                    'opacity-0 group-hover:opacity-100 transition-opacity',
+                    'hover:bg-muted',
+                    isActive
+                      ? 'text-active-foreground'
+                      : 'text-muted-foreground',
+                  )}
+                  title={t('slideEdit')}
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+
+            {/* Drag handle - always visible with subtle styling */}
             {!isEditing && (
               <div
                 {...attributes}
                 {...listeners}
+                aria-label="Drag to reorder"
                 className={cn(
                   'absolute left-1 top-1/2 -translate-y-1/2 p-1 rounded cursor-grab',
-                  'opacity-0 group-hover:opacity-100 transition-opacity',
+                  'opacity-50 hover:opacity-100 transition-opacity',
                   'hover:bg-muted',
                   isActive ? 'text-active-foreground' : 'text-muted-foreground',
                 )}
@@ -231,31 +277,68 @@ function SortableSlide({
                   placeholder={t('enterLyrics')}
                   rows={Math.max(2, editText.split('\n').length)}
                 />
-                <p className="text-[10px] text-muted-foreground mt-1">
+                {/* Font size override */}
+                <div className="mt-3 pt-3 border-t border-border/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Checkbox
+                      id={`fontSize-${slide.id}`}
+                      checked={useCustomFontSize}
+                      onCheckedChange={(checked) => {
+                        setUseCustomFontSize(checked === true);
+                        if (!checked) {
+                          setEditFontSize(defaultFontSize);
+                        }
+                      }}
+                    />
+                    <Label
+                      htmlFor={`fontSize-${slide.id}`}
+                      className="text-xs text-muted-foreground cursor-pointer"
+                    >
+                      {t('slideFontSizeOverride')}
+                    </Label>
+                  </div>
+                  {useCustomFontSize && (
+                    <div className="flex items-center gap-3">
+                      <Slider
+                        value={[editFontSize ?? defaultFontSize]}
+                        onValueChange={(value) => setEditFontSize(value[0])}
+                        min={48}
+                        max={144}
+                        step={4}
+                        className="flex-1"
+                      />
+                      <span className="text-xs text-muted-foreground min-w-[40px] text-right">
+                        {editFontSize ?? defaultFontSize}px
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-2">
                   {t('slideEditHint')}
                 </p>
               </div>
             ) : (
-              /* View mode - clickable area */
-              <button onClick={onClick} className="w-full text-left pl-5">
-                {/* Lyrics preview */}
-                <div className="pr-2 min-h-[40px]">
-                  {slide.lines.map((line, lineIndex) => (
-                    <p
-                      key={lineIndex}
-                      className={cn(
-                        'text-sm leading-relaxed',
-                        isActive
-                          ? 'text-active-foreground font-semibold'
-                          : 'text-foreground',
-                        lineIndex > 0 && 'mt-0.5 opacity-80',
-                      )}
-                    >
-                      {line || '\u00A0'}
-                    </p>
-                  ))}
-                </div>
-              </button>
+              /* View mode - lyrics preview */
+              <div
+                className="pl-5 pr-2 min-h-[40px] cursor-pointer"
+                onClick={onClick}
+                onDoubleClick={onDoubleClick}
+              >
+                {slide.lines.map((line, lineIndex) => (
+                  <p
+                    key={lineIndex}
+                    className={cn(
+                      'text-sm leading-relaxed',
+                      isActive
+                        ? 'text-active-foreground font-semibold'
+                        : 'text-foreground',
+                      lineIndex > 0 && 'mt-0.5 opacity-80',
+                    )}
+                  >
+                    {line || '\u00A0'}
+                  </p>
+                ))}
+              </div>
             )}
           </div>
         </ContextMenuTrigger>
@@ -275,7 +358,7 @@ function SortableSlide({
             className={cn(
               'gap-2',
               canDelete &&
-                'text-red-400 focus:text-red-300 focus:bg-red-500/20',
+                'text-red-500 focus:text-red-400 focus:bg-red-500/20',
             )}
           >
             <Trash2 className="w-4 h-4" />
@@ -293,6 +376,7 @@ export default function SlideNavigator() {
     usePresentation();
   const { reorderSlides, duplicateSlide, deleteSlide, updateSlide } =
     useSetlist();
+  const { projectionSettings } = useProjection();
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -340,8 +424,11 @@ export default function SlideNavigator() {
     index: number,
     lines: string[],
     section?: string,
+    fontSize?: number,
   ) => {
-    updateSlide(currentSongIndex, index, lines, section);
+    // Wrap fontSize in SlideOverrides if provided
+    const overrides = fontSize !== undefined ? { fontSize } : undefined;
+    updateSlide(currentSongIndex, index, lines, section, overrides);
     setEditingIndex(null);
   };
 
@@ -481,13 +568,14 @@ export default function SlideNavigator() {
                     isHighlighted={isHighlighted}
                     sectionNumber={sectionNumber}
                     hasSections={hasSections}
+                    defaultFontSize={projectionSettings.fontSize}
                     onClick={() => goToSlide(index)}
                     onDoubleClick={() => startEditing(index)}
                     onEdit={() => startEditing(index)}
                     onDuplicate={() => duplicateSlide(currentSongIndex, index)}
                     onDelete={() => deleteSlide(currentSongIndex, index)}
-                    onSave={(lines, section) =>
-                      handleSaveSlide(index, lines, section)
+                    onSave={(lines, section, fontSize) =>
+                      handleSaveSlide(index, lines, section, fontSize)
                     }
                     onCancelEdit={cancelEditing}
                     canDelete={currentSong.slides.length > 1}

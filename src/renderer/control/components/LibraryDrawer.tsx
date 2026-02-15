@@ -29,6 +29,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../../components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 import { cn } from '../../lib/utils';
 import SongEditor from './SongEditor';
 import { Song } from '../../shared/types/song';
@@ -72,6 +82,9 @@ export default function LibraryDrawer({
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+
+  // Delete confirmation state
+  const [deletingSongId, setDeletingSongId] = useState<string | null>(null);
 
   // Get IDs of songs already in session
   const sessionSongIds = useMemo(() => {
@@ -128,8 +141,9 @@ export default function LibraryDrawer({
       const result = await window.electron.library.delete(id);
       if (result.success) {
         if (selectedSong?.id === id) setSelectedSong(null);
-        selectedIds.delete(id);
-        setSelectedIds(new Set(selectedIds));
+        const newSelectedIds = new Set(selectedIds);
+        newSelectedIds.delete(id);
+        setSelectedIds(newSelectedIds);
         loadSongs();
       }
     } catch (error) {
@@ -194,8 +208,8 @@ export default function LibraryDrawer({
       title: song.title,
       rawLyrics: song.lyrics,
       slides: parseLyricsToSlides(song.lyrics),
-      createdAt: new Date(song.createdAt),
-      updatedAt: new Date(song.updatedAt),
+      createdAt: song.createdAt,
+      updatedAt: song.updatedAt,
     };
     setEditingSong(songForEditor);
     setIsEditorOpen(true);
@@ -345,9 +359,9 @@ export default function LibraryDrawer({
                       className={cn(
                         'group p-3 rounded-lg border transition-all duration-150',
                         isSelected
-                          ? 'bg-accent border-accent-foreground/20'
+                          ? 'bg-active border-active-border-subtle'
                           : selectedSong?.id === song.id
-                            ? 'bg-muted border-foreground/20'
+                            ? 'bg-active border-active-border-subtle'
                             : 'bg-transparent border-transparent hover:bg-muted/50 hover:border-border',
                       )}
                     >
@@ -385,7 +399,7 @@ export default function LibraryDrawer({
                             {isInSession && (
                               <Badge
                                 variant="outline"
-                                className="text-[9px] px-1.5 py-0 flex-shrink-0 gap-0.5"
+                                className="text-[10px] px-1.5 py-0 flex-shrink-0 gap-0.5"
                               >
                                 <Check className="w-2.5 h-2.5" />
                                 {t('inSession')}
@@ -402,7 +416,7 @@ export default function LibraryDrawer({
                                 <Badge
                                   key={cat}
                                   variant="outline"
-                                  className="text-[9px] px-1.5 py-0"
+                                  className="text-[10px] px-1.5 py-0"
                                 >
                                   {cat}
                                 </Badge>
@@ -411,7 +425,7 @@ export default function LibraryDrawer({
                                 <Badge
                                   key={tag}
                                   variant="secondary"
-                                  className="text-[9px] px-1.5 py-0"
+                                  className="text-[10px] px-1.5 py-0"
                                 >
                                   {tag}
                                 </Badge>
@@ -473,7 +487,7 @@ export default function LibraryDrawer({
                             className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-500/10"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteSong(song.id);
+                              setDeletingSongId(song.id);
                             }}
                             title={t('delete')}
                             aria-label={t('delete')}
@@ -549,6 +563,37 @@ export default function LibraryDrawer({
         song={editingSong}
         onSave={handleEditorSave}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={!!deletingSongId}
+        onOpenChange={(dialogOpen) => {
+          if (!dialogOpen) setDeletingSongId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('confirmDelete')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('confirmDeleteSongDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600 text-white"
+              onClick={() => {
+                if (deletingSongId) {
+                  handleDeleteSong(deletingSongId);
+                  setDeletingSongId(null);
+                }
+              }}
+            >
+              {t('delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

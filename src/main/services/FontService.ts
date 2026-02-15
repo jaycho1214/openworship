@@ -131,7 +131,12 @@ export const addFont = (
     const userFontsPath = getUserFontsPath();
     ensureFontsDir();
 
-    const destPath = path.join(userFontsPath, fileName);
+    const destPath = path.resolve(userFontsPath, fileName);
+
+    // Path traversal protection
+    if (!destPath.startsWith(path.resolve(userFontsPath))) {
+      return { success: false, error: 'Invalid file name' };
+    }
 
     // Check if font already exists
     if (fs.existsSync(destPath)) {
@@ -170,10 +175,10 @@ export const addFont = (
 export const deleteFont = (fileName: string): IpcResponse<void> => {
   try {
     const userFontsPath = getUserFontsPath();
-    const fontPath = path.join(userFontsPath, fileName);
+    const fontPath = path.resolve(userFontsPath, fileName);
 
     // Only allow deleting user fonts
-    if (!fontPath.startsWith(userFontsPath)) {
+    if (!fontPath.startsWith(path.resolve(userFontsPath))) {
       return { success: false, error: 'Cannot delete bundled fonts' };
     }
 

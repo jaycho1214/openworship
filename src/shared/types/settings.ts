@@ -33,6 +33,17 @@ export type AnimationType = 'none' | 'fade' | 'slide-up' | 'slide-left';
 export type DisplayMode = 'fullscreen' | 'windowed';
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type Language = 'en' | 'ko';
+export type BackgroundType = 'video' | 'image' | 'color';
+
+// Predefined color presets for chroma key
+export const COLOR_PRESETS = {
+  black: '#000000',
+  white: '#FFFFFF',
+  green: '#00FF00',
+  blue: '#0000FF',
+} as const;
+
+export type ColorPreset = keyof typeof COLOR_PRESETS;
 
 export interface ProjectionSettings {
   fontSize: number;
@@ -46,6 +57,10 @@ export interface ProjectionSettings {
   textJustify?: 'left' | 'center' | 'right';
   lineGap?: number;
   padding?: PaddingSettings;
+  // Background settings
+  backgroundType?: BackgroundType;
+  backgroundColor?: string;
+  backgroundImagePath?: string;
 }
 
 export interface AppSettings {
@@ -87,4 +102,7 @@ export const defaultProjectionSettings: ProjectionSettings = {
     left: 5,
     right: 5,
   },
+  backgroundType: 'video',
+  backgroundColor: '#000000',
+  backgroundImagePath: undefined,
 };

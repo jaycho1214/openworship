@@ -1,85 +1,82 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, CSSProperties } from 'react';
 import { cn } from '../../lib/utils';
-
-interface ProjectionSettings {
-  fontSize: number;
-  textColor: string;
-  textShadow: {
-    enabled: boolean;
-    offsetX: number;
-    offsetY: number;
-    blur: number;
-    color: string;
-  };
-  textOutline: {
-    enabled: boolean;
-    width: number;
-    color: string;
-  };
-  backgroundDim: number;
-  animation: 'none' | 'fade' | 'slide-up' | 'slide-left';
-  textAlign: {
-    horizontal: 'left' | 'center' | 'right';
-    vertical: 'top' | 'middle' | 'bottom';
-  };
-  textJustify?: 'left' | 'center' | 'right';
-  lineGap?: number;
-  padding?: {
-    top: number;
-    bottom: number;
-    left: number;
-    right: number;
-  };
-}
+import type {
+  AdvertisementPosition,
+  AdvertisementPadding,
+} from '../../../shared/types/advertisement';
+import type { Frame } from '../../../shared/types/frame';
+import {
+  type ProjectionSettings,
+  defaultProjectionSettings,
+} from '../../../shared/types/settings';
+import { getFrameStyle } from '../../shared/utils/frameStyles';
+import type { SlideOverrides } from '../../shared/types/song';
 
 interface LyricsOverlayProps {
   lines: string[];
   fontFamily?: string;
   settings?: ProjectionSettings;
   isHidden?: boolean;
+  isBannerAdVisible?: boolean;
+  bannerAdPosition?: AdvertisementPosition;
+  bannerAdPadding?: AdvertisementPadding;
+  bannerAdFontSize?: number;
+  frame?: Frame | null;
+  slideFontSize?: number; // Per-slide font size override
+  slideOverrides?: SlideOverrides; // Per-slide overrides (position, padding)
 }
-
-const defaultSettings: ProjectionSettings = {
-  fontSize: 72,
-  textColor: '#ffffff',
-  textShadow: {
-    enabled: true,
-    offsetX: 0,
-    offsetY: 0,
-    blur: 8,
-    color: 'rgba(0,0,0,0.9)',
-  },
-  textOutline: {
-    enabled: false,
-    width: 2,
-    color: '#000000',
-  },
-  backgroundDim: 0,
-  animation: 'fade',
-  textAlign: {
-    horizontal: 'center',
-    vertical: 'middle',
-  },
-  textJustify: 'center',
-  lineGap: 12,
-  padding: {
-    top: 5,
-    bottom: 5,
-    left: 5,
-    right: 5,
-  },
-};
 
 export default function LyricsOverlay({
   lines,
   fontFamily = 'inherit',
-  settings = defaultSettings,
+  settings = defaultProjectionSettings,
   isHidden = false,
+  isBannerAdVisible = false,
+  bannerAdPosition = 'bottom',
+  bannerAdPadding = { top: 48, right: 64, bottom: 48, left: 64 },
+  bannerAdFontSize = 36,
+  frame = null,
+  slideFontSize,
+  slideOverrides,
 }: LyricsOverlayProps) {
-  const s = { ...defaultSettings, ...settings };
+  const s = { ...defaultProjectionSettings, ...settings };
+
+  // Use slide-specific font size if provided, otherwise fall back to global setting
+  const effectiveFontSize =
+    slideFontSize ?? slideOverrides?.fontSize ?? s.fontSize;
+
+  // Use slide-specific text alignment if provided, otherwise fall back to global setting
+  const effectiveTextAlign = {
+    horizontal: slideOverrides?.textAlign?.horizontal ?? s.textAlign.horizontal,
+    vertical: slideOverrides?.textAlign?.vertical ?? s.textAlign.vertical,
+  };
+
+  // Use slide-specific padding if provided, otherwise fall back to global setting
+  const effectivePadding = {
+    top: slideOverrides?.padding?.top ?? s.padding?.top ?? 5,
+    bottom: slideOverrides?.padding?.bottom ?? s.padding?.bottom ?? 5,
+    left: slideOverrides?.padding?.left ?? s.padding?.left ?? 5,
+    right: slideOverrides?.padding?.right ?? s.padding?.right ?? 5,
+  };
+
+  // Calculate the actual banner height in pixels
+  // Banner height = top padding + content height (fontSize * lineHeight 1.4) + bottom padding
+  const bannerHeight = isBannerAdVisible
+    ? bannerAdPadding.top + bannerAdFontSize * 1.4 + bannerAdPadding.bottom
+    : 0;
+
+  // Calculate pixel offset based on banner position
+  const topOffset =
+    isBannerAdVisible && bannerAdPosition === 'top' ? bannerHeight : 0;
+  const bottomOffset =
+    isBannerAdVisible && bannerAdPosition === 'bottom' ? bannerHeight : 0;
+  // For middle position, add offset to both sides
+  const middleOffset =
+    isBannerAdVisible && bannerAdPosition === 'middle' ? bannerHeight / 2 : 0;
   const [currentLines, setCurrentLines] = useState<string[]>(lines);
   const [opacity, setOpacity] = useState(1);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentLinesRef = useRef<string[]>(lines);
 
   const animate = s.animation !== 'none';
 
@@ -90,13 +87,14 @@ export default function LyricsOverlay({
     }
 
     if (!animate) {
+      currentLinesRef.current = lines;
       setCurrentLines(lines);
       setOpacity(lines.length > 0 ? 1 : 0);
       return;
     }
 
-    // If content is the same, do nothing
-    if (JSON.stringify(lines) === JSON.stringify(currentLines)) {
+    // If content is the same, do nothing (use ref to avoid feedback loop)
+    if (JSON.stringify(lines) === JSON.stringify(currentLinesRef.current)) {
       return;
     }
 
@@ -105,6 +103,7 @@ export default function LyricsOverlay({
 
     // After fade out, swap content and fade in
     timeoutRef.current = setTimeout(() => {
+      currentLinesRef.current = lines;
       setCurrentLines(lines);
       // Small delay before fading in to ensure content is rendered
       requestAnimationFrame(() => {
@@ -152,16 +151,16 @@ export default function LyricsOverlay({
     left: 'justify-start',
     center: 'justify-center',
     right: 'justify-end',
-  }[s.textAlign.horizontal];
+  }[effectiveTextAlign.horizontal];
 
   const alignItems = {
     top: 'items-start',
     middle: 'items-center',
     bottom: 'items-end',
-  }[s.textAlign.vertical];
+  }[effectiveTextAlign.vertical];
 
-  // Get padding values (default to 5% if not set)
-  const padding = s.padding ?? { top: 5, bottom: 5, left: 5, right: 5 };
+  // Use effective padding (already computed above)
+  const padding = effectivePadding;
 
   // CSS text-align for text justification within the block
   const textJustify = s.textJustify ?? 'center';
@@ -174,6 +173,10 @@ export default function LyricsOverlay({
   // Line gap (default 12px)
   const lineGap = s.lineGap ?? 12;
 
+  // Get frame styles if frame is set
+  const frameStyle = frame ? getFrameStyle(frame) : {};
+  const hasFrame = frame !== null;
+
   return (
     // Outer wrapper for hide verse animation (same as BlankScreen pattern)
     <div
@@ -185,26 +188,35 @@ export default function LyricsOverlay({
     >
       <div
         className={cn(
-          'absolute inset-0 flex overflow-hidden',
+          'absolute left-0 right-0 flex overflow-hidden',
           alignItems,
           justifyContent,
         )}
         style={{
           opacity,
-          transition: 'opacity 150ms ease-out',
+          transition:
+            'opacity 150ms ease-out, top 300ms ease-in-out, bottom 300ms ease-in-out',
+          // Use pixel-based offsets for banner, percentage for user padding
+          top: topOffset + middleOffset,
+          bottom: bottomOffset + middleOffset,
           paddingTop: `${padding.top}%`,
           paddingBottom: `${padding.bottom}%`,
           paddingLeft: `${padding.left}%`,
           paddingRight: `${padding.right}%`,
         }}
       >
+        {/* Frame container - wraps content when a frame is set */}
         <div
-          className="flex flex-col items-stretch"
+          className={cn(
+            'flex flex-col items-stretch',
+            hasFrame && 'p-4', // Add internal padding when frame is present
+          )}
           style={{
             backfaceVisibility: 'hidden',
             gap: `${lineGap}px`,
             maxWidth: '100%',
-            width: '100%',
+            width: hasFrame ? 'auto' : '100%',
+            ...(frameStyle as CSSProperties),
           }}
         >
           {currentLines.map((line, index) => (
@@ -216,7 +228,7 @@ export default function LyricsOverlay({
                   fontFamily && fontFamily !== 'inherit'
                     ? fontFamily
                     : undefined,
-                fontSize: `${s.fontSize}px`,
+                fontSize: `${effectiveFontSize}px`,
                 color: s.textColor,
                 textShadow: textShadow || undefined,
                 ...textOutlineStyle,

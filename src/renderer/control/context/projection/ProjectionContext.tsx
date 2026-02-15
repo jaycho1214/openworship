@@ -4,6 +4,8 @@ import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
+  useRef,
   ReactNode,
 } from 'react';
 import {
@@ -12,9 +14,11 @@ import {
 } from '../../../shared/types/song';
 import { usePresentation } from '../presentation/PresentationContext';
 import { useMedia } from '../media/MediaContext';
+import { useFrame } from '../frame/FrameContext';
+import { useSetlist } from '../setlist/SetlistContext';
+import type { SetlistItemType } from '../../../../shared/types/setlistItem';
 
-// Helper to safely access electron API
-const getElectron = () => (window as any).electron;
+import { getElectron } from '../../../shared/hooks/useElectron';
 
 interface ProjectionContextType {
   isProjectionOpen: boolean;
@@ -43,9 +47,24 @@ interface ProjectionProviderProps {
 }
 
 export function ProjectionProvider({ children }: ProjectionProviderProps) {
-  const { currentSlide } = usePresentation();
-  const { fontFamily, embeddedVideos, currentVideoPath, selectVideo } =
-    useMedia();
+  const { currentSlide, presentationState } = usePresentation();
+  const { currentSetlist } = useSetlist();
+  const {
+    getFrameForType,
+    sendFrameToProjection,
+    settings: frameSettings,
+  } = useFrame();
+  const {
+    fontFamily,
+    embeddedVideos,
+    currentVideoPath,
+    selectVideo,
+    backgroundType,
+    backgroundColor,
+    currentImagePath,
+  } = useMedia();
+
+  const lastItemTypeRef = useRef<SetlistItemType | null>(null);
 
   const [isProjectionOpen, setIsProjectionOpen] = useState(false);
   const [isBlank, setIsBlank] = useState(false);
@@ -59,7 +78,11 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
     if (!electron) return;
 
     if (currentSlide) {
-      electron.projection.update({ lines: currentSlide.lines });
+      electron.projection.update({
+        lines: currentSlide.lines,
+        fontSize: currentSlide.fontSize ?? currentSlide.overrides?.fontSize,
+        overrides: currentSlide.overrides,
+      });
     } else {
       electron.projection.update({ lines: [] });
     }
@@ -120,6 +143,47 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
     };
   }, []);
 
+  // Send frame update when current item type changes
+  useEffect(() => {
+    if (!isProjectionOpen || !currentSetlist) return;
+
+    // Get current item type from setlist items
+    const currentItemIndex = presentationState.currentSongIndex;
+    const currentItem = currentSetlist.items[currentItemIndex];
+    const currentItemType: SetlistItemType = currentItem?.type ?? 'song';
+
+    // Send frame if item type changed
+    if (currentItemType !== lastItemTypeRef.current) {
+      lastItemTypeRef.current = currentItemType;
+      const frame = getFrameForType(currentItemType);
+      sendFrameToProjection(frame, currentItemType);
+      console.log(
+        '[Projection] Sent frame for item type:',
+        currentItemType,
+        frame,
+      );
+    }
+  }, [
+    isProjectionOpen,
+    currentSetlist,
+    presentationState.currentSongIndex,
+    getFrameForType,
+    sendFrameToProjection,
+  ]);
+
+  // Also send frame update when frame settings change
+  useEffect(() => {
+    if (!isProjectionOpen || !currentSetlist) return;
+
+    const currentItemIndex = presentationState.currentSongIndex;
+    const currentItem = currentSetlist.items[currentItemIndex];
+    const currentItemType: SetlistItemType = currentItem?.type ?? 'song';
+
+    const frame = getFrameForType(currentItemType);
+    sendFrameToProjection(frame, currentItemType);
+    console.log('[Projection] Frame settings changed, sending frame:', frame);
+  }, [frameSettings]);
+
   const toggleBlank = useCallback(() => {
     setIsBlank((prev) => !prev);
   }, []);
@@ -147,34 +211,66 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
     const electron = getElectron();
     if (!electron) return;
 
-    // Shuffle to a random video when projection opens
-    let videoToSend = currentVideoPath;
-    if (embeddedVideos.length > 0) {
-      const randomVideo =
-        embeddedVideos[Math.floor(Math.random() * embeddedVideos.length)];
-      videoToSend = randomVideo;
-      selectVideo(randomVideo);
+    try {
+      // Only shuffle video when background type is video
+      let videoToSend = currentVideoPath;
+      if (backgroundType === 'video' && embeddedVideos.length > 0) {
+        const randomVideo =
+          embeddedVideos[Math.floor(Math.random() * embeddedVideos.length)];
+        videoToSend = randomVideo;
+        selectVideo(randomVideo);
+      }
+
+      // Set up listener for projection ready signal BEFORE opening
+      const unsubReady = electron.projection.onReady(() => {
+        console.log('Received ready signal from projection window');
+        if (currentSlide) {
+          electron.projection.update({
+            lines: currentSlide.lines,
+            fontSize: currentSlide.fontSize ?? currentSlide.overrides?.fontSize,
+            overrides: currentSlide.overrides,
+          });
+        } else {
+          electron.projection.update({ lines: [] });
+        }
+        // FIX: Send appropriate background based on current backgroundType
+        if (backgroundType === 'video' && videoToSend) {
+          electron.projection.setVideo(videoToSend);
+        } else if (backgroundType === 'image' && currentImagePath) {
+          electron.projection.setImage(currentImagePath);
+        } else if (backgroundType === 'color') {
+          electron.projection.setBackgroundColor(backgroundColor);
+        } else if (videoToSend) {
+          // Fallback to video if no background type is set
+          electron.projection.setVideo(videoToSend);
+        }
+        electron.projection.setFont(fontFamily);
+        electron.projection.setBlank(isBlank);
+        electron.projection.setVerseHidden(isVerseHidden);
+
+        // Send initial frame based on current item type
+        if (currentSetlist) {
+          const currentItemIndex = presentationState.currentSongIndex;
+          const currentItem = currentSetlist.items[currentItemIndex];
+          const currentItemType: SetlistItemType = currentItem?.type ?? 'song';
+          const frame = getFrameForType(currentItemType);
+          sendFrameToProjection(frame, currentItemType);
+          lastItemTypeRef.current = currentItemType;
+          console.log(
+            '[Projection] Sent initial frame:',
+            currentItemType,
+            frame,
+          );
+        }
+
+        unsubReady();
+      });
+
+      await electron.projection.open();
+      setIsProjectionOpen(true);
+    } catch (error) {
+      console.error('Failed to open projection:', error);
     }
-
-    // Set up listener for projection ready signal BEFORE opening
-    const unsubReady = electron.projection.onReady(() => {
-      console.log('Received ready signal from projection window');
-      if (currentSlide) {
-        electron.projection.update({ lines: currentSlide.lines });
-      } else {
-        electron.projection.update({ lines: [] });
-      }
-      if (videoToSend) {
-        electron.projection.setVideo(videoToSend);
-      }
-      electron.projection.setFont(fontFamily);
-      electron.projection.setBlank(isBlank);
-      electron.projection.setVerseHidden(isVerseHidden);
-      unsubReady();
-    });
-
-    await electron.projection.open();
-    setIsProjectionOpen(true);
   }, [
     currentSlide,
     currentVideoPath,
@@ -183,30 +279,54 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
     isBlank,
     isVerseHidden,
     selectVideo,
+    backgroundType,
+    backgroundColor,
+    currentImagePath,
+    currentSetlist,
+    presentationState.currentSongIndex,
+    getFrameForType,
+    sendFrameToProjection,
   ]);
 
   const closeProjection = useCallback(async () => {
     const electron = getElectron();
     if (!electron) return;
 
-    await electron.projection.close();
-    setIsProjectionOpen(false);
+    try {
+      await electron.projection.close();
+      setIsProjectionOpen(false);
+    } catch (error) {
+      console.error('Failed to close projection:', error);
+    }
   }, []);
 
+  const contextValue = useMemo(
+    () => ({
+      isProjectionOpen,
+      isBlank,
+      isVerseHidden,
+      projectionSettings,
+      openProjection,
+      closeProjection,
+      toggleBlank,
+      toggleVerseHidden,
+      updateProjectionSettings,
+    }),
+    [
+      isProjectionOpen,
+      isBlank,
+      isVerseHidden,
+      projectionSettings,
+      openProjection,
+      closeProjection,
+      toggleBlank,
+      toggleVerseHidden,
+      updateProjectionSettings,
+    ],
+  );
+
   return (
-    <ProjectionContext.Provider
-      value={{
-        isProjectionOpen,
-        isBlank,
-        isVerseHidden,
-        projectionSettings,
-        openProjection,
-        closeProjection,
-        toggleBlank,
-        toggleVerseHidden,
-        updateProjectionSettings,
-      }}
-    >
+    <ProjectionContext.Provider value={contextValue}>
       {children}
     </ProjectionContext.Provider>
   );

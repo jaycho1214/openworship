@@ -11,6 +11,8 @@ module.exports = {
     'import/no-import-module-exports': 'off',
     'no-shadow': 'off',
     '@typescript-eslint/no-shadow': 'error',
+    'no-redeclare': 'off',
+    '@typescript-eslint/no-redeclare': 'error',
     'no-unused-vars': 'off',
     '@typescript-eslint/no-unused-vars': [
       'error',

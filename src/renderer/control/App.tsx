@@ -1,14 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppProviders, useSession } from './context';
+import { AppProviders, useSession, useUndo } from './context';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import Header from './components/Header';
 import SessionList from './components/SessionList';
 import LivePreview from './components/LivePreview';
 import UnifiedNavigator from './components/UnifiedNavigator';
 import ControlPanel from './components/ControlPanel';
 import LibrarySidebar from './components/LibrarySidebar';
+import ImportDialog from './components/ImportDialog';
+import SessionBreadcrumb from './components/SessionBreadcrumb';
+import GlobalSearch from './components/GlobalSearch';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { cn } from '../lib/utils';
+import type { ImportPreview } from '../../shared/types';
+
+// Helper to safely access electron API
+const getElectron = () => (window as any).electron;
 
 // Page-based navigation type
 type NavigationPage = 'sessions' | 'songs';
@@ -23,19 +31,72 @@ function AppContent() {
     deleteSession,
     renameSession,
   } = useSession();
+  const { lastAction } = useUndo();
 
   // Page-based navigation state
   const [currentPage, setCurrentPage] = useState<NavigationPage>('sessions');
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const [currentSessionName, setCurrentSessionName] = useState<string>('');
+
+  // File association state
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(
+    null,
+  );
+
+  // Global search state
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Handle Cmd+K for global search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+K (Mac) or Ctrl+K (Windows/Linux) - always works
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Update document title based on current language
   useEffect(() => {
     document.title = t('windowTitleControl');
   }, [t]);
 
+  // Handle file association - when user opens .oworship file
+  useEffect(() => {
+    const electron = getElectron();
+    if (!electron?.onFileOpen) return;
+
+    const unsubscribe = electron.onFileOpen(async (filePath: string) => {
+      console.log('[App] File opened:', filePath);
+      try {
+        const result = await electron.import.previewPath(filePath);
+        if (result.success && result.data) {
+          setImportPreview(result.data);
+          setImportDialogOpen(true);
+        } else {
+          console.error('[App] Failed to preview file:', result.error);
+        }
+      } catch (err) {
+        console.error('[App] Error handling file open:', err);
+      }
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, []);
+
   // Handle session selection - navigate to songs page
-  const handleSelectSession = (sessionId: string) => {
-    loadSession(sessionId);
+  const handleSelectSession = async (sessionId: string) => {
+    const session = await loadSession(sessionId);
+    if (session) {
+      setCurrentSessionName(session.name);
+    }
     setCurrentPage('songs');
   };
 
@@ -57,6 +118,16 @@ function AppContent() {
 
       {/* Header */}
       <Header />
+
+      {/* Session Breadcrumb - shown when in setlist view */}
+      {currentPage === 'songs' && currentSessionName && (
+        <SessionBreadcrumb
+          sessionName={currentSessionName}
+          currentSessionId={currentSessionId}
+          onSelectSession={handleSelectSession}
+          onBackToSessions={handleBackToSessions}
+        />
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
@@ -111,14 +182,44 @@ function AppContent() {
           <ControlPanel />
         </main>
       </div>
+
+      {/* Undo/Redo Toast Notification */}
+      {lastAction && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+          <div className="bg-foreground text-background px-4 py-2 rounded-lg shadow-lg text-sm font-medium animate-in fade-in slide-in-from-top-4 duration-200">
+            {lastAction === 'undo' ? t('undoAction') : t('redoAction')}
+          </div>
+        </div>
+      )}
+
+      {/* Import Dialog for file association */}
+      <ImportDialog
+        open={importDialogOpen}
+        onOpenChange={(open) => {
+          setImportDialogOpen(open);
+          if (!open) {
+            setImportPreview(null);
+          }
+        }}
+        initialPreview={importPreview || undefined}
+      />
+
+      {/* Global Search Dialog (Cmd+K) */}
+      <GlobalSearch
+        open={isSearchOpen}
+        onOpenChange={setIsSearchOpen}
+        onSelectSession={handleSelectSession}
+      />
     </div>
   );
 }
 
 export default function App() {
   return (
-    <AppProviders>
-      <AppContent />
-    </AppProviders>
+    <ErrorBoundary>
+      <AppProviders>
+        <AppContent />
+      </AppProviders>
+    </ErrorBoundary>
   );
 }

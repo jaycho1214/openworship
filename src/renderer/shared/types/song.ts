@@ -1,26 +1,42 @@
+// Per-slide display overrides (optional, falls back to global ProjectionSettings)
+export interface SlideOverrides {
+  fontSize?: number; // 48-144px
+  textAlign?: {
+    horizontal?: 'left' | 'center' | 'right';
+    vertical?: 'top' | 'middle' | 'bottom';
+  };
+  padding?: {
+    top?: number;
+    bottom?: number;
+    left?: number;
+    right?: number;
+  };
+}
+
 export interface Slide {
   id: string;
   lines: string[]; // 1-3 lines max
   section?: string; // Optional section marker like "Verse", "Chorus", "Bridge"
   sectionRef?: string; // Reference to another section by name (e.g., "Chorus" to repeat)
+  fontSize?: number; // Optional per-slide font size override (48-144px) - kept for backwards compatibility
+  overrides?: SlideOverrides; // All per-slide display overrides
 }
 
 export interface Song {
   id: string;
   title: string;
-  artist?: string;
   rawLyrics: string;
   slides: Slide[]; // Auto-generated from rawLyrics
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Setlist {
   id: string;
   name: string; // e.g., "주일예배 1월 12일"
   songs: Song[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PresentationState {
@@ -75,6 +91,10 @@ export interface ProjectionSettings {
     left: number;
     right: number;
   };
+  // Background settings
+  backgroundType?: 'video' | 'image' | 'color';
+  backgroundColor?: string;
+  backgroundImagePath?: string;
 }
 
 // Default projection settings
@@ -108,4 +128,7 @@ export const defaultProjectionSettings: ProjectionSettings = {
     left: 5,
     right: 5,
   },
+  backgroundType: 'video',
+  backgroundColor: '#000000',
+  backgroundImagePath: undefined,
 };

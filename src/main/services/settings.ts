@@ -6,44 +6,44 @@
 import Store from 'electron-store';
 import { safeStorage } from 'electron';
 import log from 'electron-log';
+import {
+  ProjectionSettings,
+  ThemeMode,
+  Language,
+} from '../../shared/types/settings';
+import { FrameSettings, defaultFrameSettings } from '../../shared/types/frame';
 
-// Settings schema
-interface ProjectionSettings {
-  fontSize: number;
-  textColor: string;
-  textShadow: {
-    enabled: boolean;
-    offsetX: number;
-    offsetY: number;
-    blur: number;
-    color: string;
-  };
-  textOutline: {
-    enabled: boolean;
-    width: number;
-    color: string;
-  };
-  backgroundDim: number;
-  animation: 'none' | 'fade' | 'slide-up' | 'slide-left';
-  displayMode: 'fullscreen' | 'windowed';
-  textAlign: {
-    horizontal: 'left' | 'center' | 'right';
-    vertical: 'top' | 'middle' | 'bottom';
-  };
-  padding: {
-    top: number; // percentage 0-20
-    bottom: number;
-    left: number;
-    right: number;
-  };
+// Recent item types for quick-add
+interface RecentSongItem {
+  type: 'song';
+  songId: string;
+  title: string;
+  addedAt: number;
 }
+
+interface RecentBibleItem {
+  type: 'bible';
+  reference: string; // e.g., "John 3:16-18"
+  translationId: string;
+  translationName: string;
+  bookId: string;
+  bookName: string;
+  chapter: number;
+  startVerse: number;
+  endVerse: number;
+  addedAt: number;
+}
+
+type RecentItem = RecentSongItem | RecentBibleItem;
 
 interface AppSettings {
   apiKey: string; // Encrypted
-  language: 'en' | 'ko';
-  theme: 'light' | 'dark' | 'system';
+  language: Language;
+  theme: ThemeMode;
   projection: ProjectionSettings;
   assetsMigrated: boolean;
+  frameSettings: FrameSettings;
+  recentItems: RecentItem[];
 }
 
 const defaultProjectionSettings: ProjectionSettings = {
@@ -74,6 +74,9 @@ const defaultProjectionSettings: ProjectionSettings = {
     left: 5,
     right: 5,
   },
+  backgroundType: 'video',
+  backgroundColor: '#000000',
+  backgroundImagePath: undefined,
 };
 
 const defaultSettings: AppSettings = {
@@ -82,6 +85,8 @@ const defaultSettings: AppSettings = {
   theme: 'system',
   projection: defaultProjectionSettings,
   assetsMigrated: false,
+  frameSettings: defaultFrameSettings,
+  recentItems: [],
 };
 
 // Create store with schema validation
@@ -106,6 +111,20 @@ const store = new Store<AppSettings>({
       },
     },
     assetsMigrated: { type: 'boolean' },
+    frameSettings: {
+      type: 'object',
+      properties: {
+        songFrameId: { type: ['string', 'null'] },
+        bibleFrameId: { type: ['string', 'null'] },
+        announcementFrameId: { type: ['string', 'null'] },
+      },
+    },
+    recentItems: {
+      type: 'array',
+      items: {
+        type: 'object',
+      },
+    },
   },
 });
 
@@ -184,14 +203,14 @@ export const settingsService = {
   /**
    * Get language setting
    */
-  getLanguage(): 'en' | 'ko' {
+  getLanguage(): Language {
     return store.get('language', 'ko');
   },
 
   /**
    * Set language setting
    */
-  setLanguage(language: 'en' | 'ko'): void {
+  setLanguage(language: Language): void {
     store.set('language', language);
     log.info('[Settings] Language set to:', language);
   },
@@ -199,14 +218,14 @@ export const settingsService = {
   /**
    * Get theme setting
    */
-  getTheme(): 'light' | 'dark' | 'system' {
-    return store.get('theme', 'dark');
+  getTheme(): ThemeMode {
+    return store.get('theme', 'system');
   },
 
   /**
    * Set theme setting
    */
-  setTheme(theme: 'light' | 'dark' | 'system'): void {
+  setTheme(theme: ThemeMode): void {
     store.set('theme', theme);
     log.info('[Settings] Theme set to:', theme);
   },
@@ -237,6 +256,8 @@ export const settingsService = {
       theme: this.getTheme(),
       projection: this.getProjectionSettings(),
       assetsMigrated: store.get('assetsMigrated', false),
+      frameSettings: this.getFrameSettings(),
+      recentItems: this.getRecentItems(),
     };
   },
 
@@ -255,6 +276,66 @@ export const settingsService = {
   },
 
   /**
+   * Get frame settings
+   */
+  getFrameSettings(): FrameSettings {
+    return store.get('frameSettings', defaultFrameSettings);
+  },
+
+  /**
+   * Set frame settings
+   */
+  setFrameSettings(settings: Partial<FrameSettings>): FrameSettings {
+    const current = this.getFrameSettings();
+    const updated = { ...current, ...settings };
+    store.set('frameSettings', updated);
+    log.info('[Settings] Frame settings updated');
+    return updated;
+  },
+
+  /**
+   * Get recent items
+   */
+  getRecentItems(): RecentItem[] {
+    return store.get('recentItems', []);
+  },
+
+  /**
+   * Add a recent item (maintains max 10 items, deduplicates)
+   */
+  addRecentItem(item: Omit<RecentItem, 'addedAt'>): void {
+    const MAX_RECENT_ITEMS = 10;
+    const current = this.getRecentItems();
+
+    // Create new item with timestamp
+    const newItem = { ...item, addedAt: Date.now() } as RecentItem;
+
+    // Remove duplicates based on type and unique identifier
+    const filtered = current.filter((existing) => {
+      if (item.type === 'song' && existing.type === 'song') {
+        return existing.songId !== (item as RecentSongItem).songId;
+      }
+      if (item.type === 'bible' && existing.type === 'bible') {
+        return existing.reference !== (item as RecentBibleItem).reference;
+      }
+      return true;
+    });
+
+    // Add new item at the beginning and limit to max
+    const updated = [newItem, ...filtered].slice(0, MAX_RECENT_ITEMS);
+    store.set('recentItems', updated);
+    log.info('[Settings] Recent item added:', item.type);
+  },
+
+  /**
+   * Clear recent items
+   */
+  clearRecentItems(): void {
+    store.set('recentItems', []);
+    log.info('[Settings] Recent items cleared');
+  },
+
+  /**
    * Reset all settings to defaults
    */
   resetAll(): void {
@@ -270,5 +351,6 @@ export const settingsService = {
   },
 };
 
-export type { AppSettings, ProjectionSettings };
+export type { ProjectionSettings } from '../../shared/types/settings';
+export type { AppSettings, RecentItem, RecentSongItem, RecentBibleItem };
 export { defaultProjectionSettings, defaultSettings };

@@ -4,29 +4,40 @@
 import { ipcMain, dialog } from 'electron';
 import log from 'electron-log';
 import type { SaveFileOptions, OpenFileOptions } from '../../shared/types';
+import { getErrorMessage } from '../../shared/types';
 
 export const registerDialogHandlers = (): void => {
   // Select folder dialog
   ipcMain.handle('dialog:selectFolder', async (_event, title: string) => {
-    const result = await dialog.showOpenDialog({
-      title,
-      properties: ['openDirectory'],
-    });
-    if (result.canceled) return null;
-    return result.filePaths[0];
+    try {
+      const result = await dialog.showOpenDialog({
+        title,
+        properties: ['openDirectory'],
+      });
+      if (result.canceled) return null;
+      return result.filePaths[0];
+    } catch (error) {
+      log.error('[Dialog] Error selecting folder:', getErrorMessage(error));
+      return null;
+    }
   });
 
   // Save file dialog
   ipcMain.handle(
     'dialog:saveFile',
     async (_event, options: SaveFileOptions) => {
-      const result = await dialog.showSaveDialog({
-        title: options.title,
-        defaultPath: options.defaultPath,
-        filters: options.filters,
-      });
-      if (result.canceled) return null;
-      return result.filePath;
+      try {
+        const result = await dialog.showSaveDialog({
+          title: options.title,
+          defaultPath: options.defaultPath,
+          filters: options.filters,
+        });
+        if (result.canceled) return null;
+        return result.filePath;
+      } catch (error) {
+        log.error('[Dialog] Error saving file:', getErrorMessage(error));
+        return null;
+      }
     },
   );
 
@@ -34,13 +45,18 @@ export const registerDialogHandlers = (): void => {
   ipcMain.handle(
     'dialog:openFile',
     async (_event, options: OpenFileOptions) => {
-      const result = await dialog.showOpenDialog({
-        title: options.title,
-        properties: ['openFile'],
-        filters: options.filters,
-      });
-      if (result.canceled) return null;
-      return result.filePaths[0];
+      try {
+        const result = await dialog.showOpenDialog({
+          title: options.title,
+          properties: ['openFile'],
+          filters: options.filters,
+        });
+        if (result.canceled) return null;
+        return result.filePaths[0];
+      } catch (error) {
+        log.error('[Dialog] Error opening file:', getErrorMessage(error));
+        return null;
+      }
     },
   );
 

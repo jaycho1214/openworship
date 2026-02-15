@@ -8,25 +8,54 @@
  * All IPC handlers are in src/main/ipc/
  * Window management is in src/main/windows/
  */
-import { app } from 'electron';
+import path from 'path';
+import { app, protocol, net } from 'electron';
+import { pathToFileURL } from 'url';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { databaseService } from './services/database';
 import {
   createControlWindow,
   recreateControlWindow,
+  getControlWindow,
 } from './windows/WindowManager';
 import { registerAllHandlers } from './ipc';
 
+// Global error handlers - log but don't crash
+process.on('uncaughtException', (error) => {
+  log.error('Uncaught exception:', error);
+});
+
+process.on('unhandledRejection', (reason) => {
+  log.error('Unhandled rejection:', reason);
+});
+
+// Track file to open from file association
+let pendingFilePath: string | null = null;
+
 /**
- * App updater configuration
+ * Register 'app://' as a privileged scheme before app is ready.
+ * This must be called synchronously at module load time.
  */
-class AppUpdater {
-  constructor() {
-    log.transports.file.level = 'info';
-    autoUpdater.logger = log;
-    autoUpdater.checkForUpdatesAndNotify();
-  }
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'app',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+    },
+  },
+]);
+
+/**
+ * Initialize auto-updater (non-blocking)
+ */
+function initAutoUpdater(): void {
+  log.transports.file.level = 'info';
+  autoUpdater.logger = log;
+  autoUpdater.checkForUpdatesAndNotify();
 }
 
 /**
@@ -48,14 +77,85 @@ app.on('window-all-closed', () => {
   }
 });
 
+/**
+ * Handle file association - macOS
+ * When user opens .oworship file, this event is triggered
+ */
+app.on('open-file', (event, filePath) => {
+  event.preventDefault();
+  log.info('[App] Open file event:', filePath);
+
+  if (app.isReady()) {
+    // App is already running, send to window
+    const controlWindow = getControlWindow();
+    if (controlWindow) {
+      controlWindow.webContents.send('file:open', filePath);
+    }
+  } else {
+    // App is starting, save for later
+    pendingFilePath = filePath;
+  }
+});
+
+/**
+ * Handle file association - Windows/Linux
+ * When user opens .oworship file, a second instance is created with file path
+ */
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, commandLine) => {
+    log.info('[App] Second instance with args:', commandLine);
+
+    // Find the file path in command line arguments
+    const filePath = commandLine.find((arg) => arg.endsWith('.oworship'));
+    if (filePath) {
+      const controlWindow = getControlWindow();
+      if (controlWindow) {
+        controlWindow.webContents.send('file:open', filePath);
+        if (controlWindow.isMinimized()) {
+          controlWindow.restore();
+        }
+        controlWindow.focus();
+      }
+    }
+  });
+}
+
 app
   .whenReady()
   .then(async () => {
     log.info('[App] Starting OpenWorship...');
 
+    // Register custom app:// protocol to serve local files securely
+    protocol.handle('app', (request) => {
+      const url = new URL(request.url);
+      // Resolve the file path from the URL pathname
+      const filePath = path.normalize(decodeURIComponent(url.pathname));
+
+      // Prevent directory traversal attacks
+      const userDataPath = app.getPath('userData');
+      const resolvedPath = path.resolve(filePath);
+      if (
+        !resolvedPath.startsWith(userDataPath) &&
+        !resolvedPath.startsWith(path.resolve(process.resourcesPath || ''))
+      ) {
+        return new Response('Forbidden', { status: 403 });
+      }
+
+      return net.fetch(pathToFileURL(resolvedPath).toString());
+    });
+
     // Initialize database
     databaseService.init();
     log.info('[App] Database initialized');
+
+    // Start dev MCP server (patches ipcMain before handlers register)
+    if (process.env.NODE_ENV === 'development') {
+      const { startDevMcpServer } = require('./services/devMcpServer');
+      startDevMcpServer();
+    }
 
     // Register all IPC handlers
     registerAllHandlers();
@@ -64,14 +164,25 @@ app
     await createControlWindow();
     log.info('[App] Control window created');
 
+    // Handle pending file from file association
+    if (pendingFilePath) {
+      const controlWindow = getControlWindow();
+      if (controlWindow) {
+        // Wait for window to be ready before sending file
+        controlWindow.webContents.once('did-finish-load', () => {
+          controlWindow.webContents.send('file:open', pendingFilePath);
+          pendingFilePath = null;
+        });
+      }
+    }
+
     // macOS: re-create window when dock icon is clicked
     app.on('activate', () => {
       recreateControlWindow();
     });
 
     // Initialize auto-updater (non-blocking)
-    // eslint-disable-next-line no-new
-    new AppUpdater();
+    initAutoUpdater();
 
     log.info('[App] OpenWorship ready');
   })

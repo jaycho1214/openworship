@@ -6,7 +6,7 @@ import path from 'path';
 import { app, BrowserWindow, shell, screen } from 'electron';
 import log from 'electron-log';
 import { settingsService } from '../services/settings';
-import MenuBuilder from '../menu';
+import MenuBuilder, { setProjectionWindowRef } from '../menu';
 import { resolveHtmlPath } from '../util';
 
 let controlWindow: BrowserWindow | null = null;
@@ -52,7 +52,7 @@ export const createControlWindow = async (): Promise<void> => {
       preload: getPreloadPath(),
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false, // TODO: Replace with protocol handler for local files
+      sandbox: false,
     },
   });
 
@@ -80,9 +80,23 @@ export const createControlWindow = async (): Promise<void> => {
   const menuBuilder = new MenuBuilder(controlWindow);
   menuBuilder.buildMenu();
 
+  // Prevent navigation to untrusted URLs
+  controlWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    const parsedUrl = new URL(navigationUrl);
+    if (parsedUrl.protocol !== 'app:' && parsedUrl.hostname !== 'localhost') {
+      event.preventDefault();
+      log.warn('Blocked navigation to:', navigationUrl);
+    }
+  });
+
   // Open urls in the user's browser
   controlWindow.webContents.setWindowOpenHandler((edata) => {
-    shell.openExternal(edata.url);
+    const parsedUrl = new URL(edata.url);
+    if (parsedUrl.protocol === 'https:' || parsedUrl.protocol === 'http:') {
+      shell.openExternal(edata.url);
+    } else {
+      log.warn('Blocked external URL with unsafe protocol:', edata.url);
+    }
     return { action: 'deny' };
   });
 };
@@ -126,19 +140,33 @@ export const createProjectionWindow = (): BrowserWindow => {
       preload: getPreloadPath(),
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false, // TODO: Replace with protocol handler for local files
+      sandbox: false,
+      backgroundThrottling: false,
     },
   });
 
   projectionWindow.loadURL(resolveHtmlPath('projection.html'));
 
+  // Prevent navigation to untrusted URLs
+  projectionWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    const parsedUrl = new URL(navigationUrl);
+    if (parsedUrl.protocol !== 'app:' && parsedUrl.hostname !== 'localhost') {
+      event.preventDefault();
+      log.warn('Blocked navigation to:', navigationUrl);
+    }
+  });
+
   projectionWindow.on('closed', () => {
     projectionWindow = null;
+    setProjectionWindowRef(null);
     // Notify control window that projection closed
     if (controlWindow && !controlWindow.isDestroyed()) {
       controlWindow.webContents.send('projection:closed');
     }
   });
+
+  // Set reference for dev tools menu
+  setProjectionWindowRef(projectionWindow);
 
   // Prevent projection window from being focused accidentally
   projectionWindow.on('focus', () => {

@@ -9,10 +9,16 @@ export type SendChannels =
   | 'projection:blank'
   | 'projection:verseHidden'
   | 'projection:video'
+  | 'projection:image'
+  | 'projection:backgroundColor'
   | 'projection:font'
   | 'projection:closed'
   | 'projection:ready'
-  | 'projection:settings';
+  | 'projection:settings'
+  | 'projection:advertisement'
+  | 'projection:frame'
+  | 'bible:importProgress'
+  | 'file:open';
 
 // Request-response channels (invoke)
 export type InvokeChannels =
@@ -34,6 +40,10 @@ export type InvokeChannels =
   | 'videos:getEmbedded'
   | 'videos:add'
   | 'videos:delete'
+  // Images
+  | 'images:getAll'
+  | 'images:add'
+  | 'images:delete'
   // Fonts
   | 'fonts:getLyricsFont'
   | 'fonts:getAll'
@@ -75,29 +85,82 @@ export type InvokeChannels =
   | 'session:addSong'
   | 'session:removeSong'
   | 'session:reorderSongs'
-  | 'session:getCount';
+  | 'session:getCount'
+  // Export/Import
+  | 'export:song'
+  | 'export:session'
+  | 'export:library'
+  | 'import:preview'
+  | 'import:previewPath'
+  | 'import:execute'
+  // Advertisements
+  | 'ad:getAll'
+  | 'ad:getById'
+  | 'ad:add'
+  | 'ad:update'
+  | 'ad:delete'
+  | 'ad:reorder'
+  | 'ad:getDisplaySettings'
+  | 'ad:setDisplaySettings'
+  // Settings (recent items)
+  | 'settings:getRecentItems'
+  | 'settings:addRecentItem'
+  | 'settings:clearRecentItems'
+  // Bible
+  | 'bible:getTranslations'
+  | 'bible:getTranslation'
+  | 'bible:getBooks'
+  | 'bible:getVerses'
+  | 'bible:getVersesRange'
+  | 'bible:getVerseCount'
+  | 'bible:searchVerses'
+  | 'bible:versesToSlides'
+  | 'bible:importFromFile'
+  | 'bible:downloadAndImport'
+  | 'bible:deleteTranslation'
+  | 'bible:getAvailableBibles'
+  // Frames
+  | 'frame:getAll'
+  | 'frame:getById'
+  | 'frame:add'
+  | 'frame:update'
+  | 'frame:delete'
+  | 'frame:importImage'
+  | 'frame:getSettings'
+  | 'frame:setSettings'
+  // Session Items (Unified Setlist)
+  | 'sessionItem:getAll'
+  | 'sessionItem:add'
+  | 'sessionItem:update'
+  | 'sessionItem:delete'
+  | 'sessionItem:reorder';
 
 /**
- * Standard IPC response type
+ * Standard IPC response type (discriminated union)
  * All IPC handlers should return this format
  */
-export interface IpcResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+export type IpcResponse<T = void> =
+  | (T extends void
+      ? { success: true; data?: undefined }
+      : { success: true; data: T })
+  | { success: false; error: string };
 
 /**
  * Create a success response
  */
+export function successResponse<T>(data: T): IpcResponse<T>;
+export function successResponse(): IpcResponse<void>;
 export function successResponse<T>(data?: T): IpcResponse<T> {
-  return { success: true, data };
+  if (data === undefined) {
+    return { success: true } as IpcResponse<T>;
+  }
+  return { success: true, data } as IpcResponse<T>;
 }
 
 /**
  * Create an error response
  */
-export function errorResponse(error: string): IpcResponse {
+export function errorResponse(error: string): IpcResponse<never> {
   return { success: false, error };
 }
 
@@ -117,6 +180,12 @@ export interface OcrImageResult {
 
 // Video types
 export interface VideoData {
+  fileName: string;
+  base64: string;
+}
+
+// Image types
+export interface ImageData {
   fileName: string;
   base64: string;
 }

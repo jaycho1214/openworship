@@ -9,7 +9,9 @@ import {
   Check,
   X,
   ListMusic,
+  Upload,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -20,7 +22,20 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '../../components/ui/context-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 import { cn } from '../../lib/utils';
+
+// Helper to safely access electron API
+const getElectron = () => (window as any).electron;
 
 // Types matching database
 interface DbSession {
@@ -47,13 +62,14 @@ export default function SessionList({
   onRenameSession,
   className,
 }: SessionListProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [sessions, setSessions] = useState<DbSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
 
   // Load sessions
   const loadSessions = useCallback(async () => {
@@ -87,12 +103,14 @@ export default function SessionList({
     }
   };
 
-  // Delete session
-  const handleDeleteSession = async (sessionId: string) => {
-    const deleted = await onDeleteSession(sessionId);
+  // Delete session with confirmation
+  const handleConfirmDelete = async () => {
+    if (!sessionToDelete) return;
+    const deleted = await onDeleteSession(sessionToDelete);
     if (deleted) {
       loadSessions();
     }
+    setSessionToDelete(null);
   };
 
   // Start renaming
@@ -120,10 +138,29 @@ export default function SessionList({
     setEditingName('');
   };
 
+  // Export session
+  const handleExportSession = async (sessionId: string) => {
+    const electron = getElectron();
+    if (!electron) return;
+
+    try {
+      const result = await electron.export.session(sessionId);
+      if (result.canceled) return;
+      if (result.success) {
+        toast.success(t('exportSuccess'));
+      } else {
+        toast.error(result.error || t('exportFailed'));
+      }
+    } catch (err) {
+      console.error('[SessionList] Export error:', err);
+      toast.error(t('exportFailed'));
+    }
+  };
+
   // Format date
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('ko-KR', {
+    return date.toLocaleDateString(i18n.language, {
       month: 'short',
       day: 'numeric',
     });
@@ -174,7 +211,7 @@ export default function SessionList({
             <Button
               size="icon"
               variant="ghost"
-              className="h-8 w-8 text-green-400 hover:text-green-300"
+              className="h-8 w-8 text-green-500 hover:text-green-400"
               onClick={handleCreateSession}
             >
               <Check className="w-4 h-4" />
@@ -226,7 +263,7 @@ export default function SessionList({
                   <ContextMenuTrigger asChild>
                     <div
                       className={cn(
-                        'group relative flex items-center gap-2 px-3 py-3 rounded-lg cursor-pointer',
+                        'group relative flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer',
                         'transition-all duration-150',
                         currentSessionId === session.id
                           ? 'bg-active border-2 border-active-border-subtle shadow-elevated'
@@ -285,7 +322,7 @@ export default function SessionList({
                               className={cn(
                                 'text-sm truncate',
                                 currentSessionId === session.id
-                                  ? 'text-active-foreground font-bold'
+                                  ? 'text-active-foreground font-semibold'
                                   : 'text-foreground font-medium',
                               )}
                             >
@@ -325,7 +362,7 @@ export default function SessionList({
                             className="h-7 w-7 text-muted-foreground hover:text-red-300 hover:bg-red-500/20"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteSession(session.id);
+                              setSessionToDelete(session.id);
                             }}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -340,8 +377,14 @@ export default function SessionList({
                       {t('rename')}
                     </ContextMenuItem>
                     <ContextMenuItem
-                      className="text-red-400 focus:text-red-300"
-                      onClick={() => handleDeleteSession(session.id)}
+                      onClick={() => handleExportSession(session.id)}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {t('exportSession')}
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      className="text-red-500 focus:text-red-400"
+                      onClick={() => setSessionToDelete(session.id)}
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
                       {t('delete')}
@@ -353,6 +396,32 @@ export default function SessionList({
           )}
         </div>
       </ScrollArea>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog
+        open={sessionToDelete !== null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) setSessionToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('confirmDeleteSession')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('confirmDeleteSessionDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleConfirmDelete}
+            >
+              {t('delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

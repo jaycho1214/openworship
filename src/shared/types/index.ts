@@ -5,6 +5,7 @@
 
 // Song and presentation types
 export type {
+  SlideOverrides,
   Slide,
   Song,
   Setlist,
@@ -22,10 +23,12 @@ export type {
   DisplayMode,
   ThemeMode,
   Language,
+  BackgroundType,
+  ColorPreset,
   ProjectionSettings,
   AppSettings,
 } from './settings';
-export { defaultProjectionSettings } from './settings';
+export { defaultProjectionSettings, COLOR_PRESETS } from './settings';
 
 // Library types
 export type {
@@ -43,6 +46,7 @@ export type {
   OcrResult,
   OcrImageResult,
   VideoData,
+  ImageData,
   FontData,
   SaveFileOptions,
   OpenFileOptions,
@@ -52,3 +56,75 @@ export { successResponse, errorResponse } from './ipc';
 // Error types
 export type { AppError } from './errors';
 export { ErrorCode, createError, getErrorMessage, isAppError } from './errors';
+
+// Export/Import types
+export type {
+  OpenWorshipFile,
+  ExportedSong,
+  ExportedSession,
+  ImportPreview,
+  ImportOptions,
+  ImportResult,
+} from './export';
+
+// Advertisement types
+export type {
+  Advertisement,
+  AdvertisementState,
+  AdvertisementCreateInput,
+  AdvertisementUpdateInput,
+  AdvertisementDisplaySettings,
+  ProjectionAdvertisementMessage,
+} from './advertisement';
+export { DEFAULT_DISPLAY_SETTINGS } from './advertisement';
+
+// Bible types
+export type {
+  BibleTranslation,
+  BibleBook,
+  BibleVerse,
+  BibleReference,
+  BibleImportData,
+  BibleImportBook,
+  BibleImportChapter,
+  BibleImportVerse,
+  BibleDisplayMode,
+  BibleVerseSelection,
+  BibleDownloadInfo,
+  BibleImportProgress,
+} from './bible';
+
+// Setlist item types (unified content)
+export type {
+  SetlistItem,
+  SongSetlistItem,
+  BibleSetlistItem,
+  AnnouncementSetlistItem,
+  SetlistItemInput,
+  SongSetlistItemInput,
+  BibleSetlistItemInput,
+  AnnouncementSetlistItemInput,
+  UnifiedSetlist,
+  SetlistItemType,
+} from './setlistItem';
+export {
+  isSongItem,
+  isBibleItem,
+  isAnnouncementItem,
+  getItemLabel,
+  getItemSlides,
+  getItemSlideCount,
+} from './setlistItem';
+
+// Frame types
+export type {
+  Frame,
+  FrameType,
+  FramePadding,
+  FrameSettings,
+  FrameInput,
+  ImageFrameInput,
+  CssFrameInput,
+  FrameUpdateInput,
+} from './frame';
+export { defaultFrameSettings, getFrameIdForType } from './frame';

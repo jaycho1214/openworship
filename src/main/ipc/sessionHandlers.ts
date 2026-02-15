@@ -4,17 +4,21 @@
 import { ipcMain } from 'electron';
 import log from 'electron-log';
 import { databaseService } from '../services/database';
-import { getErrorMessage } from '../../shared/types';
+import {
+  successResponse,
+  errorResponse,
+  getErrorMessage,
+} from '../../shared/types';
 
 export const registerSessionHandlers = (): void => {
   // Get all sessions
   ipcMain.handle('session:getAll', () => {
     try {
-      return { success: true, data: databaseService.getAllSessions() };
+      return successResponse(databaseService.getAllSessions());
     } catch (error) {
       const message = getErrorMessage(error);
       log.error('[Session] Error getting sessions:', message);
-      return { success: false, error: message };
+      return errorResponse(message);
     }
   });
 
@@ -22,12 +26,12 @@ export const registerSessionHandlers = (): void => {
   ipcMain.handle('session:getById', (_event, id: string) => {
     try {
       const session = databaseService.getSessionById(id);
-      if (!session) return { success: false, error: 'Session not found' };
-      return { success: true, data: session };
+      if (!session) return errorResponse('Session not found');
+      return successResponse(session);
     } catch (error) {
       const message = getErrorMessage(error);
       log.error('[Session] Error getting session:', message);
-      return { success: false, error: message };
+      return errorResponse(message);
     }
   });
 
@@ -35,11 +39,11 @@ export const registerSessionHandlers = (): void => {
   ipcMain.handle('session:create', (_event, name: string) => {
     try {
       const session = databaseService.createSession({ name });
-      return { success: true, data: session };
+      return successResponse(session);
     } catch (error) {
       const message = getErrorMessage(error);
       log.error('[Session] Error creating session:', message);
-      return { success: false, error: message };
+      return errorResponse(message);
     }
   });
 
@@ -49,12 +53,12 @@ export const registerSessionHandlers = (): void => {
     (_event, id: string, updates: { name?: string }) => {
       try {
         const session = databaseService.updateSession(id, updates);
-        if (!session) return { success: false, error: 'Session not found' };
-        return { success: true, data: session };
+        if (!session) return errorResponse('Session not found');
+        return successResponse(session);
       } catch (error) {
         const message = getErrorMessage(error);
         log.error('[Session] Error updating session:', message);
-        return { success: false, error: message };
+        return errorResponse(message);
       }
     },
   );
@@ -63,14 +67,12 @@ export const registerSessionHandlers = (): void => {
   ipcMain.handle('session:delete', (_event, id: string) => {
     try {
       const deleted = databaseService.deleteSession(id);
-      return {
-        success: deleted,
-        error: deleted ? undefined : 'Session not found',
-      };
+      if (!deleted) return errorResponse('Session not found');
+      return successResponse(true);
     } catch (error) {
       const message = getErrorMessage(error);
       log.error('[Session] Error deleting session:', message);
-      return { success: false, error: message };
+      return errorResponse(message);
     }
   });
 
@@ -80,11 +82,11 @@ export const registerSessionHandlers = (): void => {
     (_event, sessionId: string, songId: string) => {
       try {
         const added = databaseService.addSongToSession(sessionId, songId);
-        return { success: added };
+        return successResponse(added);
       } catch (error) {
         const message = getErrorMessage(error);
         log.error('[Session] Error adding song to session:', message);
-        return { success: false, error: message };
+        return errorResponse(message);
       }
     },
   );
@@ -98,11 +100,11 @@ export const registerSessionHandlers = (): void => {
           sessionId,
           songId,
         );
-        return { success: removed };
+        return successResponse(removed);
       } catch (error) {
         const message = getErrorMessage(error);
         log.error('[Session] Error removing song from session:', message);
-        return { success: false, error: message };
+        return errorResponse(message);
       }
     },
   );
@@ -116,11 +118,11 @@ export const registerSessionHandlers = (): void => {
           sessionId,
           songIds,
         );
-        return { success: reordered };
+        return successResponse(reordered);
       } catch (error) {
         const message = getErrorMessage(error);
         log.error('[Session] Error reordering songs in session:', message);
-        return { success: false, error: message };
+        return errorResponse(message);
       }
     },
   );
@@ -128,11 +130,11 @@ export const registerSessionHandlers = (): void => {
   // Get sessions count
   ipcMain.handle('session:getCount', () => {
     try {
-      return { success: true, data: databaseService.getSessionsCount() };
+      return successResponse(databaseService.getSessionsCount());
     } catch (error) {
       const message = getErrorMessage(error);
       log.error('[Session] Error getting sessions count:', message);
-      return { success: false, error: message };
+      return errorResponse(message);
     }
   });
 

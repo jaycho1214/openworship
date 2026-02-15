@@ -309,9 +309,7 @@ export function DisplaySettingsTab({
                     onClick={() => onFontSelect('system')}
                     className={cn(
                       'group flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all',
-                      isSystemSelected
-                        ? 'bg-foreground/5'
-                        : 'hover:bg-muted/50',
+                      isSystemSelected ? 'bg-active' : 'hover:bg-muted/50',
                     )}
                   >
                     <div
@@ -349,7 +347,7 @@ export function DisplaySettingsTab({
                     onClick={() => onFontSelect(font.name)}
                     className={cn(
                       'group flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all',
-                      isSelected ? 'bg-foreground/5' : 'hover:bg-muted/50',
+                      isSelected ? 'bg-active' : 'hover:bg-muted/50',
                     )}
                   >
                     <div
@@ -499,7 +497,7 @@ export function DisplaySettingsTab({
             <div className="space-y-1">
               {userVideos.map((videoName, index) => (
                 <div
-                  key={videoName + index}
+                  key={videos[index]}
                   className="flex items-start gap-2 px-2 py-1.5 rounded bg-muted/30 group"
                 >
                   <Video className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />

@@ -7,7 +7,11 @@ import {
   parseLyricsFromImage,
   parseLyricsFromImages,
 } from '../services/openaiService';
-import { getErrorMessage } from '../../shared/types';
+import {
+  successResponse,
+  errorResponse,
+  getErrorMessage,
+} from '../../shared/types';
 
 export const registerOcrHandlers = (): void => {
   // Parse lyrics from a single image
@@ -16,11 +20,11 @@ export const registerOcrHandlers = (): void => {
     async (_event, imageBase64: string, mimeType: string) => {
       try {
         const result = await parseLyricsFromImage(imageBase64, mimeType);
-        return { success: true, data: result };
+        return successResponse(result);
       } catch (error) {
         const message = getErrorMessage(error);
         log.error('[OCR] Parse error:', message);
-        return { success: false, error: message };
+        return errorResponse(message);
       }
     },
   );
@@ -31,11 +35,11 @@ export const registerOcrHandlers = (): void => {
     async (_event, images: Array<{ base64: string; mimeType: string }>) => {
       try {
         const results = await parseLyricsFromImages(images);
-        return { success: true, data: results };
+        return successResponse(results);
       } catch (error) {
         const message = getErrorMessage(error);
         log.error('[OCR] Batch parse error:', message);
-        return { success: false, error: message };
+        return errorResponse(message);
       }
     },
   );

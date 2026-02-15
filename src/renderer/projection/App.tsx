@@ -1,13 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import VideoBackground from './components/VideoBackground';
-import LyricsOverlay from './components/LyricsOverlay';
-import BlankScreen from './components/BlankScreen';
+import ProjectionRenderer from './components/ProjectionRenderer';
 import {
   DetectedFont,
   ProjectionSettings,
   defaultProjectionSettings,
+  SlideOverrides,
 } from '../shared/types/song';
+import { useFontLoader } from '../shared/hooks/useFontLoader';
+import type { BackgroundType, Advertisement } from '../../shared/types';
+import {
+  AdvertisementDisplaySettings,
+  DEFAULT_DISPLAY_SETTINGS,
+  ProjectionAdvertisementMessage,
+} from '../../shared/types/advertisement';
+import type { Frame } from '../../shared/types/frame';
+import type { SetlistItemType } from '../../shared/types/setlistItem';
 
 // System font uses inherited/default font family
 const SYSTEM_FONT = 'inherit';
@@ -15,15 +23,30 @@ const SYSTEM_FONT = 'inherit';
 export default function App() {
   const { t } = useTranslation();
   const [currentLines, setCurrentLines] = useState<string[]>([]);
+  const [slideFontSize, setSlideFontSize] = useState<number | undefined>(
+    undefined,
+  );
+  const [slideOverrides, setSlideOverrides] = useState<
+    SlideOverrides | undefined
+  >(undefined);
   const [isBlank, setIsBlank] = useState(false);
   const [isVerseHidden, setIsVerseHidden] = useState(false);
   const [projectionSettings, setProjectionSettings] =
     useState<ProjectionSettings>(defaultProjectionSettings);
   const [currentVideoPath, setCurrentVideoPath] = useState<string | null>(null);
+  const [currentImagePath, setCurrentImagePath] = useState<string | null>(null);
+  const [backgroundColor, setBackgroundColor] = useState<string>('#000000');
+  const [backgroundType, setBackgroundType] = useState<BackgroundType>('video');
   const [fontFamily, setFontFamily] = useState<string>(SYSTEM_FONT);
-  const [fontsLoaded, setFontsLoaded] = useState(false);
-  const loadedFontsRef = useRef<Set<string>>(new Set());
+  const [fetchedFonts, setFetchedFonts] = useState<DetectedFont[]>([]);
+  const { loadedFontsRef, fontsLoaded } = useFontLoader(fetchedFonts);
   const fontsDataRef = useRef<DetectedFont[]>([]);
+  const pendingFontRef = useRef<string | null>(null); // Track font requested before fonts loaded
+  const [isAdVisible, setIsAdVisible] = useState(false);
+  const [currentAd, setCurrentAd] = useState<Advertisement | null>(null);
+  const [adDisplaySettings, setAdDisplaySettings] =
+    useState<AdvertisementDisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
+  const [currentFrame, setCurrentFrame] = useState<Frame | null>(null);
 
   // Update document title based on current language
   useEffect(() => {
@@ -37,6 +60,13 @@ export default function App() {
         const settings = await window.electron.settings.getProjection();
         setProjectionSettings(settings);
         console.log('[Projection] Loaded settings:', settings);
+        // FIX: Initialize background from settings
+        if (settings.backgroundType) {
+          setBackgroundType(settings.backgroundType);
+        }
+        if (settings.backgroundColor) {
+          setBackgroundColor(settings.backgroundColor);
+        }
       } catch (error) {
         console.error('[Projection] Failed to load settings:', error);
       }
@@ -56,9 +86,9 @@ export default function App() {
     };
   }, []);
 
-  // Load all user fonts on mount
+  // Fetch all user fonts on mount (non-blocking - projection works immediately with system fonts)
   useEffect(() => {
-    const loadFonts = async () => {
+    const fetchFonts = async () => {
       const { electron } = window as Window &
         typeof globalThis & {
           electron: {
@@ -70,58 +100,130 @@ export default function App() {
 
       try {
         const fonts = await electron.fonts.getAll();
-        console.log('[Projection] Loading fonts:', fonts.length);
         fontsDataRef.current = fonts;
-
-        // Load all fonts into document.fonts
-        for (const font of fonts) {
-          if (!loadedFontsRef.current.has(font.name)) {
-            try {
-              const fontFace = new FontFace(font.name, `url(${font.dataUrl})`);
-              await fontFace.load();
-              document.fonts.add(fontFace);
-              loadedFontsRef.current.add(font.name);
-              console.log(`[Projection] Loaded font: ${font.name}`);
-            } catch (error) {
-              console.error(
-                `[Projection] Failed to load font ${font.name}:`,
-                error,
-              );
-            }
-          }
-        }
-
-        // Default to system font (control window will send selected font preference)
-        setFontFamily(SYSTEM_FONT);
-        console.log('[Projection] Set default font to system font');
-
-        setFontsLoaded(true);
-        console.log('[Projection] All fonts loaded');
+        setFetchedFonts(fonts); // Triggers useFontLoader
       } catch (error) {
-        console.error('[Projection] Failed to load fonts:', error);
-        setFontsLoaded(true); // Still mark as loaded so we can proceed
+        console.error('[Projection] Failed to fetch fonts:', error);
       }
     };
 
-    loadFonts();
+    fetchFonts();
   }, []);
 
-  // Listen for IPC messages from control window - only after fonts are loaded
+  // Apply pending font once all fonts finish loading
   useEffect(() => {
-    if (!fontsLoaded) return;
+    if (
+      fontsLoaded &&
+      pendingFontRef.current &&
+      loadedFontsRef.current.has(pendingFontRef.current)
+    ) {
+      setFontFamily(`"${pendingFontRef.current}"`);
+      pendingFontRef.current = null;
+    }
+  }, [fontsLoaded, loadedFontsRef]);
 
+  // Subscribe to advertisement changes immediately (doesn't need fonts)
+  useEffect(() => {
+    const { electron } = window as Window &
+      typeof globalThis & {
+        electron: {
+          advertisement: {
+            onAdvertisement: (
+              callback: (message: ProjectionAdvertisementMessage) => void,
+            ) => () => void;
+          };
+        };
+      };
+
+    console.log('[Projection] Setting up advertisement subscription');
+    const unsubAdvertisement = electron.advertisement.onAdvertisement(
+      (message) => {
+        console.log(
+          '[Projection] Received advertisement message:',
+          message.action,
+          message.advertisement,
+          message.displaySettings,
+        );
+        if (message.action === 'show' && message.advertisement) {
+          console.log(
+            '[Projection] Setting ad visible:',
+            message.advertisement,
+          );
+          setCurrentAd(message.advertisement);
+          if (message.displaySettings) {
+            setAdDisplaySettings(message.displaySettings);
+          }
+          setIsAdVisible(true);
+        } else if (message.action === 'hide') {
+          console.log('[Projection] Hiding ad');
+          setIsAdVisible(false);
+        } else if (
+          message.action === 'updateSettings' &&
+          message.displaySettings
+        ) {
+          console.log(
+            '[Projection] Updating display settings:',
+            message.displaySettings,
+          );
+          setAdDisplaySettings(message.displaySettings);
+        }
+      },
+    );
+
+    return () => {
+      unsubAdvertisement();
+    };
+  }, []);
+
+  // Subscribe to frame changes from control window
+  useEffect(() => {
+    const { electron } = window as Window &
+      typeof globalThis & {
+        electron: {
+          frame: {
+            onFrame: (
+              callback: (data: {
+                frame: Frame | null;
+                itemType: SetlistItemType;
+              }) => void,
+            ) => () => void;
+          };
+        };
+      };
+
+    console.log('[Projection] Setting up frame subscription');
+    const unsubFrame = electron.frame.onFrame((data) => {
+      console.log('[Projection] Received frame update:', data);
+      setCurrentFrame(data.frame);
+    });
+
+    return () => {
+      unsubFrame();
+    };
+  }, []);
+
+  // Listen for IPC messages from control window - subscribe immediately (no need to wait for fonts)
+  useEffect(() => {
     const { electron } = window as Window &
       typeof globalThis & {
         electron: {
           projection: {
             onUpdate: (
-              callback: (data: { lines: string[] }) => void,
+              callback: (data: {
+                lines: string[];
+                fontSize?: number;
+                overrides?: SlideOverrides;
+              }) => void,
             ) => () => void;
             onBlank: (callback: (isBlank: boolean) => void) => () => void;
             onVerseHidden: (
               callback: (isVerseHidden: boolean) => void,
             ) => () => void;
             onVideo: (callback: (videoPath: string) => void) => () => void;
+            onImage: (callback: (imagePath: string) => void) => () => void;
+            onBackgroundColor: (
+              callback: (color: string) => void,
+            ) => () => void;
             onFont: (callback: (fontFamily: string) => void) => () => void;
             sendReady: () => void;
           };
@@ -131,6 +233,8 @@ export default function App() {
     // Subscribe to lyrics updates
     const unsubUpdate = electron.projection.onUpdate((data) => {
       setCurrentLines(data.lines);
+      setSlideFontSize(data.fontSize);
+      setSlideOverrides(data.overrides);
     });
 
     // Subscribe to blank screen toggle
@@ -149,19 +253,33 @@ export default function App() {
     const unsubVideo = electron.projection.onVideo((videoPath) => {
       console.log('Projection received video:', videoPath);
       setCurrentVideoPath(videoPath);
+      setBackgroundType('video');
     });
 
-    // Subscribe to font changes
+    // Subscribe to image changes
+    const unsubImage = electron.projection.onImage((imagePath) => {
+      console.log('Projection received image:', imagePath);
+      setCurrentImagePath(imagePath);
+      setBackgroundType('image');
+    });
+
+    // Subscribe to background color changes
+    const unsubBackgroundColor = electron.projection.onBackgroundColor(
+      (color) => {
+        console.log('Projection received background color:', color);
+        setBackgroundColor(color);
+        setBackgroundType('color');
+      },
+    );
+
+    // Subscribe to font changes - handles fonts that may not be loaded yet
     const unsubFont = electron.projection.onFont(async (font) => {
       console.log('[Projection] Received font change:', font);
-      console.log(
-        '[Projection] Currently loaded fonts:',
-        Array.from(loadedFontsRef.current),
-      );
 
       // Use system font if 'system', 'inherit', or empty is received
       if (!font || font === 'system' || font === 'inherit') {
         console.log('[Projection] Using system font');
+        pendingFontRef.current = null;
         setFontFamily(SYSTEM_FONT);
         return;
       }
@@ -169,9 +287,17 @@ export default function App() {
       // Check if font is already loaded
       if (loadedFontsRef.current.has(font)) {
         console.log('[Projection] Font already loaded, setting:', font);
+        pendingFontRef.current = null;
         setFontFamily(`"${font}"`);
         return;
       }
+
+      // Font not loaded yet - store as pending and try to load it
+      console.log(
+        '[Projection] Font not loaded yet, storing as pending:',
+        font,
+      );
+      pendingFontRef.current = font;
 
       // Try to find and load the font from our fonts data
       const fontData = fontsDataRef.current.find((f) => f.name === font);
@@ -185,22 +311,24 @@ export default function App() {
           document.fonts.add(fontFace);
           loadedFontsRef.current.add(fontData.name);
           console.log(`[Projection] Dynamically loaded font: ${fontData.name}`);
-          setFontFamily(`"${font}"`);
+          if (pendingFontRef.current === font) {
+            setFontFamily(`"${font}"`);
+            pendingFontRef.current = null;
+          }
         } catch (error) {
           console.error(`[Projection] Failed to load font ${font}:`, error);
-          setFontFamily(`"${font}"`); // Try anyway
+          // Keep using system font until the font is loaded via the background load
         }
       } else {
-        console.warn(`[Projection] Font not found in available fonts: ${font}`);
-        setFontFamily(`"${font}"`); // Try anyway in case it's a system font
+        // Font data not available yet, it will be applied when fonts finish loading
+        console.log(
+          '[Projection] Font data not available yet, will apply when loaded',
+        );
       }
     });
 
-    // Signal to control window that projection is ready to receive messages
-    // This now happens AFTER fonts are loaded
-    console.log(
-      '[Projection] Fonts ready, sending ready signal to control window',
-    );
+    // Signal to control window that projection is ready to receive messages immediately
+    console.log('[Projection] Sending ready signal to control window');
     electron.projection.sendReady();
 
     // Cleanup subscriptions on unmount
@@ -209,35 +337,31 @@ export default function App() {
       unsubBlank();
       unsubVerseHidden();
       unsubVideo();
+      unsubImage();
+      unsubBackgroundColor();
       unsubFont();
     };
-  }, [fontsLoaded]);
+  }, []);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black select-none cursor-none">
-      {/* Video Background Layer */}
-      <VideoBackground videoPath={currentVideoPath} crossfadeDuration={1000} />
-
-      {/* Background Dim Overlay */}
-      {projectionSettings.backgroundDim > 0 && (
-        <div
-          className="absolute inset-0 bg-black pointer-events-none z-5"
-          style={{ opacity: projectionSettings.backgroundDim / 100 }}
-        />
-      )}
-
-      {/* Lyrics Overlay */}
-      {!isBlank && (
-        <LyricsOverlay
-          lines={currentLines}
-          fontFamily={fontFamily}
-          settings={projectionSettings}
-          isHidden={isVerseHidden}
-        />
-      )}
-
-      {/* Blank Screen Overlay */}
-      <BlankScreen isBlank={isBlank} />
+      <ProjectionRenderer
+        videoPath={currentVideoPath}
+        imagePath={currentImagePath}
+        backgroundColor={backgroundColor}
+        backgroundType={backgroundType}
+        lines={currentLines}
+        fontFamily={fontFamily}
+        settings={projectionSettings}
+        slideFontSize={slideFontSize}
+        slideOverrides={slideOverrides}
+        isBlank={isBlank}
+        isVerseHidden={isVerseHidden}
+        isAdVisible={isAdVisible}
+        currentAd={currentAd}
+        adDisplaySettings={adDisplaySettings}
+        frame={currentFrame}
+      />
     </div>
   );
 }

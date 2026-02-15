@@ -1,6 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Key, Palette, Monitor, Info, Database } from 'lucide-react';
+import {
+  Key,
+  Palette,
+  Monitor,
+  Info,
+  Database,
+  Book,
+  Frame,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -8,17 +16,27 @@ import {
 } from '../../../components/ui/dialog';
 import { cn } from '../../../lib/utils';
 import { DetectedFont } from '../../../shared/types/song';
+import { useFontLoader } from '../../../shared/hooks/useFontLoader';
 import {
   ApiSettingsTab,
   AppearanceTab,
   DisplaySettingsTab,
   DataSettingsTab,
+  BibleSettingsTab,
+  FrameSettingsTab,
   AboutTab,
 } from './tabs';
 
 type Theme = 'light' | 'dark' | 'system';
 type Language = 'en' | 'ko';
-type SettingsTab = 'api' | 'appearance' | 'display' | 'data' | 'about';
+type SettingsTab =
+  | 'api'
+  | 'appearance'
+  | 'display'
+  | 'data'
+  | 'bible'
+  | 'frame'
+  | 'about';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -57,28 +75,7 @@ export default function SettingsDialog({
 }: SettingsDialogProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<SettingsTab>('api');
-  const loadedFontsRef = useRef<Set<string>>(new Set());
-
-  // Load font faces for preview
-  useEffect(() => {
-    const loadFonts = async () => {
-      for (const font of fonts) {
-        if (!loadedFontsRef.current.has(font.name)) {
-          try {
-            const fontFace = new FontFace(font.name, `url(${font.dataUrl})`);
-            await fontFace.load();
-            document.fonts.add(fontFace);
-            loadedFontsRef.current.add(font.name);
-          } catch (error) {
-            console.error(`Failed to load font ${font.name}:`, error);
-          }
-        }
-      }
-    };
-    if (fonts.length > 0) {
-      loadFonts();
-    }
-  }, [fonts]);
+  const { loadedFontsRef } = useFontLoader(fonts);
 
   const navItems = [
     { id: 'api' as SettingsTab, label: t('apiSettings'), icon: Key },
@@ -96,6 +93,16 @@ export default function SettingsDialog({
       id: 'data' as SettingsTab,
       label: t('dataSettings'),
       icon: Database,
+    },
+    {
+      id: 'bible' as SettingsTab,
+      label: t('bibleSettings'),
+      icon: Book,
+    },
+    {
+      id: 'frame' as SettingsTab,
+      label: t('frameSettings'),
+      icon: Frame,
     },
     { id: 'about' as SettingsTab, label: t('about'), icon: Info },
   ];
@@ -130,8 +137,8 @@ export default function SettingsDialog({
                       'w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-left',
                       'transition-all duration-150 group',
                       isActive
-                        ? 'bg-foreground/10 text-foreground'
-                        : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
+                        ? 'bg-active text-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                     )}
                   >
                     <Icon
@@ -191,6 +198,18 @@ export default function SettingsDialog({
               {activeTab === 'data' && (
                 <div className="animate-in fade-in duration-200 h-full">
                   <DataSettingsTab />
+                </div>
+              )}
+
+              {activeTab === 'bible' && (
+                <div className="animate-in fade-in duration-200 h-full">
+                  <BibleSettingsTab />
+                </div>
+              )}
+
+              {activeTab === 'frame' && (
+                <div className="animate-in fade-in duration-200 h-full">
+                  <FrameSettingsTab />
                 </div>
               )}
 
