@@ -11,6 +11,9 @@ import {
   Film,
   ChevronDown,
   Type,
+  Music,
+  BookOpen,
+  Megaphone,
 } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import { Label } from '../../../../components/ui/label';
@@ -34,10 +37,282 @@ import {
   ProjectionSettings,
   defaultProjectionSettings,
 } from '../../../../shared/types/song';
+import type {
+  ContentTypeTextSettings,
+  TextStyleSettings,
+  BibleReferenceStyle,
+} from '../../../../../shared/types/settings';
+import { defaultContentTypeTextSettings } from '../../../../../shared/types/settings';
 import { SettingsRow } from '../components/SettingsRow';
 
 // Helper to safely access electron API
 const getElectron = () => (window as any).electron;
+
+type ContentTypeTab = 'song' | 'bible' | 'announcement';
+
+interface TextSettingsPanelProps {
+  settings: TextStyleSettings;
+  onUpdate: (updates: Partial<TextStyleSettings>) => void;
+  isBible?: boolean;
+  bibleReferenceStyle?: BibleReferenceStyle;
+  onBibleReferenceUpdate?: (updates: Partial<BibleReferenceStyle>) => void;
+  t: (key: string) => string;
+}
+
+function TextSettingsPanel({
+  settings,
+  onUpdate,
+  isBible = false,
+  bibleReferenceStyle,
+  onBibleReferenceUpdate,
+  t,
+}: TextSettingsPanelProps) {
+  return (
+    <div className="space-y-3">
+      {/* Bible: Verse section header */}
+      {isBible && (
+        <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          {t('verseText')}
+        </Label>
+      )}
+
+      {/* Font Size */}
+      <SettingsRow title={isBible ? t('verseFontSize') : t('fontSize')}>
+        <div className="flex items-center gap-2">
+          <Slider
+            value={[settings.fontSize]}
+            onValueChange={([value]) => onUpdate({ fontSize: value })}
+            min={48}
+            max={144}
+            step={4}
+            className="w-24"
+          />
+          <span className="text-xs text-muted-foreground w-10 text-right tabular-nums">
+            {settings.fontSize}px
+          </span>
+        </div>
+      </SettingsRow>
+
+      <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
+
+      {/* Text Position */}
+      <div className="flex items-center justify-between gap-3 py-1">
+        <Label className="text-[13px] font-medium">{t('textPosition')}</Label>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-0.5">
+            {(['top', 'middle', 'bottom'] as const).map((id) => (
+              <Button
+                key={id}
+                variant={
+                  settings.textAlign.vertical === id ? 'default' : 'ghost'
+                }
+                size="icon"
+                className="h-7 w-7"
+                onClick={() =>
+                  onUpdate({
+                    textAlign: {
+                      ...settings.textAlign,
+                      vertical: id,
+                    },
+                  })
+                }
+              >
+                <div
+                  className={cn(
+                    'w-3.5 h-4 border border-current rounded-sm flex flex-col',
+                    id === 'top' && 'justify-start pt-0.5',
+                    id === 'middle' && 'justify-center',
+                    id === 'bottom' && 'justify-end pb-0.5',
+                  )}
+                >
+                  <div className="w-2 h-px bg-current mx-auto" />
+                </div>
+              </Button>
+            ))}
+          </div>
+          <div className="w-px h-5 bg-border" />
+          <div className="flex gap-0.5">
+            {(['left', 'center', 'right'] as const).map((id) => (
+              <Button
+                key={id}
+                variant={
+                  settings.textAlign.horizontal === id ? 'default' : 'ghost'
+                }
+                size="icon"
+                className="h-7 w-7"
+                onClick={() =>
+                  onUpdate({
+                    textAlign: {
+                      ...settings.textAlign,
+                      horizontal: id,
+                    },
+                  })
+                }
+              >
+                <div
+                  className={cn(
+                    'w-4 h-3.5 border border-current rounded-sm flex flex-row',
+                    id === 'left' && 'justify-start pl-0.5',
+                    id === 'center' && 'justify-center',
+                    id === 'right' && 'justify-end pr-0.5',
+                  )}
+                >
+                  <div className="w-px h-2 bg-current my-auto" />
+                </div>
+              </Button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
+
+      {/* Text Alignment (CSS text-align) */}
+      <SettingsRow title={t('textAlignment')}>
+        <div className="flex gap-0.5">
+          {[
+            { id: 'left' as const, icon: AlignLeft },
+            { id: 'center' as const, icon: AlignCenter },
+            { id: 'right' as const, icon: AlignRight },
+          ].map(({ id, icon: Icon }) => (
+            <Button
+              key={id}
+              variant={
+                (settings.textJustify ?? 'center') === id ? 'default' : 'ghost'
+              }
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => onUpdate({ textJustify: id })}
+            >
+              <Icon className="w-3.5 h-3.5" />
+            </Button>
+          ))}
+        </div>
+      </SettingsRow>
+
+      <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
+
+      {/* Line Gap */}
+      <SettingsRow title={t('lineGap')}>
+        <div className="flex items-center gap-2">
+          <Slider
+            value={[settings.lineGap ?? 12]}
+            onValueChange={([value]) => onUpdate({ lineGap: value })}
+            min={0}
+            max={48}
+            step={4}
+            className="w-24"
+          />
+          <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">
+            {settings.lineGap ?? 12}px
+          </span>
+        </div>
+      </SettingsRow>
+
+      <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
+
+      {/* Padding */}
+      <SettingsRow title={t('textPadding')}>
+        <div className="flex items-center gap-2">
+          <Slider
+            value={[settings.padding?.left ?? 5]}
+            onValueChange={([value]) =>
+              onUpdate({
+                padding: {
+                  top: value,
+                  bottom: value,
+                  left: value,
+                  right: value,
+                },
+              })
+            }
+            min={0}
+            max={20}
+            step={1}
+            className="w-24"
+          />
+          <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">
+            {settings.padding?.left ?? 5}%
+          </span>
+        </div>
+      </SettingsRow>
+
+      <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
+
+      {/* Text Shadow */}
+      <SettingsRow title={t('textShadow')}>
+        <div className="flex items-center gap-2">
+          <Slider
+            value={[settings.textShadow.blur]}
+            onValueChange={([blur]) =>
+              onUpdate({
+                textShadow: {
+                  ...settings.textShadow,
+                  blur,
+                  enabled: blur > 0,
+                },
+              })
+            }
+            min={0}
+            max={20}
+            step={1}
+            className="w-24"
+          />
+          <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">
+            {settings.textShadow.blur}px
+          </span>
+        </div>
+      </SettingsRow>
+
+      {/* Bible-specific: Reference style */}
+      {isBible && bibleReferenceStyle && onBibleReferenceUpdate && (
+        <>
+          <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
+
+          <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider pt-1">
+            {t('referenceText')}
+          </Label>
+
+          <SettingsRow title={t('referenceFontSize')}>
+            <div className="flex items-center gap-2">
+              <Slider
+                value={[bibleReferenceStyle.fontSize]}
+                onValueChange={([value]) =>
+                  onBibleReferenceUpdate({ fontSize: value })
+                }
+                min={24}
+                max={120}
+                step={4}
+                className="w-24"
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right tabular-nums">
+                {bibleReferenceStyle.fontSize}px
+              </span>
+            </div>
+          </SettingsRow>
+
+          <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
+
+          <SettingsRow title={t('referenceTextColor')}>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={bibleReferenceStyle.textColor}
+                onChange={(e) =>
+                  onBibleReferenceUpdate({ textColor: e.target.value })
+                }
+                className="w-7 h-7 rounded border border-border cursor-pointer bg-transparent p-0.5"
+              />
+              <span className="text-xs text-muted-foreground font-mono">
+                {bibleReferenceStyle.textColor}
+              </span>
+            </div>
+          </SettingsRow>
+        </>
+      )}
+    </div>
+  );
+}
 
 interface DisplaySettingsTabProps {
   fonts: DetectedFont[];
@@ -63,6 +338,10 @@ export function DisplaySettingsTab({
   const { t } = useTranslation();
   const [projectionSettings, setProjectionSettings] =
     useState<ProjectionSettings>(defaultProjectionSettings);
+  const [contentTypeTextSettings, setContentTypeTextSettings] =
+    useState<ContentTypeTextSettings>(defaultContentTypeTextSettings);
+  const [activeContentTab, setActiveContentTab] =
+    useState<ContentTypeTab>('song');
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [isAddingFont, setIsAddingFont] = useState(false);
@@ -85,7 +364,7 @@ export function DisplaySettingsTab({
 
       try {
         const settings = await electron.settings.getProjection();
-        setProjectionSettings((prev) => ({
+        setProjectionSettings((prev: ProjectionSettings) => ({
           ...prev,
           ...settings,
           textShadow: { ...prev.textShadow, ...settings.textShadow },
@@ -95,20 +374,78 @@ export function DisplaySettingsTab({
         }));
       } catch (error) {
         console.error('Failed to load projection settings:', error);
-      } finally {
-        setIsLoadingSettings(false);
       }
+
+      // Load content-type text settings
+      try {
+        const result = await electron.settings.getContentTypeText();
+        if (result.success && result.data) {
+          setContentTypeTextSettings(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to load content type text settings:', error);
+      }
+
+      setIsLoadingSettings(false);
     };
     loadSettings();
   }, []);
 
-  const updateSettings = async (updates: Partial<ProjectionSettings>) => {
+  const updateGlobalSettings = async (updates: Partial<ProjectionSettings>) => {
     const electron = getElectron();
     if (!electron) return;
 
     const newSettings = { ...projectionSettings, ...updates };
     setProjectionSettings(newSettings);
     await electron.settings.setProjection(newSettings);
+  };
+
+  const updateContentTypeText = async (
+    type: ContentTypeTab,
+    updates: Partial<TextStyleSettings>,
+  ) => {
+    const electron = getElectron();
+    if (!electron) return;
+
+    // Optimistic update
+    setContentTypeTextSettings((prev) => ({
+      ...prev,
+      [type]: { ...prev[type], ...updates },
+    }));
+
+    try {
+      const result = await electron.settings.setContentTypeText(type, updates);
+      if (result.success && result.data) {
+        setContentTypeTextSettings(result.data);
+      }
+    } catch (error) {
+      console.error('Failed to update content type text settings:', error);
+    }
+  };
+
+  const updateBibleReferenceStyle = async (
+    updates: Partial<BibleReferenceStyle>,
+  ) => {
+    const electron = getElectron();
+    if (!electron) return;
+
+    // Optimistic update
+    setContentTypeTextSettings((prev) => ({
+      ...prev,
+      bible: {
+        ...prev.bible,
+        referenceStyle: { ...prev.bible.referenceStyle, ...updates },
+      },
+    }));
+
+    try {
+      const result = await electron.settings.setBibleReferenceStyle(updates);
+      if (result.success && result.data) {
+        setContentTypeTextSettings(result.data);
+      }
+    } catch (error) {
+      console.error('Failed to update bible reference style:', error);
+    }
   };
 
   // Font drag-and-drop handlers
@@ -259,6 +596,20 @@ export function DisplaySettingsTab({
 
   const userFonts = fonts;
   const userVideos = videos.map((path) => path.split('/').pop() || path);
+
+  const contentTabs: {
+    id: ContentTypeTab;
+    labelKey: string;
+    icon: typeof Music;
+  }[] = [
+    { id: 'song', labelKey: 'songTextSettings', icon: Music },
+    { id: 'bible', labelKey: 'bibleTextSettings', icon: BookOpen },
+    {
+      id: 'announcement',
+      labelKey: 'announcementTextSettings',
+      icon: Megaphone,
+    },
+  ];
 
   if (isLoadingSettings) {
     return (
@@ -520,199 +871,48 @@ export function DisplaySettingsTab({
 
       <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
 
-      {/* Font Size */}
-      <SettingsRow title={t('fontSize')}>
-        <div className="flex items-center gap-2">
-          <Slider
-            value={[projectionSettings.fontSize]}
-            onValueChange={([value]) => updateSettings({ fontSize: value })}
-            min={48}
-            max={144}
-            step={4}
-            className="w-24"
-          />
-          <span className="text-xs text-muted-foreground w-10 text-right tabular-nums">
-            {projectionSettings.fontSize}px
-          </span>
-        </div>
-      </SettingsRow>
+      {/* Per-Content-Type Text Settings */}
+      <div className="space-y-3">
+        <Label className="text-[13px] font-medium">{t('textSettings')}</Label>
 
-      <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
-
-      {/* Text Position */}
-      <div className="flex items-center justify-between gap-3 py-1">
-        <Label className="text-[13px] font-medium">{t('textPosition')}</Label>
-        <div className="flex items-center gap-3">
-          <div className="flex gap-0.5">
-            {(['top', 'middle', 'bottom'] as const).map((id) => (
-              <Button
-                key={id}
-                variant={
-                  projectionSettings.textAlign.vertical === id
-                    ? 'default'
-                    : 'ghost'
-                }
-                size="icon"
-                className="h-7 w-7"
-                onClick={() =>
-                  updateSettings({
-                    textAlign: {
-                      ...projectionSettings.textAlign,
-                      vertical: id,
-                    },
-                  })
-                }
-              >
-                <div
-                  className={cn(
-                    'w-3.5 h-4 border border-current rounded-sm flex flex-col',
-                    id === 'top' && 'justify-start pt-0.5',
-                    id === 'middle' && 'justify-center',
-                    id === 'bottom' && 'justify-end pb-0.5',
-                  )}
-                >
-                  <div className="w-2 h-px bg-current mx-auto" />
-                </div>
-              </Button>
-            ))}
-          </div>
-          <div className="w-px h-5 bg-border" />
-          <div className="flex gap-0.5">
-            {(['left', 'center', 'right'] as const).map((id) => (
-              <Button
-                key={id}
-                variant={
-                  projectionSettings.textAlign.horizontal === id
-                    ? 'default'
-                    : 'ghost'
-                }
-                size="icon"
-                className="h-7 w-7"
-                onClick={() =>
-                  updateSettings({
-                    textAlign: {
-                      ...projectionSettings.textAlign,
-                      horizontal: id,
-                    },
-                  })
-                }
-              >
-                <div
-                  className={cn(
-                    'w-4 h-3.5 border border-current rounded-sm flex flex-row',
-                    id === 'left' && 'justify-start pl-0.5',
-                    id === 'center' && 'justify-center',
-                    id === 'right' && 'justify-end pr-0.5',
-                  )}
-                >
-                  <div className="w-px h-2 bg-current my-auto" />
-                </div>
-              </Button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
-
-      {/* Text Alignment (CSS text-align) */}
-      <SettingsRow title={t('textAlignment')}>
-        <div className="flex gap-0.5">
-          {[
-            { id: 'left' as const, icon: AlignLeft },
-            { id: 'center' as const, icon: AlignCenter },
-            { id: 'right' as const, icon: AlignRight },
-          ].map(({ id, icon: Icon }) => (
-            <Button
+        {/* Content Type Tabs */}
+        <div className="flex border-b border-border -mx-5 px-5">
+          {contentTabs.map(({ id, labelKey, icon: Icon }) => (
+            <button
               key={id}
-              variant={
-                (projectionSettings.textJustify ?? 'center') === id
-                  ? 'default'
-                  : 'ghost'
-              }
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => updateSettings({ textJustify: id })}
+              onClick={() => setActiveContentTab(id)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium transition-colors border-b-2 -mb-px',
+                activeContentTab === id
+                  ? 'border-foreground text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground',
+              )}
             >
               <Icon className="w-3.5 h-3.5" />
-            </Button>
+              {t(labelKey)}
+            </button>
           ))}
         </div>
-      </SettingsRow>
 
-      <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
-
-      {/* Line Gap */}
-      <SettingsRow title={t('lineGap')}>
-        <div className="flex items-center gap-2">
-          <Slider
-            value={[projectionSettings.lineGap ?? 12]}
-            onValueChange={([value]) => updateSettings({ lineGap: value })}
-            min={0}
-            max={48}
-            step={4}
-            className="w-24"
-          />
-          <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">
-            {projectionSettings.lineGap ?? 12}px
-          </span>
-        </div>
-      </SettingsRow>
-
-      <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
-
-      {/* Padding */}
-      <SettingsRow title={t('textPadding')}>
-        <div className="flex items-center gap-2">
-          <Slider
-            value={[projectionSettings.padding?.left ?? 5]}
-            onValueChange={([value]) =>
-              updateSettings({
-                padding: {
-                  top: value,
-                  bottom: value,
-                  left: value,
-                  right: value,
-                },
-              })
-            }
-            min={0}
-            max={20}
-            step={1}
-            className="w-24"
-          />
-          <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">
-            {projectionSettings.padding?.left ?? 5}%
-          </span>
-        </div>
-      </SettingsRow>
-
-      <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
-
-      {/* Text Shadow */}
-      <SettingsRow title={t('textShadow')}>
-        <div className="flex items-center gap-2">
-          <Slider
-            value={[projectionSettings.textShadow.blur]}
-            onValueChange={([blur]) =>
-              updateSettings({
-                textShadow: {
-                  ...projectionSettings.textShadow,
-                  blur,
-                  enabled: blur > 0,
-                },
-              })
-            }
-            min={0}
-            max={20}
-            step={1}
-            className="w-24"
-          />
-          <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">
-            {projectionSettings.textShadow.blur}px
-          </span>
-        </div>
-      </SettingsRow>
+        {/* Text settings for the active content type */}
+        <TextSettingsPanel
+          key={activeContentTab}
+          settings={contentTypeTextSettings[activeContentTab]}
+          onUpdate={(updates) =>
+            updateContentTypeText(activeContentTab, updates)
+          }
+          isBible={activeContentTab === 'bible'}
+          bibleReferenceStyle={
+            activeContentTab === 'bible'
+              ? contentTypeTextSettings.bible.referenceStyle
+              : undefined
+          }
+          onBibleReferenceUpdate={
+            activeContentTab === 'bible' ? updateBibleReferenceStyle : undefined
+          }
+          t={t}
+        />
+      </div>
 
       <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
 
@@ -722,7 +922,7 @@ export function DisplaySettingsTab({
           <Slider
             value={[projectionSettings.backgroundDim]}
             onValueChange={([value]) =>
-              updateSettings({ backgroundDim: value })
+              updateGlobalSettings({ backgroundDim: value })
             }
             min={0}
             max={80}
@@ -743,7 +943,7 @@ export function DisplaySettingsTab({
           value={projectionSettings.animation}
           onValueChange={(
             animation: 'none' | 'fade' | 'slide-up' | 'slide-left',
-          ) => updateSettings({ animation })}
+          ) => updateGlobalSettings({ animation })}
         >
           <SelectTrigger className="w-28 bg-muted/30 h-8 text-xs">
             <SelectValue />
@@ -766,7 +966,7 @@ export function DisplaySettingsTab({
         <Select
           value={projectionSettings.displayMode}
           onValueChange={async (mode: 'fullscreen' | 'windowed') => {
-            updateSettings({ displayMode: mode });
+            updateGlobalSettings({ displayMode: mode });
             const electron = getElectron();
             if (electron) {
               await electron.projection.setDisplayMode(mode);

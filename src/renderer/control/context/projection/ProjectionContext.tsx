@@ -17,6 +17,11 @@ import { useMedia } from '../media/MediaContext';
 import { useFrame } from '../frame/FrameContext';
 import { useSetlist } from '../setlist/SetlistContext';
 import type { SetlistItemType } from '../../../../shared/types/setlistItem';
+import type {
+  ContentTypeTextSettings,
+  TextStyleSettings,
+  BibleReferenceStyle,
+} from '../../../../shared/types/settings';
 
 import { getElectron } from '../../../shared/hooks/useElectron';
 
@@ -25,11 +30,19 @@ interface ProjectionContextType {
   isBlank: boolean;
   isVerseHidden: boolean;
   projectionSettings: ProjectionSettings;
+  contentTypeTextSettings: ContentTypeTextSettings | null;
   openProjection: () => Promise<void>;
   closeProjection: () => Promise<void>;
   toggleBlank: () => void;
   toggleVerseHidden: () => void;
   updateProjectionSettings: (settings: Partial<ProjectionSettings>) => void;
+  updateContentTypeTextSettings: (
+    type: 'song' | 'bible' | 'announcement',
+    updates: Partial<TextStyleSettings>,
+  ) => Promise<void>;
+  updateBibleReferenceStyle: (
+    updates: Partial<BibleReferenceStyle>,
+  ) => Promise<void>;
 }
 
 const ProjectionContext = createContext<ProjectionContextType | null>(null);
@@ -71,6 +84,13 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
   const [isVerseHidden, setIsVerseHidden] = useState(false);
   const [projectionSettings, setProjectionSettings] =
     useState<ProjectionSettings>(defaultProjectionSettings);
+  const [contentTypeTextSettings, setContentTypeTextSettings] =
+    useState<ContentTypeTextSettings | null>(null);
+
+  // Determine current content type
+  const currentItemIndex = presentationState.currentSongIndex;
+  const currentItem = currentSetlist?.items[currentItemIndex];
+  const currentContentType: SetlistItemType = currentItem?.type ?? 'song';
 
   // Send update to projection window when slide changes
   useEffect(() => {
@@ -82,11 +102,13 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
         lines: currentSlide.lines,
         fontSize: currentSlide.fontSize ?? currentSlide.overrides?.fontSize,
         overrides: currentSlide.overrides,
+        contentType: currentContentType,
+        lineRoles: currentSlide.lineRoles,
       });
     } else {
       electron.projection.update({ lines: [] });
     }
-  }, [currentSlide]);
+  }, [currentSlide, currentContentType]);
 
   // Update projection blank state
   useEffect(() => {
@@ -129,6 +151,16 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
       } catch (error) {
         console.error('Failed to load projection settings:', error);
       }
+
+      // Load content-type text settings
+      try {
+        const result = await electron.settings.getContentTypeText();
+        if (result.success && result.data) {
+          setContentTypeTextSettings(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to load content type text settings:', error);
+      }
     };
     loadSettings();
 
@@ -138,8 +170,17 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
         setProjectionSettings(settings);
       },
     );
+
+    // Listen for content-type text settings updates
+    const unsubContentTypeText = electron.settings.onContentTypeText(
+      (settings: ContentTypeTextSettings) => {
+        setContentTypeTextSettings(settings);
+      },
+    );
+
     return () => {
       unsubscribe();
+      unsubContentTypeText();
     };
   }, []);
 
@@ -148,20 +189,16 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
     if (!isProjectionOpen || !currentSetlist) return;
 
     // Get current item type from setlist items
-    const currentItemIndex = presentationState.currentSongIndex;
-    const currentItem = currentSetlist.items[currentItemIndex];
-    const currentItemType: SetlistItemType = currentItem?.type ?? 'song';
+    const itemIdx = presentationState.currentSongIndex;
+    const item = currentSetlist.items[itemIdx];
+    const itemType: SetlistItemType = item?.type ?? 'song';
 
     // Send frame if item type changed
-    if (currentItemType !== lastItemTypeRef.current) {
-      lastItemTypeRef.current = currentItemType;
-      const frame = getFrameForType(currentItemType);
-      sendFrameToProjection(frame, currentItemType);
-      console.log(
-        '[Projection] Sent frame for item type:',
-        currentItemType,
-        frame,
-      );
+    if (itemType !== lastItemTypeRef.current) {
+      lastItemTypeRef.current = itemType;
+      const frame = getFrameForType(itemType);
+      sendFrameToProjection(frame, itemType);
+      console.log('[Projection] Sent frame for item type:', itemType, frame);
     }
   }, [
     isProjectionOpen,
@@ -175,12 +212,12 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
   useEffect(() => {
     if (!isProjectionOpen || !currentSetlist) return;
 
-    const currentItemIndex = presentationState.currentSongIndex;
-    const currentItem = currentSetlist.items[currentItemIndex];
-    const currentItemType: SetlistItemType = currentItem?.type ?? 'song';
+    const itemIdx = presentationState.currentSongIndex;
+    const item = currentSetlist.items[itemIdx];
+    const itemType: SetlistItemType = item?.type ?? 'song';
 
-    const frame = getFrameForType(currentItemType);
-    sendFrameToProjection(frame, currentItemType);
+    const frame = getFrameForType(itemType);
+    sendFrameToProjection(frame, itemType);
     console.log('[Projection] Frame settings changed, sending frame:', frame);
   }, [frameSettings]);
 
@@ -202,6 +239,46 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
         setProjectionSettings((prev) => ({ ...prev, ...settings }));
       } catch (error) {
         console.error('Failed to update projection settings:', error);
+      }
+    },
+    [],
+  );
+
+  const updateContentTypeTextSettings = useCallback(
+    async (
+      type: 'song' | 'bible' | 'announcement',
+      updates: Partial<TextStyleSettings>,
+    ) => {
+      const electron = getElectron();
+      if (!electron) return;
+
+      try {
+        const result = await electron.settings.setContentTypeText(
+          type,
+          updates,
+        );
+        if (result.success && result.data) {
+          setContentTypeTextSettings(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to update content type text settings:', error);
+      }
+    },
+    [],
+  );
+
+  const updateBibleReferenceStyle = useCallback(
+    async (updates: Partial<BibleReferenceStyle>) => {
+      const electron = getElectron();
+      if (!electron) return;
+
+      try {
+        const result = await electron.settings.setBibleReferenceStyle(updates);
+        if (result.success && result.data) {
+          setContentTypeTextSettings(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to update bible reference style:', error);
       }
     },
     [],
@@ -229,6 +306,8 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
             lines: currentSlide.lines,
             fontSize: currentSlide.fontSize ?? currentSlide.overrides?.fontSize,
             overrides: currentSlide.overrides,
+            contentType: currentContentType,
+            lineRoles: currentSlide.lineRoles,
           });
         } else {
           electron.projection.update({ lines: [] });
@@ -250,17 +329,13 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
 
         // Send initial frame based on current item type
         if (currentSetlist) {
-          const currentItemIndex = presentationState.currentSongIndex;
-          const currentItem = currentSetlist.items[currentItemIndex];
-          const currentItemType: SetlistItemType = currentItem?.type ?? 'song';
-          const frame = getFrameForType(currentItemType);
-          sendFrameToProjection(frame, currentItemType);
-          lastItemTypeRef.current = currentItemType;
-          console.log(
-            '[Projection] Sent initial frame:',
-            currentItemType,
-            frame,
-          );
+          const initIdx = presentationState.currentSongIndex;
+          const initItem = currentSetlist.items[initIdx];
+          const initType: SetlistItemType = initItem?.type ?? 'song';
+          const frame = getFrameForType(initType);
+          sendFrameToProjection(frame, initType);
+          lastItemTypeRef.current = initType;
+          console.log('[Projection] Sent initial frame:', initType, frame);
         }
 
         unsubReady();
@@ -286,6 +361,7 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
     presentationState.currentSongIndex,
     getFrameForType,
     sendFrameToProjection,
+    currentContentType,
   ]);
 
   const closeProjection = useCallback(async () => {
@@ -306,22 +382,28 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
       isBlank,
       isVerseHidden,
       projectionSettings,
+      contentTypeTextSettings,
       openProjection,
       closeProjection,
       toggleBlank,
       toggleVerseHidden,
       updateProjectionSettings,
+      updateContentTypeTextSettings,
+      updateBibleReferenceStyle,
     }),
     [
       isProjectionOpen,
       isBlank,
       isVerseHidden,
       projectionSettings,
+      contentTypeTextSettings,
       openProjection,
       closeProjection,
       toggleBlank,
       toggleVerseHidden,
       updateProjectionSettings,
+      updateContentTypeTextSettings,
+      updateBibleReferenceStyle,
     ],
   );
 

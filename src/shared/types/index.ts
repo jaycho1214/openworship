@@ -27,8 +27,18 @@ export type {
   ColorPreset,
   ProjectionSettings,
   AppSettings,
+  TextStyleSettings,
+  BibleReferenceStyle,
+  BibleTextStyleSettings,
+  ContentTypeTextSettings,
 } from './settings';
-export { defaultProjectionSettings, COLOR_PRESETS } from './settings';
+export {
+  defaultProjectionSettings,
+  COLOR_PRESETS,
+  defaultTextStyleSettings,
+  defaultBibleReferenceStyle,
+  defaultContentTypeTextSettings,
+} from './settings';
 
 // Library types
 export type {

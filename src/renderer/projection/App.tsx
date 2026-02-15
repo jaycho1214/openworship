@@ -16,6 +16,7 @@ import {
 } from '../../shared/types/advertisement';
 import type { Frame } from '../../shared/types/frame';
 import type { SetlistItemType } from '../../shared/types/setlistItem';
+import type { ContentTypeTextSettings } from '../../shared/types/settings';
 
 // System font uses inherited/default font family
 const SYSTEM_FONT = 'inherit';
@@ -47,6 +48,15 @@ export default function App() {
   const [adDisplaySettings, setAdDisplaySettings] =
     useState<AdvertisementDisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
   const [currentFrame, setCurrentFrame] = useState<Frame | null>(null);
+  const [contentType, setContentType] = useState<SetlistItemType | undefined>(
+    undefined,
+  );
+  const [lineRoles, setLineRoles] = useState<
+    ('body' | 'reference')[] | undefined
+  >(undefined);
+  const [contentTypeTextSettings, setContentTypeTextSettings] = useState<
+    ContentTypeTextSettings | undefined
+  >(undefined);
 
   // Update document title based on current language
   useEffect(() => {
@@ -70,6 +80,23 @@ export default function App() {
       } catch (error) {
         console.error('[Projection] Failed to load settings:', error);
       }
+
+      // Load content-type text settings
+      try {
+        const result = await window.electron.settings.getContentTypeText();
+        if (result.success && result.data) {
+          setContentTypeTextSettings(result.data);
+          console.log(
+            '[Projection] Loaded content type text settings:',
+            result.data,
+          );
+        }
+      } catch (error) {
+        console.error(
+          '[Projection] Failed to load content type text settings:',
+          error,
+        );
+      }
     };
     loadSettings();
 
@@ -81,8 +108,20 @@ export default function App() {
       },
     );
 
+    // Listen for content-type text settings updates
+    const unsubContentTypeText = window.electron.settings.onContentTypeText(
+      (settings: ContentTypeTextSettings) => {
+        console.log(
+          '[Projection] Content type text settings updated:',
+          settings,
+        );
+        setContentTypeTextSettings(settings);
+      },
+    );
+
     return () => {
       unsubSettings();
+      unsubContentTypeText();
     };
   }, []);
 
@@ -235,6 +274,8 @@ export default function App() {
       setCurrentLines(data.lines);
       setSlideFontSize(data.fontSize);
       setSlideOverrides(data.overrides);
+      setContentType(data.contentType as SetlistItemType | undefined);
+      setLineRoles(data.lineRoles);
     });
 
     // Subscribe to blank screen toggle
@@ -361,6 +402,9 @@ export default function App() {
         currentAd={currentAd}
         adDisplaySettings={adDisplaySettings}
         frame={currentFrame}
+        contentType={contentType}
+        lineRoles={lineRoles}
+        contentTypeTextSettings={contentTypeTextSettings}
       />
     </div>
   );

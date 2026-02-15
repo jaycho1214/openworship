@@ -9,6 +9,8 @@ import {
   settingsService,
   ProjectionSettings,
   RecentItem,
+  TextStyleSettings,
+  BibleReferenceStyle,
 } from '../services/settings';
 import { databaseService } from '../services/database';
 import { advertisementService } from '../services/AdvertisementService';
@@ -184,6 +186,80 @@ export const registerSettingsHandlers = (): void => {
       return errorResponse(message);
     }
   });
+
+  // Get content-type text settings
+  ipcMain.handle('settings:getContentTypeText', () => {
+    try {
+      return successResponse(settingsService.getContentTypeTextSettings());
+    } catch (error) {
+      const message = getErrorMessage(error);
+      log.error(
+        '[Settings] Error getting content type text settings:',
+        message,
+      );
+      return errorResponse(message);
+    }
+  });
+
+  // Set content-type text settings
+  ipcMain.handle(
+    'settings:setContentTypeText',
+    (
+      event,
+      type: 'song' | 'bible' | 'announcement',
+      updates: Partial<TextStyleSettings>,
+    ) => {
+      try {
+        const updated = settingsService.setContentTypeTextSettings(
+          type,
+          updates,
+        );
+        // Forward to projection window if open
+        const projectionWindow = getProjectionWindow();
+        if (projectionWindow && !projectionWindow.isDestroyed()) {
+          projectionWindow.webContents.send(
+            'projection:contentTypeText',
+            updated,
+          );
+        }
+        // Also notify the control window so ProjectionContext updates
+        event.sender.send('projection:contentTypeText', updated);
+        return successResponse(updated);
+      } catch (error) {
+        const message = getErrorMessage(error);
+        log.error(
+          '[Settings] Error setting content type text settings:',
+          message,
+        );
+        return errorResponse(message);
+      }
+    },
+  );
+
+  // Set Bible reference style
+  ipcMain.handle(
+    'settings:setBibleReferenceStyle',
+    (event, updates: Partial<BibleReferenceStyle>) => {
+      try {
+        const updated = settingsService.setBibleReferenceStyle(updates);
+        // Forward to projection window if open
+        const projectionWindow = getProjectionWindow();
+        if (projectionWindow && !projectionWindow.isDestroyed()) {
+          projectionWindow.webContents.send(
+            'projection:contentTypeText',
+            updated,
+          );
+        }
+        // Also notify the control window so ProjectionContext updates
+        event.sender.send('projection:contentTypeText', updated);
+        return successResponse(updated);
+      } catch (error) {
+        const message = getErrorMessage(error);
+        log.error('[Settings] Error setting bible reference style:', message);
+        return errorResponse(message);
+      }
+    },
+  );
 
   // Factory reset
   ipcMain.handle('settings:factoryReset', async () => {

@@ -18,6 +18,9 @@ import type {
   ImportPreview,
   ImportOptions,
   ImportResult,
+  ContentTypeTextSettings,
+  TextStyleSettings,
+  BibleReferenceStyle,
 } from '../shared/types';
 import type {
   Advertisement,
@@ -56,6 +59,7 @@ export type Channels =
   | 'projection:settings'
   | 'projection:advertisement'
   | 'projection:frame'
+  | 'projection:contentTypeText'
   | 'file:open'
   | 'bible:importProgress';
 
@@ -93,6 +97,9 @@ export type InvokeChannels =
   | 'settings:getRecentItems'
   | 'settings:addRecentItem'
   | 'settings:clearRecentItems'
+  | 'settings:getContentTypeText'
+  | 'settings:setContentTypeText'
+  | 'settings:setBibleReferenceStyle'
   | 'settings:factoryReset'
   | 'library:getAll'
   | 'library:getById'
@@ -217,6 +224,8 @@ const electronHandler = {
           right?: number;
         };
       };
+      contentType?: 'song' | 'bible' | 'announcement';
+      lineRoles?: ('body' | 'reference')[];
     }) => ipcRenderer.send('projection:update', data),
     setBlank: (isBlank: boolean) =>
       ipcRenderer.send('projection:blank', isBlank),
@@ -262,6 +271,8 @@ const electronHandler = {
             right?: number;
           };
         };
+        contentType?: 'song' | 'bible' | 'announcement';
+        lineRoles?: ('body' | 'reference')[];
       }) => void,
     ) => {
       const subscription = (
@@ -282,6 +293,8 @@ const electronHandler = {
               right?: number;
             };
           };
+          contentType?: 'song' | 'bible' | 'announcement';
+          lineRoles?: ('body' | 'reference')[];
         },
       ) => callback(data);
       ipcRenderer.on('projection:update', subscription);
@@ -573,6 +586,38 @@ const electronHandler = {
     },
     factoryReset: (): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('settings:factoryReset'),
+    // Content-type text settings
+    getContentTypeText: (): Promise<{
+      success: boolean;
+      data?: ContentTypeTextSettings;
+      error?: string;
+    }> => ipcRenderer.invoke('settings:getContentTypeText'),
+    setContentTypeText: (
+      type: 'song' | 'bible' | 'announcement',
+      updates: Partial<TextStyleSettings>,
+    ): Promise<{
+      success: boolean;
+      data?: ContentTypeTextSettings;
+      error?: string;
+    }> => ipcRenderer.invoke('settings:setContentTypeText', type, updates),
+    setBibleReferenceStyle: (
+      updates: Partial<BibleReferenceStyle>,
+    ): Promise<{
+      success: boolean;
+      data?: ContentTypeTextSettings;
+      error?: string;
+    }> => ipcRenderer.invoke('settings:setBibleReferenceStyle', updates),
+    onContentTypeText: (
+      callback: (settings: ContentTypeTextSettings) => void,
+    ) => {
+      const subscription = (
+        _event: IpcRendererEvent,
+        settings: ContentTypeTextSettings,
+      ) => callback(settings);
+      ipcRenderer.on('projection:contentTypeText', subscription);
+      return () =>
+        ipcRenderer.removeListener('projection:contentTypeText', subscription);
+    },
     // Recent items
     getRecentItems: (): Promise<{
       success: boolean;

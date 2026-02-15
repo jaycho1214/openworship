@@ -7,10 +7,13 @@ import type {
 import type { Frame } from '../../../shared/types/frame';
 import {
   type ProjectionSettings,
+  type ContentTypeTextSettings,
+  type BibleReferenceStyle,
   defaultProjectionSettings,
 } from '../../../shared/types/settings';
 import { getFrameStyle } from '../../shared/utils/frameStyles';
 import type { SlideOverrides } from '../../shared/types/song';
+import type { SetlistItemType } from '../../../shared/types/setlistItem';
 
 interface LyricsOverlayProps {
   lines: string[];
@@ -24,6 +27,9 @@ interface LyricsOverlayProps {
   frame?: Frame | null;
   slideFontSize?: number; // Per-slide font size override
   slideOverrides?: SlideOverrides; // Per-slide overrides (position, padding)
+  contentType?: SetlistItemType;
+  lineRoles?: ('body' | 'reference')[];
+  contentTypeTextSettings?: ContentTypeTextSettings;
 }
 
 export default function LyricsOverlay({
@@ -38,26 +44,60 @@ export default function LyricsOverlay({
   frame = null,
   slideFontSize,
   slideOverrides,
+  contentType,
+  lineRoles,
+  contentTypeTextSettings,
 }: LyricsOverlayProps) {
-  const s = { ...defaultProjectionSettings, ...settings };
+  // Helper to resolve settings from given content type and overrides
+  const resolveSettings = (
+    ct?: SetlistItemType,
+    so?: SlideOverrides,
+    sfs?: number,
+  ) => {
+    const ts =
+      contentTypeTextSettings && ct ? contentTypeTextSettings[ct] : undefined;
 
-  // Use slide-specific font size if provided, otherwise fall back to global setting
-  const effectiveFontSize =
-    slideFontSize ?? slideOverrides?.fontSize ?? s.fontSize;
+    const merged = {
+      ...defaultProjectionSettings,
+      ...settings,
+      ...(ts
+        ? {
+            fontSize: ts.fontSize,
+            textColor: ts.textColor,
+            textShadow: ts.textShadow,
+            textOutline: ts.textOutline,
+            textAlign: ts.textAlign,
+            textJustify: ts.textJustify,
+            lineGap: ts.lineGap,
+            padding: ts.padding,
+          }
+        : {}),
+    };
 
-  // Use slide-specific text alignment if provided, otherwise fall back to global setting
-  const effectiveTextAlign = {
-    horizontal: slideOverrides?.textAlign?.horizontal ?? s.textAlign.horizontal,
-    vertical: slideOverrides?.textAlign?.vertical ?? s.textAlign.vertical,
+    const refStyle: BibleReferenceStyle | undefined =
+      ct === 'bible' && contentTypeTextSettings?.bible
+        ? contentTypeTextSettings.bible.referenceStyle
+        : undefined;
+
+    return {
+      s: merged,
+      bibleRefStyle: refStyle,
+      effectiveFontSize: sfs ?? so?.fontSize ?? merged.fontSize,
+      effectiveTextAlign: {
+        horizontal: so?.textAlign?.horizontal ?? merged.textAlign.horizontal,
+        vertical: so?.textAlign?.vertical ?? merged.textAlign.vertical,
+      },
+      effectivePadding: {
+        top: so?.padding?.top ?? merged.padding?.top ?? 5,
+        bottom: so?.padding?.bottom ?? merged.padding?.bottom ?? 5,
+        left: so?.padding?.left ?? merged.padding?.left ?? 5,
+        right: so?.padding?.right ?? merged.padding?.right ?? 5,
+      },
+    };
   };
 
-  // Use slide-specific padding if provided, otherwise fall back to global setting
-  const effectivePadding = {
-    top: slideOverrides?.padding?.top ?? s.padding?.top ?? 5,
-    bottom: slideOverrides?.padding?.bottom ?? s.padding?.bottom ?? 5,
-    left: slideOverrides?.padding?.left ?? s.padding?.left ?? 5,
-    right: slideOverrides?.padding?.right ?? s.padding?.right ?? 5,
-  };
+  // Current settings (for animation detection)
+  const { s } = resolveSettings(contentType, slideOverrides, slideFontSize);
 
   // Calculate the actual banner height in pixels
   // Banner height = top padding + content height (fontSize * lineHeight 1.4) + bottom padding
@@ -73,7 +113,15 @@ export default function LyricsOverlay({
   // For middle position, add offset to both sides
   const middleOffset =
     isBannerAdVisible && bannerAdPosition === 'middle' ? bannerHeight / 2 : 0;
-  const [currentLines, setCurrentLines] = useState<string[]>(lines);
+  // Snapshot of display state — only updates when invisible (between fade-out and fade-in)
+  // This prevents layout from jumping before the text has faded out
+  const [displayed, setDisplayed] = useState({
+    lines,
+    contentType,
+    lineRoles,
+    slideOverrides,
+    slideFontSize,
+  });
   const [opacity, setOpacity] = useState(1);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const currentLinesRef = useRef<string[]>(lines);
@@ -88,23 +136,42 @@ export default function LyricsOverlay({
 
     if (!animate) {
       currentLinesRef.current = lines;
-      setCurrentLines(lines);
+      setDisplayed({
+        lines,
+        contentType,
+        lineRoles,
+        slideOverrides,
+        slideFontSize,
+      });
       setOpacity(lines.length > 0 ? 1 : 0);
       return;
     }
 
-    // If content is the same, do nothing (use ref to avoid feedback loop)
+    // If content is the same, update styles immediately (no animation needed)
     if (JSON.stringify(lines) === JSON.stringify(currentLinesRef.current)) {
+      setDisplayed((prev) => ({
+        ...prev,
+        contentType,
+        lineRoles,
+        slideOverrides,
+        slideFontSize,
+      }));
       return;
     }
 
     // Fade out
     setOpacity(0);
 
-    // After fade out, swap content and fade in
+    // After fade out, swap content AND styles, then fade in
     timeoutRef.current = setTimeout(() => {
       currentLinesRef.current = lines;
-      setCurrentLines(lines);
+      setDisplayed({
+        lines,
+        contentType,
+        lineRoles,
+        slideOverrides,
+        slideFontSize,
+      });
       // Small delay before fading in to ensure content is rendered
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -118,52 +185,58 @@ export default function LyricsOverlay({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [lines, animate]);
+  }, [lines, animate, contentType, lineRoles, slideOverrides, slideFontSize]);
 
-  if (currentLines.length === 0) {
+  // Resolve render settings from displayed (deferred) state
+  const render = resolveSettings(
+    displayed.contentType,
+    displayed.slideOverrides,
+    displayed.slideFontSize,
+  );
+
+  if (displayed.lines.length === 0) {
     return null;
   }
 
-  // Build text shadow from settings
+  // Build text shadow from render settings (deferred during animation)
+  const rs = render.s;
   const textShadowParts: string[] = [];
-  if (s.textShadow.enabled) {
+  if (rs.textShadow.enabled) {
     textShadowParts.push(
-      `${s.textShadow.offsetX}px ${s.textShadow.offsetY}px ${s.textShadow.blur}px ${s.textShadow.color}`,
+      `${rs.textShadow.offsetX}px ${rs.textShadow.offsetY}px ${rs.textShadow.blur}px ${rs.textShadow.color}`,
     );
-    // Add additional shadow layers for better readability
     textShadowParts.push(
-      `0 0 ${s.textShadow.blur * 2}px ${s.textShadow.color}`,
+      `0 0 ${rs.textShadow.blur * 2}px ${rs.textShadow.color}`,
     );
-    textShadowParts.push(`0 0 ${s.textShadow.blur * 4}px rgba(0,0,0,0.5)`);
+    textShadowParts.push(`0 0 ${rs.textShadow.blur * 4}px rgba(0,0,0,0.5)`);
   }
   const textShadow = textShadowParts.join(', ');
 
   // Build text outline (using text-stroke)
-  const textOutlineStyle = s.textOutline.enabled
+  const textOutlineStyle = rs.textOutline.enabled
     ? {
-        WebkitTextStroke: `${s.textOutline.width}px ${s.textOutline.color}`,
+        WebkitTextStroke: `${rs.textOutline.width}px ${rs.textOutline.color}`,
         paintOrder: 'stroke fill' as const,
       }
     : {};
 
-  // Alignment classes (in flex row: justify = horizontal, items = vertical)
+  // Alignment classes from deferred state
   const justifyContent = {
     left: 'justify-start',
     center: 'justify-center',
     right: 'justify-end',
-  }[effectiveTextAlign.horizontal];
+  }[render.effectiveTextAlign.horizontal];
 
   const alignItems = {
     top: 'items-start',
     middle: 'items-center',
     bottom: 'items-end',
-  }[effectiveTextAlign.vertical];
+  }[render.effectiveTextAlign.vertical];
 
-  // Use effective padding (already computed above)
-  const padding = effectivePadding;
+  const padding = render.effectivePadding;
 
   // CSS text-align for text justification within the block
-  const textJustify = s.textJustify ?? 'center';
+  const textJustify = rs.textJustify ?? 'center';
   const textAlignClass = {
     left: 'text-left',
     center: 'text-center',
@@ -171,7 +244,7 @@ export default function LyricsOverlay({
   }[textJustify];
 
   // Line gap (default 12px)
-  const lineGap = s.lineGap ?? 12;
+  const lineGap = rs.lineGap ?? 12;
 
   // Get frame styles if frame is set
   const frameStyle = frame ? getFrameStyle(frame) : {};
@@ -194,8 +267,7 @@ export default function LyricsOverlay({
         )}
         style={{
           opacity,
-          transition:
-            'opacity 150ms ease-out, top 300ms ease-in-out, bottom 300ms ease-in-out',
+          transition: 'opacity 150ms ease-out',
           // Use pixel-based offsets for banner, percentage for user padding
           top: topOffset + middleOffset,
           bottom: bottomOffset + middleOffset,
@@ -219,32 +291,46 @@ export default function LyricsOverlay({
             ...(frameStyle as CSSProperties),
           }}
         >
-          {currentLines.map((line, index) => (
-            <p
-              key={index}
-              className={cn('font-bold leading-tight', textAlignClass)}
-              style={{
-                fontFamily:
-                  fontFamily && fontFamily !== 'inherit'
-                    ? fontFamily
-                    : undefined,
-                fontSize: `${effectiveFontSize}px`,
-                color: s.textColor,
-                textShadow: textShadow || undefined,
-                ...textOutlineStyle,
-                WebkitFontSmoothing: 'antialiased',
-                MozOsxFontSmoothing: 'grayscale',
-                backfaceVisibility: 'hidden',
-                transform: 'translateZ(0)',
-                // Word-based wrapping (not character-based)
-                overflowWrap: 'break-word',
-                wordWrap: 'break-word',
-                hyphens: 'auto',
-              }}
-            >
-              {line}
-            </p>
-          ))}
+          {displayed.lines.map((line, index) => {
+            const isReference =
+              displayed.lineRoles?.[index] === 'reference' &&
+              render.bibleRefStyle;
+            const lineFontSize = isReference
+              ? (displayed.slideOverrides?.referenceFontSize ??
+                render.bibleRefStyle!.fontSize)
+              : render.effectiveFontSize;
+            const lineColor = isReference
+              ? (displayed.slideOverrides?.referenceTextColor ??
+                render.bibleRefStyle!.textColor)
+              : rs.textColor;
+
+            return (
+              <p
+                key={index}
+                className={cn('font-bold leading-tight', textAlignClass)}
+                style={{
+                  fontFamily:
+                    fontFamily && fontFamily !== 'inherit'
+                      ? fontFamily
+                      : undefined,
+                  fontSize: `${lineFontSize}px`,
+                  color: lineColor,
+                  textShadow: textShadow || undefined,
+                  ...textOutlineStyle,
+                  WebkitFontSmoothing: 'antialiased',
+                  MozOsxFontSmoothing: 'grayscale',
+                  backfaceVisibility: 'hidden',
+                  transform: 'translateZ(0)',
+                  // Word-based wrapping (not character-based)
+                  overflowWrap: 'break-word',
+                  wordWrap: 'break-word',
+                  hyphens: 'auto',
+                }}
+              >
+                {line}
+              </p>
+            );
+          })}
         </div>
       </div>
     </div>

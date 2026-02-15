@@ -1,19 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Key,
-  Palette,
-  Monitor,
-  Info,
-  Database,
-  Book,
-  Frame,
-} from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '../../../components/ui/dialog';
+import { Settings, Monitor, Book, ChevronRight, X } from 'lucide-react';
+import { Button } from '../../../components/ui/button';
+import { Separator } from '../../../components/ui/separator';
 import { cn } from '../../../lib/utils';
 import { DetectedFont } from '../../../shared/types/song';
 import { useFontLoader } from '../../../shared/hooks/useFontLoader';
@@ -24,19 +13,11 @@ import {
   DataSettingsTab,
   BibleSettingsTab,
   FrameSettingsTab,
-  AboutTab,
 } from './tabs';
 
 type Theme = 'light' | 'dark' | 'system';
 type Language = 'en' | 'ko';
-type SettingsTab =
-  | 'api'
-  | 'appearance'
-  | 'display'
-  | 'data'
-  | 'bible'
-  | 'frame'
-  | 'about';
+type SettingsTab = 'general' | 'display' | 'bible';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -74,15 +55,14 @@ export default function SettingsDialog({
   onVideosChange,
 }: SettingsDialogProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<SettingsTab>('api');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const { loadedFontsRef } = useFontLoader(fonts);
 
   const navItems = [
-    { id: 'api' as SettingsTab, label: t('apiSettings'), icon: Key },
     {
-      id: 'appearance' as SettingsTab,
-      label: t('appearanceSettings'),
-      icon: Palette,
+      id: 'general' as SettingsTab,
+      label: t('generalSettings'),
+      icon: Settings,
     },
     {
       id: 'display' as SettingsTab,
@@ -90,138 +70,127 @@ export default function SettingsDialog({
       icon: Monitor,
     },
     {
-      id: 'data' as SettingsTab,
-      label: t('dataSettings'),
-      icon: Database,
-    },
-    {
       id: 'bible' as SettingsTab,
       label: t('bibleSettings'),
       icon: Book,
     },
-    {
-      id: 'frame' as SettingsTab,
-      label: t('frameSettings'),
-      icon: Frame,
-    },
-    { id: 'about' as SettingsTab, label: t('about'), icon: Info },
   ];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
+    <>
+      {/* Collapsed state - clickable bar */}
+      {!open && (
+        <button
+          onClick={() => onOpenChange(true)}
+          className="flex-shrink-0 border-l border-border bg-card/30 w-10 flex flex-col items-center py-4 hover:bg-muted/50 transition-colors cursor-pointer"
+        >
+          <ChevronRight className="w-4 h-4 text-muted-foreground rotate-180" />
+          <div className="mt-6 flex-1 flex items-start">
+            <span className="[writing-mode:vertical-rl] text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              {t('settings')}
+            </span>
+          </div>
+        </button>
+      )}
+
+      {/* Expanded state */}
+      <div
         className={cn(
-          'max-w-[780px] p-0 gap-0 overflow-hidden',
-          'bg-background border-border',
+          'flex-shrink-0 border-l border-border bg-card/30 transition-all duration-300 ease-in-out overflow-hidden',
+          open ? 'w-[420px]' : 'w-0',
         )}
       >
-        <DialogTitle className="sr-only">{t('settings')}</DialogTitle>
-
-        <div className="flex h-[480px]">
-          {/* Left Sidebar */}
-          <div className="w-[180px] border-r border-border bg-muted/20 flex flex-col">
-            <div className="h-11 px-4 flex items-center border-b border-border">
-              <h2 className="text-sm font-semibold text-foreground tracking-tight">
-                {t('settings')}
-              </h2>
-            </div>
-            <nav className="flex-1 p-1.5 space-y-0.5">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={cn(
-                      'w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-left',
-                      'transition-all duration-150 group',
-                      isActive
-                        ? 'bg-active text-foreground'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                    )}
-                  >
-                    <Icon
-                      className={cn(
-                        'w-3.5 h-3.5 flex-shrink-0',
-                        isActive
-                          ? 'text-foreground'
-                          : 'text-muted-foreground group-hover:text-foreground',
-                      )}
-                    />
-                    <span className="text-[13px] font-medium truncate">
-                      {item.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
+        <div className="w-[420px] flex flex-col h-full">
+          {/* Header */}
+          <div className="h-12 px-3 border-b border-border flex items-center justify-between flex-shrink-0">
+            <h2 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+              {t('settings')}
+            </h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onOpenChange(false)}
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </Button>
           </div>
 
-          {/* Right Content */}
-          <div className="flex-1 flex flex-col min-w-0">
-            {/* Content Header */}
-            <div className="h-11 px-5 flex items-center border-b border-border">
-              <h3 className="text-sm font-semibold text-foreground">
-                {navItems.find((item) => item.id === activeTab)?.label}
-              </h3>
-            </div>
+          {/* Tab navigation - horizontal */}
+          <div className="border-b border-border px-2 flex items-center flex-shrink-0">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-2.5 text-[12px] font-medium whitespace-nowrap',
+                    'transition-colors duration-150 border-b-2 -mb-px',
+                    isActive
+                      ? 'border-foreground text-foreground'
+                      : 'border-transparent text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
 
-            {/* Content Body */}
-            <div className="flex-1 overflow-y-auto px-5 py-4">
-              {activeTab === 'api' && <ApiSettingsTab isOpen={open} />}
-
-              {activeTab === 'appearance' && (
+          {/* Content Body */}
+          <div className="flex-1 overflow-y-auto px-5 py-4">
+            {/* General: Appearance + API + Data */}
+            {activeTab === 'general' && (
+              <div className="space-y-4 animate-in fade-in duration-200">
                 <AppearanceTab
                   theme={theme}
                   onThemeChange={onThemeChange}
                   language={language}
                   onLanguageChange={onLanguageChange}
                 />
-              )}
 
-              {activeTab === 'display' && (
-                <div className="animate-in fade-in duration-200">
-                  <DisplaySettingsTab
-                    fonts={fonts}
-                    selectedFont={selectedFont}
-                    onFontSelect={onFontSelect}
-                    isLoading={fontsLoading}
-                    loadedFonts={loadedFontsRef.current}
-                    onFontsChange={onFontsChange}
-                    videos={videos}
-                    onVideosChange={onVideosChange}
-                  />
-                </div>
-              )}
+                <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
 
-              {activeTab === 'data' && (
-                <div className="animate-in fade-in duration-200 h-full">
-                  <DataSettingsTab />
-                </div>
-              )}
+                <ApiSettingsTab isOpen={open} />
 
-              {activeTab === 'bible' && (
-                <div className="animate-in fade-in duration-200 h-full">
-                  <BibleSettingsTab />
-                </div>
-              )}
+                <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
 
-              {activeTab === 'frame' && (
-                <div className="animate-in fade-in duration-200 h-full">
-                  <FrameSettingsTab />
-                </div>
-              )}
+                <DataSettingsTab />
+              </div>
+            )}
 
-              {activeTab === 'about' && (
-                <div className="animate-in fade-in duration-200 h-full">
-                  <AboutTab />
-                </div>
-              )}
-            </div>
+            {/* Display + Frame merged */}
+            {activeTab === 'display' && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <DisplaySettingsTab
+                  fonts={fonts}
+                  selectedFont={selectedFont}
+                  onFontSelect={onFontSelect}
+                  isLoading={fontsLoading}
+                  loadedFonts={loadedFontsRef.current}
+                  onFontsChange={onFontsChange}
+                  videos={videos}
+                  onVideosChange={onVideosChange}
+                />
+
+                <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
+
+                <FrameSettingsTab />
+              </div>
+            )}
+
+            {/* Bible */}
+            {activeTab === 'bible' && (
+              <div className="animate-in fade-in duration-200 h-full">
+                <BibleSettingsTab />
+              </div>
+            )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppProviders, useSession, useUndo } from './context';
+import { AppProviders, useSession, useUndo, useMedia } from './context';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Header from './components/Header';
 import SessionList from './components/SessionList';
@@ -8,6 +8,7 @@ import LivePreview from './components/LivePreview';
 import UnifiedNavigator from './components/UnifiedNavigator';
 import ControlPanel from './components/ControlPanel';
 import LibrarySidebar from './components/LibrarySidebar';
+import SettingsDialog from './components/settings/SettingsDialog';
 import ImportDialog from './components/ImportDialog';
 import SessionBreadcrumb from './components/SessionBreadcrumb';
 import GlobalSearch from './components/GlobalSearch';
@@ -20,9 +21,11 @@ const getElectron = () => (window as any).electron;
 
 // Page-based navigation type
 type NavigationPage = 'sessions' | 'songs';
+type Theme = 'light' | 'dark' | 'system';
+type Language = 'en' | 'ko';
 
 function AppContent() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   useKeyboardShortcuts();
   const {
     currentSessionId,
@@ -32,11 +35,26 @@ function AppContent() {
     renameSession,
   } = useSession();
   const { lastAction } = useUndo();
+  const {
+    fontFamily,
+    setFontFamily,
+    detectedFonts,
+    fontsLoading,
+    loadFonts,
+    embeddedVideos,
+    loadVideos,
+  } = useMedia();
 
   // Page-based navigation state
   const [currentPage, setCurrentPage] = useState<NavigationPage>('sessions');
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [currentSessionName, setCurrentSessionName] = useState<string>('');
+
+  // Settings state (lifted from Header)
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>('system');
+  const [language, setLanguage] = useState<Language>('ko');
+  const [isSettingsLoading, setIsSettingsLoading] = useState(true);
 
   // File association state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -46,6 +64,42 @@ function AppContent() {
 
   // Global search state
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Load settings from electron-store on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await window.electron.settings.getAll();
+        setTheme(settings.theme);
+        setLanguage(settings.language);
+        if (settings.language !== i18n.language) {
+          i18n.changeLanguage(settings.language);
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      } finally {
+        setIsSettingsLoading(false);
+      }
+    };
+    loadSettings();
+  }, [i18n]);
+
+  // Apply theme
+  useEffect(() => {
+    if (isSettingsLoading) return;
+
+    const root = document.documentElement;
+    root.classList.remove('light', 'dark');
+
+    if (theme === 'system') {
+      const systemDark = window.matchMedia(
+        '(prefers-color-scheme: dark)',
+      ).matches;
+      root.classList.add(systemDark ? 'dark' : 'light');
+    } else {
+      root.classList.add(theme);
+    }
+  }, [theme, isSettingsLoading]);
 
   // Handle Cmd+K for global search
   useEffect(() => {
@@ -181,6 +235,23 @@ function AppContent() {
           {/* Control Panel - Fixed at bottom */}
           <ControlPanel />
         </main>
+
+        {/* Settings Panel - Right */}
+        <SettingsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          theme={theme}
+          onThemeChange={setTheme}
+          language={language}
+          onLanguageChange={setLanguage}
+          fonts={detectedFonts}
+          selectedFont={fontFamily}
+          onFontSelect={setFontFamily}
+          fontsLoading={fontsLoading}
+          onFontsChange={loadFonts}
+          videos={embeddedVideos}
+          onVideosChange={loadVideos}
+        />
       </div>
 
       {/* Undo/Redo Toast Notification */}

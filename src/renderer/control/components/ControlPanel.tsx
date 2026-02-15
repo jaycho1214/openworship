@@ -747,7 +747,7 @@ export default function ControlPanel() {
         <div className="flex-1" />
 
         {/* Shortcuts hint */}
-        <div className="text-[10px] text-muted-foreground font-medium hidden lg:block">
+        <div className="text-[10px] text-muted-foreground font-medium whitespace-nowrap flex-shrink-0">
           <span className="font-bold">← →</span> {t('slide')} ·{' '}
           <span className="font-bold">↑ ↓</span> {t('song')} ·{' '}
           <span className="font-bold">B</span> {t('blank')} ·{' '}

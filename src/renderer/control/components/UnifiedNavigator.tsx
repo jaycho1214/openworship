@@ -30,6 +30,8 @@ import {
   Megaphone,
   Plus,
   Copy,
+  ChevronsDownUp,
+  ChevronsUpDown,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -225,6 +227,7 @@ interface SortableItemGroupProps {
     lines: string[],
     section?: string,
     overrides?: SlideOverrides,
+    lineRoles?: ('body' | 'reference')[],
   ) => void;
   onDuplicateSlide: (slideIndex: number) => void;
   onDeleteSlide: (slideIndex: number) => void;
@@ -421,9 +424,15 @@ const SortableItemGroup = memo(function SortableItemGroup({
         }}
         slide={settingsSlide?.slide ?? null}
         defaultFontSize={defaultFontSize}
-        onSave={(lines, section, overrides) => {
+        onSave={(lines, section, overrides, lineRoles) => {
           if (settingsSlide !== null) {
-            onSaveSlide(settingsSlide.index, lines, section, overrides);
+            onSaveSlide(
+              settingsSlide.index,
+              lines,
+              section,
+              overrides,
+              lineRoles,
+            );
           }
         }}
       />
@@ -467,32 +476,8 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
     'song' | 'bible' | 'announcement'
   >('song');
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const prevItemsLengthRef = useRef<number>(0);
 
   const items = currentSetlist?.items ?? [];
-
-  // Auto-open current item
-  useEffect(() => {
-    if (currentItem && currentSetlist) {
-      setOpenItemIds((prev) => {
-        if (prev.has(currentItem.id)) return prev;
-        return new Set([...prev, currentItem.id]);
-      });
-    }
-  }, [currentItem?.id, currentSetlist]);
-
-  // Auto-expand newly added items
-  useEffect(() => {
-    if (items.length > prevItemsLengthRef.current && items.length > 0) {
-      // A new item was added - expand the last item
-      const lastItem = items[items.length - 1];
-      setOpenItemIds((prev) => {
-        if (prev.has(lastItem.id)) return prev;
-        return new Set([...prev, lastItem.id]);
-      });
-    }
-    prevItemsLengthRef.current = items.length;
-  }, [items]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -651,14 +636,44 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
           </h2>
         </div>
         {currentSessionId && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => setIsAddContentOpen(true)}
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-0.5">
+            {items.length > 0 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => {
+                  const allOpen = items.every((item) =>
+                    openItemIds.has(item.id),
+                  );
+                  if (allOpen) {
+                    setOpenItemIds(new Set());
+                  } else {
+                    setOpenItemIds(new Set(items.map((item) => item.id)));
+                  }
+                }}
+                title={
+                  items.every((item) => openItemIds.has(item.id))
+                    ? t('collapseAll')
+                    : t('expandAll')
+                }
+              >
+                {items.every((item) => openItemIds.has(item.id)) ? (
+                  <ChevronsDownUp className="w-4 h-4" />
+                ) : (
+                  <ChevronsUpDown className="w-4 h-4" />
+                )}
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setIsAddContentOpen(true)}
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
         )}
       </div>
 
@@ -768,13 +783,20 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
                         }}
                         onEdit={song ? () => handleEditSong(song) : undefined}
                         onDelete={() => deleteItem(item.id)}
-                        onSaveSlide={(slideIndex, lines, section, overrides) =>
+                        onSaveSlide={(
+                          slideIndex,
+                          lines,
+                          section,
+                          overrides,
+                          lineRoles,
+                        ) =>
                           updateSlide(
                             originalIndex,
                             slideIndex,
                             lines,
                             section,
                             overrides,
+                            lineRoles,
                           )
                         }
                         onDuplicateSlide={(slideIndex) =>

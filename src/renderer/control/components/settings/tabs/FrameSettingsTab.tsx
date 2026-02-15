@@ -9,7 +9,6 @@ import {
   Music,
   BookOpen,
   Megaphone,
-  Sparkles,
   ImagePlus,
   Pencil,
 } from 'lucide-react';
@@ -45,6 +44,7 @@ import {
 import { SetlistItemType } from '../../../../../shared/types/setlistItem';
 import { Frame as FrameType } from '../../../../../shared/types/frame';
 import { getFrameStyle } from '../../../../shared/utils/frameStyles';
+import { Separator } from '../../../../components/ui/separator';
 import { cn } from '../../../../lib/utils';
 
 // Supported image extensions for drag-and-drop
@@ -283,7 +283,7 @@ export function FrameSettingsTab() {
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-6 pb-4 animate-in fade-in duration-300">
       {/* Content Frame Assignments */}
       <section>
         <div className="flex items-center gap-2.5 mb-4">
@@ -384,16 +384,7 @@ export function FrameSettingsTab() {
       </section>
 
       {/* Divider */}
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border/50" />
-        </div>
-        <div className="relative flex justify-center">
-          <span className="bg-background px-3">
-            <Sparkles className="h-3 w-3 text-muted-foreground/50" />
-          </span>
-        </div>
-      </div>
+      <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
 
       {/* Frame Library */}
       <section>

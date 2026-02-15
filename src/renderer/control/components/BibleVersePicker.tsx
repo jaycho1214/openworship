@@ -27,8 +27,14 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '../../components/ui/popover';
+import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from '../../components/ui/tooltip';
 import {
@@ -360,9 +366,9 @@ export function BibleVersePicker({
   }
 
   return (
-    <div className="flex gap-4">
+    <div className="flex">
       {/* Left Panel - Selection */}
-      <div className="flex-1 min-w-0 space-y-3">
+      <div className="flex-1 min-w-0 space-y-3 pr-4">
         {/* Quick reference input */}
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">
@@ -383,7 +389,7 @@ export function BibleVersePicker({
                   applyQuickRef();
                 }
               }}
-              className="pl-10 pr-20 h-10"
+              className="pl-10 pr-20 h-10 focus-visible:ring-offset-0"
             />
             {parsedRef && (
               <Button
@@ -435,118 +441,119 @@ export function BibleVersePicker({
         {/* Book selector with search */}
         <div className="space-y-1.5">
           <Label className="text-sm">{t('book', 'Book')}</Label>
-          <div className="relative">
-            <button
-              onClick={() => setBookSearchOpen(!bookSearchOpen)}
-              disabled={!selectedTranslation || isLoading}
-              className={cn(
-                'w-full flex items-center justify-between h-9 px-3 rounded-md border border-input bg-background text-sm',
-                'hover:bg-accent hover:text-accent-foreground transition-colors',
-                'disabled:cursor-not-allowed disabled:opacity-50',
-                bookSearchOpen && 'ring-2 ring-ring ring-offset-2',
-              )}
-            >
-              <span
+          <Popover open={bookSearchOpen} onOpenChange={setBookSearchOpen}>
+            <PopoverTrigger asChild>
+              <button
+                disabled={!selectedTranslation || isLoading}
                 className={cn(
-                  !selectedBook && 'text-muted-foreground truncate',
+                  'w-full flex items-center justify-between h-9 px-3 rounded-md border border-input bg-background text-sm',
+                  'hover:bg-accent hover:text-accent-foreground transition-colors',
+                  'disabled:cursor-not-allowed disabled:opacity-50',
+                  bookSearchOpen && 'ring-2 ring-ring ring-offset-2',
                 )}
               >
-                {selectedBook?.name || t('selectBook', 'Select book')}
-              </span>
-              <ChevronDown
-                className={cn(
-                  'h-4 w-4 shrink-0 text-muted-foreground transition-transform',
-                  bookSearchOpen && 'rotate-180',
-                )}
-              />
-            </button>
-
-            {/* Book search dropdown */}
-            {bookSearchOpen && (
-              <div className="absolute z-50 w-full mt-1 rounded-md border bg-popover shadow-lg">
-                <div className="p-2 border-b">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      ref={bookSearchRef}
-                      placeholder={t('bibleSearchBook', 'Search books...')}
-                      value={bookSearchQuery}
-                      onChange={(e) => setBookSearchQuery(e.target.value)}
-                      className="pl-8 h-8"
-                    />
-                    {bookSearchQuery && (
-                      <button
-                        onClick={() => setBookSearchQuery('')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
+                <span
+                  className={cn(
+                    !selectedBook && 'text-muted-foreground truncate',
+                  )}
+                >
+                  {selectedBook?.name || t('selectBook', 'Select book')}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 shrink-0 text-muted-foreground transition-transform',
+                    bookSearchOpen && 'rotate-180',
+                  )}
+                />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-[--radix-popover-trigger-width] p-0"
+              align="start"
+              sideOffset={4}
+            >
+              <div className="p-2 border-b">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    ref={bookSearchRef}
+                    placeholder={t('bibleSearchBook', 'Search books...')}
+                    value={bookSearchQuery}
+                    onChange={(e) => setBookSearchQuery(e.target.value)}
+                    className="pl-8 h-8"
+                  />
+                  {bookSearchQuery && (
+                    <button
+                      onClick={() => setBookSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
-
-                <ScrollArea className="h-[200px]">
-                  <div className="p-2 space-y-2">
-                    {oldTestament.length > 0 && (
-                      <div>
-                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1">
-                          {t('bibleOldTestament', 'Old Testament')}
-                        </p>
-                        <div className="grid grid-cols-3 gap-0.5">
-                          {oldTestament.map((book) => (
-                            <button
-                              key={book.id}
-                              onClick={() => handleBookSelect(book.id)}
-                              className={cn(
-                                'px-1.5 py-1 text-xs rounded text-left truncate transition-colors',
-                                selectedBook?.id === book.id
-                                  ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 font-medium'
-                                  : 'hover:bg-muted text-foreground',
-                              )}
-                              title={book.name}
-                            >
-                              {book.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {newTestament.length > 0 && (
-                      <div>
-                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1">
-                          {t('bibleNewTestament', 'New Testament')}
-                        </p>
-                        <div className="grid grid-cols-3 gap-0.5">
-                          {newTestament.map((book) => (
-                            <button
-                              key={book.id}
-                              onClick={() => handleBookSelect(book.id)}
-                              className={cn(
-                                'px-1.5 py-1 text-xs rounded text-left truncate transition-colors',
-                                selectedBook?.id === book.id
-                                  ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 font-medium'
-                                  : 'hover:bg-muted text-foreground',
-                              )}
-                              title={book.name}
-                            >
-                              {book.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {filteredBooks.length === 0 && (
-                      <p className="text-center text-sm text-muted-foreground py-4">
-                        {t('bibleNoBooks', 'No books found')}
-                      </p>
-                    )}
-                  </div>
-                </ScrollArea>
               </div>
-            )}
-          </div>
+
+              <ScrollArea className="h-[200px]">
+                <div className="p-2 space-y-2">
+                  {oldTestament.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1">
+                        {t('bibleOldTestament', 'Old Testament')}
+                      </p>
+                      <div className="grid grid-cols-3 gap-0.5">
+                        {oldTestament.map((book) => (
+                          <button
+                            key={book.id}
+                            onClick={() => handleBookSelect(book.id)}
+                            className={cn(
+                              'px-1.5 py-1 text-xs rounded text-left truncate transition-colors',
+                              selectedBook?.id === book.id
+                                ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 font-medium'
+                                : 'hover:bg-muted text-foreground',
+                            )}
+                            title={book.name}
+                          >
+                            {book.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {newTestament.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1">
+                        {t('bibleNewTestament', 'New Testament')}
+                      </p>
+                      <div className="grid grid-cols-3 gap-0.5">
+                        {newTestament.map((book) => (
+                          <button
+                            key={book.id}
+                            onClick={() => handleBookSelect(book.id)}
+                            className={cn(
+                              'px-1.5 py-1 text-xs rounded text-left truncate transition-colors',
+                              selectedBook?.id === book.id
+                                ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 font-medium'
+                                : 'hover:bg-muted text-foreground',
+                            )}
+                            title={book.name}
+                          >
+                            {book.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {filteredBooks.length === 0 && (
+                    <p className="text-center text-sm text-muted-foreground py-4">
+                      {t('bibleNoBooks', 'No books found')}
+                    </p>
+                  )}
+                </div>
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Chapter grid */}
@@ -690,7 +697,7 @@ export function BibleVersePicker({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 pt-2 border-t">
+        <div className="flex justify-end gap-2 pt-2 -mx-4 px-4 border-t border-border">
           {onCancel && (
             <Button variant="outline" size="sm" onClick={onCancel}>
               {t('cancel', 'Cancel')}
@@ -708,7 +715,8 @@ export function BibleVersePicker({
       </div>
 
       {/* Right Panel - Slide Preview & Editing */}
-      <div className="w-[340px] border-l pl-4 flex flex-col">
+      <div className="relative w-[340px]">
+        <div className="absolute inset-0 border-l border-border pl-4 flex flex-col overflow-hidden">
         <div className="flex items-center justify-between mb-2">
           <Label className="text-sm font-medium">
             {t('bibleSlides', 'Slides')}
@@ -725,8 +733,8 @@ export function BibleVersePicker({
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : editableSlides.length > 0 ? (
-          <ScrollArea className="flex-1 -mr-4 pr-4">
-            <div className="space-y-2">
+          <ScrollArea className="flex-1 min-h-0 -mr-4 pr-4">
+            <div className="space-y-2 pt-2 pl-2">
               {editableSlides.map((slide, index) => {
                 const isSelected = selectedSlideIndex === index;
                 const isDeleted = slide.isDeleted;
@@ -784,41 +792,43 @@ export function BibleVersePicker({
 
                     {/* Delete/Restore button */}
                     <div className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {isDeleted ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                restoreSlide(index);
-                              }}
-                              className="p-1 rounded hover:bg-background"
-                            >
-                              <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="left">
-                            {t('bibleRestoreSlide', 'Restore slide')}
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteSlide(index);
-                              }}
-                              className="p-1 rounded hover:bg-destructive/10"
-                            >
-                              <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="left">
-                            {t('bibleRemoveSlide', 'Remove slide')}
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
+                      <TooltipProvider>
+                        {isDeleted ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  restoreSlide(index);
+                                }}
+                                className="p-1 rounded hover:bg-background"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              {t('bibleRestoreSlide', 'Restore slide')}
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteSlide(index);
+                                }}
+                                className="p-1 rounded hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              {t('bibleRemoveSlide', 'Remove slide')}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </TooltipProvider>
                     </div>
 
                     {/* Font size editor (when selected) */}
@@ -875,7 +885,7 @@ export function BibleVersePicker({
 
         {/* Slide count */}
         {activeSlides.length > 0 && (
-          <div className="pt-2 mt-2 border-t text-xs text-muted-foreground text-center">
+          <div className="pt-2 mt-2 -ml-4 pl-4 border-t border-border text-xs text-muted-foreground text-center">
             {t('bibleSlidesCount', '{{count}} slides', {
               count: activeSlides.length,
             })}
@@ -887,6 +897,7 @@ export function BibleVersePicker({
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

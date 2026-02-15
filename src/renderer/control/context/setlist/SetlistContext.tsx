@@ -102,6 +102,7 @@ interface SetlistContextType {
     lines: string[],
     section?: string,
     overrides?: SlideOverrides,
+    lineRoles?: ('body' | 'reference')[],
   ) => void;
   loadSessionSongs: (dbSongs: DbLibrarySong[]) => Song[];
   refreshSongFromLibrary: (songId: string) => void;
@@ -896,6 +897,7 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
       lines: string[],
       section?: string,
       overrides?: SlideOverrides,
+      lineRoles?: ('body' | 'reference')[],
     ) => {
       setCurrentSetlist((prev) => {
         if (!prev) return prev;
@@ -910,6 +912,7 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
           // Keep fontSize from overrides for backwards compatibility
           fontSize: overrides?.fontSize,
           overrides,
+          ...(lineRoles ? { lineRoles } : {}),
         };
 
         // Update songs array

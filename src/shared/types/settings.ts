@@ -63,12 +63,83 @@ export interface ProjectionSettings {
   backgroundImagePath?: string;
 }
 
+// Per-content-type text styling
+export interface TextStyleSettings {
+  fontSize: number;
+  textColor: string;
+  textShadow: TextShadowSettings;
+  textOutline: TextOutlineSettings;
+  textAlign: TextAlignSettings;
+  textJustify: 'left' | 'center' | 'right';
+  lineGap: number;
+  padding: PaddingSettings;
+}
+
+export interface BibleReferenceStyle {
+  fontSize: number;
+  textColor: string;
+}
+
+export interface BibleTextStyleSettings extends TextStyleSettings {
+  referenceStyle: BibleReferenceStyle;
+}
+
+export interface ContentTypeTextSettings {
+  song: TextStyleSettings;
+  bible: BibleTextStyleSettings;
+  announcement: TextStyleSettings;
+}
+
+export const defaultTextStyleSettings: TextStyleSettings = {
+  fontSize: 72,
+  textColor: '#ffffff',
+  textShadow: {
+    enabled: true,
+    offsetX: 0,
+    offsetY: 0,
+    blur: 8,
+    color: 'rgba(0,0,0,0.9)',
+  },
+  textOutline: {
+    enabled: false,
+    width: 2,
+    color: '#000000',
+  },
+  textAlign: {
+    horizontal: 'center',
+    vertical: 'middle',
+  },
+  textJustify: 'center',
+  lineGap: 12,
+  padding: {
+    top: 5,
+    bottom: 5,
+    left: 5,
+    right: 5,
+  },
+};
+
+export const defaultBibleReferenceStyle: BibleReferenceStyle = {
+  fontSize: 48,
+  textColor: '#cccccc',
+};
+
+export const defaultContentTypeTextSettings: ContentTypeTextSettings = {
+  song: { ...defaultTextStyleSettings },
+  bible: {
+    ...defaultTextStyleSettings,
+    referenceStyle: { ...defaultBibleReferenceStyle },
+  },
+  announcement: { ...defaultTextStyleSettings },
+};
+
 export interface AppSettings {
   hasApiKey: boolean;
   language: Language;
   theme: ThemeMode;
   projection: ProjectionSettings;
   assetsMigrated: boolean;
+  contentTypeText?: ContentTypeTextSettings;
 }
 
 // Default projection settings

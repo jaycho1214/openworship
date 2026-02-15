@@ -10,6 +10,12 @@ import {
   ProjectionSettings,
   ThemeMode,
   Language,
+  ContentTypeTextSettings,
+  TextStyleSettings,
+  BibleReferenceStyle,
+  defaultContentTypeTextSettings,
+  defaultTextStyleSettings,
+  defaultBibleReferenceStyle,
 } from '../../shared/types/settings';
 import { FrameSettings, defaultFrameSettings } from '../../shared/types/frame';
 
@@ -44,6 +50,7 @@ interface AppSettings {
   assetsMigrated: boolean;
   frameSettings: FrameSettings;
   recentItems: RecentItem[];
+  contentTypeText: ContentTypeTextSettings;
 }
 
 const defaultProjectionSettings: ProjectionSettings = {
@@ -87,6 +94,7 @@ const defaultSettings: AppSettings = {
   assetsMigrated: false,
   frameSettings: defaultFrameSettings,
   recentItems: [],
+  contentTypeText: defaultContentTypeTextSettings,
 };
 
 // Create store with schema validation
@@ -124,6 +132,9 @@ const store = new Store<AppSettings>({
       items: {
         type: 'object',
       },
+    },
+    contentTypeText: {
+      type: 'object',
     },
   },
 });
@@ -258,6 +269,7 @@ export const settingsService = {
       assetsMigrated: store.get('assetsMigrated', false),
       frameSettings: this.getFrameSettings(),
       recentItems: this.getRecentItems(),
+      contentTypeText: this.getContentTypeTextSettings(),
     };
   },
 
@@ -336,6 +348,81 @@ export const settingsService = {
   },
 
   /**
+   * Get content-type text settings (migrates from global on first read)
+   */
+  getContentTypeTextSettings(): ContentTypeTextSettings {
+    const stored = store.get('contentTypeText') as
+      | ContentTypeTextSettings
+      | undefined;
+    if (stored?.song && stored?.bible && stored?.announcement) {
+      return stored;
+    }
+    // Migrate from existing global projection settings
+    const projection = this.getProjectionSettings();
+    const migratedBase: TextStyleSettings = {
+      fontSize: projection.fontSize ?? defaultTextStyleSettings.fontSize,
+      textColor: projection.textColor ?? defaultTextStyleSettings.textColor,
+      textShadow: projection.textShadow ?? defaultTextStyleSettings.textShadow,
+      textOutline:
+        projection.textOutline ?? defaultTextStyleSettings.textOutline,
+      textAlign: projection.textAlign ?? defaultTextStyleSettings.textAlign,
+      textJustify:
+        projection.textJustify ?? defaultTextStyleSettings.textJustify,
+      lineGap: projection.lineGap ?? defaultTextStyleSettings.lineGap,
+      padding: projection.padding ?? defaultTextStyleSettings.padding,
+    };
+    const migrated: ContentTypeTextSettings = {
+      song: { ...migratedBase },
+      bible: {
+        ...migratedBase,
+        referenceStyle: { ...defaultBibleReferenceStyle },
+      },
+      announcement: { ...migratedBase },
+    };
+    store.set('contentTypeText', migrated);
+    log.info(
+      '[Settings] Migrated global text settings to per-content-type settings',
+    );
+    return migrated;
+  },
+
+  /**
+   * Update text settings for a specific content type
+   */
+  setContentTypeTextSettings(
+    type: 'song' | 'bible' | 'announcement',
+    updates: Partial<TextStyleSettings>,
+  ): ContentTypeTextSettings {
+    const current = this.getContentTypeTextSettings();
+    const updated = {
+      ...current,
+      [type]: { ...current[type], ...updates },
+    };
+    store.set('contentTypeText', updated);
+    log.info(`[Settings] Content type text settings updated for: ${type}`);
+    return updated;
+  },
+
+  /**
+   * Update Bible reference style
+   */
+  setBibleReferenceStyle(
+    updates: Partial<BibleReferenceStyle>,
+  ): ContentTypeTextSettings {
+    const current = this.getContentTypeTextSettings();
+    const updated: ContentTypeTextSettings = {
+      ...current,
+      bible: {
+        ...current.bible,
+        referenceStyle: { ...current.bible.referenceStyle, ...updates },
+      },
+    };
+    store.set('contentTypeText', updated);
+    log.info('[Settings] Bible reference style updated');
+    return updated;
+  },
+
+  /**
    * Reset all settings to defaults
    */
   resetAll(): void {
@@ -351,6 +438,18 @@ export const settingsService = {
   },
 };
 
-export type { ProjectionSettings } from '../../shared/types/settings';
+export type {
+  ProjectionSettings,
+  ContentTypeTextSettings,
+  TextStyleSettings,
+  BibleTextStyleSettings,
+  BibleReferenceStyle,
+} from '../../shared/types/settings';
 export type { AppSettings, RecentItem, RecentSongItem, RecentBibleItem };
-export { defaultProjectionSettings, defaultSettings };
+export {
+  defaultProjectionSettings,
+  defaultSettings,
+  defaultContentTypeTextSettings,
+  defaultTextStyleSettings,
+  defaultBibleReferenceStyle,
+};

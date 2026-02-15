@@ -16,6 +16,7 @@ import {
 import { Input } from '../../../../components/ui/input';
 import { Button } from '../../../../components/ui/button';
 import { Label } from '../../../../components/ui/label';
+import { Separator } from '../../../../components/ui/separator';
 import { SettingsRow } from '../components/SettingsRow';
 import ImportDialog from '../../ImportDialog';
 
@@ -97,6 +98,8 @@ export function DataSettingsTab() {
         </Button>
       </SettingsRow>
 
+      <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
+
       {/* Import File */}
       <SettingsRow title={t('importFile')} description={t('importFile')}>
         <Button
@@ -108,6 +111,8 @@ export function DataSettingsTab() {
           {t('importFile')}
         </Button>
       </SettingsRow>
+
+      <Separator className="-mx-5 w-[calc(100%+2.5rem)]" />
 
       {/* Factory Reset */}
       <SettingsRow

@@ -19,8 +19,13 @@ export default function LivePreview() {
   const { t } = useTranslation();
   const { currentSlide, currentSong, presentationState, currentItem } =
     usePresentation();
-  const { isProjectionOpen, isBlank, isVerseHidden, projectionSettings } =
-    useProjection();
+  const {
+    isProjectionOpen,
+    isBlank,
+    isVerseHidden,
+    projectionSettings,
+    contentTypeTextSettings,
+  } = useProjection();
   const {
     fontFamily,
     detectedFonts,
@@ -190,6 +195,9 @@ export default function LivePreview() {
                 currentAd={currentAd}
                 adDisplaySettings={adDisplaySettings}
                 frame={currentFrame}
+                contentType={currentItem?.type}
+                lineRoles={currentSlide?.lineRoles}
+                contentTypeTextSettings={contentTypeTextSettings ?? undefined}
               />
             </div>
           </div>

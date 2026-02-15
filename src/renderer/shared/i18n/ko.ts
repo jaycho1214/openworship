@@ -27,6 +27,7 @@ export const ko = {
   songTitlePlaceholder: '곡 제목을 입력하세요',
   songArtist: '아티스트',
   lyrics: '가사',
+  slideTextContent: '텍스트',
   lyricsPlaceholder:
     '가사를 입력하세요...\n\n[Verse], [Chorus] 등의 섹션 마커를 사용하면\n자동으로 새 슬라이드가 생성됩니다.',
   lyricsHint:
@@ -179,6 +180,7 @@ export const ko = {
 
   // Settings
   settings: '설정',
+  generalSettings: '일반',
   apiSettings: 'API 설정',
   appearanceSettings: '외관',
   displaySettings: '디스플레이',
@@ -323,6 +325,18 @@ export const ko = {
   displayMode: '디스플레이 모드',
   fullscreen: '전체 화면',
   windowed: '창 모드',
+
+  // Content-type text settings
+  textSettings: '텍스트 설정',
+  songTextSettings: '찬양',
+  bibleTextSettings: '성경',
+  announcementTextSettings: '광고',
+  verseText: '본문',
+  referenceText: '참조',
+  referenceFontSize: '참조 크기',
+  referenceTextColor: '참조 색상',
+  verseFontSize: '본문 크기',
+  noteText: '노트',
 
   // Slide editing
   duplicateSlide: '슬라이드 복제',

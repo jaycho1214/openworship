@@ -27,6 +27,7 @@ export const en = {
   songTitlePlaceholder: 'Enter song title',
   songArtist: 'Artist',
   lyrics: 'Lyrics',
+  slideTextContent: 'Text',
   lyricsPlaceholder:
     'Enter lyrics here...\n\nUse section markers like [Verse], [Chorus]\nto automatically create new slides.',
   lyricsHint: 'Use [Verse], [Chorus] markers or blank lines to separate slides',
@@ -179,6 +180,7 @@ export const en = {
 
   // Settings
   settings: 'Settings',
+  generalSettings: 'General',
   apiSettings: 'API Settings',
   appearanceSettings: 'Appearance',
   displaySettings: 'Display',
@@ -324,6 +326,18 @@ export const en = {
   displayMode: 'Display Mode',
   fullscreen: 'Fullscreen',
   windowed: 'Windowed',
+
+  // Content-type text settings
+  textSettings: 'Text Settings',
+  songTextSettings: 'Song',
+  bibleTextSettings: 'Bible',
+  announcementTextSettings: 'Announcement',
+  verseText: 'Verse',
+  referenceText: 'Reference',
+  referenceFontSize: 'Reference Size',
+  referenceTextColor: 'Reference Color',
+  verseFontSize: 'Verse Size',
+  noteText: 'Note',
 
   // Slide editing
   duplicateSlide: 'Duplicate Slide',

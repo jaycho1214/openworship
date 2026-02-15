@@ -9,6 +9,8 @@ import type {
 import type { BackgroundType, Advertisement } from '../../../shared/types';
 import type { AdvertisementDisplaySettings } from '../../../shared/types/advertisement';
 import type { Frame } from '../../../shared/types/frame';
+import type { ContentTypeTextSettings } from '../../../shared/types/settings';
+import type { SetlistItemType } from '../../../shared/types/setlistItem';
 
 interface ProjectionRendererProps {
   // Background
@@ -35,6 +37,11 @@ interface ProjectionRendererProps {
 
   // Frame
   frame?: Frame | null;
+
+  // Content type text settings
+  contentType?: SetlistItemType;
+  lineRoles?: ('body' | 'reference')[];
+  contentTypeTextSettings?: ContentTypeTextSettings;
 }
 
 export default function ProjectionRenderer({
@@ -53,6 +60,9 @@ export default function ProjectionRenderer({
   currentAd,
   adDisplaySettings,
   frame = null,
+  contentType,
+  lineRoles,
+  contentTypeTextSettings,
 }: ProjectionRendererProps) {
   return (
     <>
@@ -89,6 +99,9 @@ export default function ProjectionRenderer({
           bannerAdPadding={adDisplaySettings.padding}
           bannerAdFontSize={currentAd?.fontSize}
           frame={frame}
+          contentType={contentType}
+          lineRoles={lineRoles}
+          contentTypeTextSettings={contentTypeTextSettings}
         />
       )}
 
