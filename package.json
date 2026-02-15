@@ -229,8 +229,7 @@
         "name": "OpenWorship File",
         "description": "OpenWorship Song/Session File",
         "mimeType": "application/x-openworship",
-        "role": "Editor",
-        "icon": "assets/icon.icns"
+        "role": "Editor"
       }
     ],
     "afterSign": ".erb/scripts/notarize.js",
@@ -286,11 +285,7 @@
       "output": "release/build"
     },
     "extraResources": [
-      {
-        "from": "./assets",
-        "to": "assets",
-        "filter": ["**/*", "!icon.icns", "!icon.ico", "!icon.svg", "!icons", "!icons/**", "!entitlements.*", "!*.d.ts", "!.DS_Store", "!preview.png"]
-      }
+      "./assets/**"
     ],
     "publish": {
       "provider": "github",
