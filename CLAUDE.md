@@ -205,6 +205,13 @@ To add a new setlist item type (like Bible or Announcement):
 9. **Create UI components to access the feature (use `/frontend-design`)**
 10. **Verify users can access the feature through the UI**
 
+## Versioning & Releases
+
+- **Two package.json files** must stay in sync: root `package.json` and `release/app/package.json`
+- electron-builder reads version from `release/app/package.json` (the `directories.app` path), NOT root `package.json`
+- When bumping versions, update **both** files
+- CI workflow (`.github/workflows/publish.yml`) syncs version from git tag at build time via `npm version --prefix release/app`
+
 ## Feature Implementation Checklist
 
 Before considering ANY feature complete, verify:
