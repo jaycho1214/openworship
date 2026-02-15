@@ -286,7 +286,11 @@
       "output": "release/build"
     },
     "extraResources": [
-      "./assets/**"
+      {
+        "from": "./assets",
+        "to": "assets",
+        "filter": ["**/*", "!icon.icns", "!icon.ico", "!icon.svg", "!icons", "!icons/**", "!entitlements.*", "!*.d.ts", "!.DS_Store", "!preview.png"]
+      }
     ],
     "publish": {
       "provider": "github",
