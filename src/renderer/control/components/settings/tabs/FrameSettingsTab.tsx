@@ -6,11 +6,11 @@ import {
   Trash2,
   Upload,
   Loader2,
+  ImagePlus,
+  Pencil,
   Music,
   BookOpen,
   Megaphone,
-  ImagePlus,
-  Pencil,
 } from 'lucide-react';
 import { useFrame } from '../../../context';
 import { Button } from '../../../../components/ui/button';
@@ -45,6 +45,7 @@ import { SetlistItemType } from '../../../../../shared/types/setlistItem';
 import { Frame as FrameType } from '../../../../../shared/types/frame';
 import { getFrameStyle } from '../../../../shared/utils/frameStyles';
 import { Separator } from '../../../../components/ui/separator';
+import { SettingsRow } from '../components/SettingsRow';
 import { cn } from '../../../../lib/utils';
 
 // Supported image extensions for drag-and-drop
@@ -254,133 +255,84 @@ export function FrameSettingsTab() {
 
   const contentTypes: {
     type: SetlistItemType;
-    icon: typeof Music;
     label: string;
-    color: string;
-    bgColor: string;
+    icon: typeof Music;
   }[] = [
     {
       type: 'song',
-      icon: Music,
       label: t('contentTypeSong'),
-      color: 'text-sky-500',
-      bgColor: 'bg-sky-500/10',
+      icon: Music,
     },
     {
       type: 'bible',
-      icon: BookOpen,
       label: t('contentTypeBible'),
-      color: 'text-amber-500',
-      bgColor: 'bg-amber-500/10',
+      icon: BookOpen,
     },
     {
       type: 'announcement',
-      icon: Megaphone,
       label: t('contentTypeAnnouncement'),
-      color: 'text-emerald-500',
-      bgColor: 'bg-emerald-500/10',
+      icon: Megaphone,
     },
   ];
 
+  const frameSelect = (type: SetlistItemType) => {
+    const frameId =
+      type === 'song'
+        ? settings.songFrameId
+        : type === 'bible'
+          ? settings.bibleFrameId
+          : settings.announcementFrameId;
+
+    return (
+      <Select
+        value={frameId || 'none'}
+        onValueChange={(value) =>
+          handleFrameAssignment(type, value === 'none' ? null : value)
+        }
+      >
+        <SelectTrigger className="w-[140px] bg-muted/30 h-8 text-xs">
+          <SelectValue placeholder={t('frame.selectFrame', 'Select frame')} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none" className="text-xs">
+            <span className="text-muted-foreground">
+              {t('frame.noFrame', 'No frame')}
+            </span>
+          </SelectItem>
+          {frames.map((frame) => (
+            <SelectItem key={frame.id} value={frame.id} className="text-xs">
+              <span className="truncate max-w-[180px] block">{frame.name}</span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  };
+
   return (
-    <div className="space-y-6 pb-4 animate-in fade-in duration-300">
+    <div className="space-y-3 pb-4 animate-in fade-in duration-200">
       {/* Content Frame Assignments */}
       <section>
-        <div className="flex items-center gap-2.5 mb-4">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10">
-            <Frame className="h-3.5 w-3.5 text-primary" />
-          </div>
-          <h3 className="text-sm font-semibold tracking-tight">
+        <div className="flex items-center gap-2 mb-2">
+          <Frame className="h-3.5 w-3.5 text-muted-foreground" />
+          <h3 className="text-[13px] font-medium">
             {t('frame.contentFrames', 'Content Frames')}
           </h3>
         </div>
 
-        <div className="space-y-2">
-          {contentTypes.map(({ type, icon: Icon, label, color, bgColor }) => {
-            const frameId =
-              type === 'song'
-                ? settings.songFrameId
-                : type === 'bible'
-                  ? settings.bibleFrameId
-                  : settings.announcementFrameId;
-
-            const assignedFrame = frames.find((f) => f.id === frameId);
-
-            return (
-              <div
-                key={type}
-                className={cn(
-                  'group relative flex items-center gap-3 p-3 rounded-lg',
-                  'bg-muted/30 hover:bg-muted/50',
-                  'border border-transparent hover:border-border/50',
-                  'transition-all duration-200',
-                  'overflow-hidden',
-                )}
-              >
-                {/* Content type indicator */}
-                <div
-                  className={cn(
-                    'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg',
-                    bgColor,
-                    'transition-transform duration-200 group-hover:scale-105',
-                  )}
-                >
-                  <Icon className={cn('h-4 w-4', color)} />
-                </div>
-
-                {/* Label */}
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium block">{label}</span>
-                  {assignedFrame && (
-                    <p className="text-[11px] text-muted-foreground max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">
-                      {assignedFrame.name}
-                    </p>
-                  )}
-                </div>
-
-                {/* Frame selector */}
-                <Select
-                  value={frameId || 'none'}
-                  onValueChange={(value) =>
-                    handleFrameAssignment(type, value === 'none' ? null : value)
-                  }
-                >
-                  <SelectTrigger
-                    className={cn(
-                      'w-[140px] h-8 text-xs flex-shrink-0',
-                      'bg-background/80 backdrop-blur-sm',
-                      'border-border/50 hover:border-border',
-                      'transition-all duration-200',
-                      '[&>span]:truncate [&>span]:max-w-[100px]',
-                    )}
-                  >
-                    <SelectValue
-                      placeholder={t('frame.selectFrame', 'Select frame')}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none" className="text-xs">
-                      <span className="text-muted-foreground">
-                        {t('frame.noFrame', 'No frame')}
-                      </span>
-                    </SelectItem>
-                    {frames.map((frame) => (
-                      <SelectItem
-                        key={frame.id}
-                        value={frame.id}
-                        className="text-xs"
-                      >
-                        <span className="truncate max-w-[180px] block">
-                          {frame.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            );
-          })}
-        </div>
+        {contentTypes.map(({ type, label, icon: Icon }) => (
+          <SettingsRow
+            key={type}
+            title={
+              <span className="flex items-center gap-1.5">
+                <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                {label}
+              </span>
+            }
+          >
+            {frameSelect(type)}
+          </SettingsRow>
+        ))}
       </section>
 
       {/* Divider */}
@@ -388,19 +340,18 @@ export function FrameSettingsTab() {
 
       {/* Frame Library */}
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10">
-              <ImagePlus className="h-3.5 w-3.5 text-primary" />
-            </div>
-            <h3 className="text-sm font-semibold tracking-tight">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <ImagePlus className="h-3.5 w-3.5 text-muted-foreground" />
+            <h3 className="text-[13px] font-medium">
               {t('frame.frameLibrary', 'Frame Library')}
             </h3>
           </div>
           <Button
             onClick={() => setShowAddDialog(true)}
             size="sm"
-            className="h-8 text-xs gap-1.5"
+            variant="outline"
+            className="h-7 text-xs gap-1.5"
           >
             <Plus className="h-3.5 w-3.5" />
             {t('frame.addFrame', 'Add Frame')}
@@ -408,71 +359,43 @@ export function FrameSettingsTab() {
         </div>
 
         {frames.length === 0 ? (
-          <div
-            className={cn(
-              'relative overflow-hidden rounded-xl',
-              'border-2 border-dashed border-border/50',
-              'bg-gradient-to-br from-muted/20 via-muted/10 to-transparent',
-              'py-10 px-6',
-            )}
-          >
-            <div className="relative z-10 flex flex-col items-center text-center">
-              <div
-                className={cn(
-                  'flex h-14 w-14 items-center justify-center rounded-2xl',
-                  'bg-muted/50 mb-4',
-                  'ring-1 ring-border/30',
-                )}
-              >
-                <Frame className="h-6 w-6 text-muted-foreground/60" />
-              </div>
-              <p className="text-sm font-medium text-muted-foreground">
-                {t('frame.noFrames', 'No frames added')}
-              </p>
-              <p className="text-xs text-muted-foreground/70 mt-1 max-w-[200px]">
-                {t(
-                  'frame.addFrameHint',
-                  'Add a frame image to use as a border',
-                )}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4 h-8 text-xs gap-1.5"
-                onClick={() => setShowAddDialog(true)}
-              >
-                <Upload className="h-3.5 w-3.5" />
-                {t('selectFrameImage')}
-              </Button>
-            </div>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <Frame className="h-5 w-5 text-muted-foreground/40 mb-2" />
+            <p className="text-sm text-muted-foreground">
+              {t('frame.noFrames', 'No frames added')}
+            </p>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              {t('frame.addFrameHint', 'Add a frame image to use as a border')}
+            </p>
+            <Button
+              onClick={() => setShowAddDialog(true)}
+              size="sm"
+              variant="outline"
+              className="mt-3 h-7 text-xs gap-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {t('frame.addFrame', 'Add Frame')}
+            </Button>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {frames.map((frame, index) => (
+            {frames.map((frame) => (
               <div
                 key={frame.id}
                 className={cn(
-                  'group relative rounded-xl overflow-hidden',
+                  'group relative rounded-lg overflow-hidden',
                   'border border-border/50 hover:border-border',
-                  'bg-gradient-to-br from-muted/30 to-muted/10',
-                  'transition-all duration-300',
-                  'hover:shadow-lg hover:shadow-black/5',
-                  'animate-in fade-in slide-in-from-bottom-2',
+                  'bg-muted/20',
+                  'transition-colors duration-150',
                 )}
-                style={{ animationDelay: `${index * 50}ms` }}
               >
                 {/* Frame Preview */}
-                <div
-                  className={cn(
-                    'relative h-28 overflow-hidden',
-                    'bg-gradient-to-br from-muted/50 to-muted/20',
-                  )}
-                >
+                <div className="relative h-24 overflow-hidden bg-muted/30">
                   {frame.type === 'image' && frame.imagePath ? (
                     <div
-                      className="absolute inset-0 transition-transform duration-500 group-hover:scale-105"
+                      className="absolute inset-0"
                       style={{
-                        backgroundImage: `url('file://${frame.imagePath}')`,
+                        backgroundImage: `url('file://${frame.imagePath.replace(/\\/g, '/')}')`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                       }}
@@ -480,7 +403,7 @@ export function FrameSettingsTab() {
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div
-                        className="w-20 h-20 rounded-lg flex items-center justify-center text-xs text-muted-foreground font-mono"
+                        className="w-16 h-16 rounded-lg flex items-center justify-center text-xs text-muted-foreground font-mono"
                         style={getFrameStyle(frame) as React.CSSProperties}
                       >
                         CSS
@@ -488,41 +411,34 @@ export function FrameSettingsTab() {
                     </div>
                   )}
 
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
-
                   {/* Action buttons */}
-                  <div className="absolute top-2 right-2 flex gap-1">
-                    {/* Edit button */}
+                  <div className="absolute top-1.5 right-1.5 flex gap-1">
                     <Button
-                      variant="secondary"
+                      variant="ghost"
                       size="icon"
                       className={cn(
-                        'h-7 w-7 rounded-lg',
+                        'h-7 w-7',
                         'bg-background/80 backdrop-blur-sm',
-                        'border border-border/50',
                         'opacity-0 group-hover:opacity-100',
-                        'hover:bg-primary hover:text-primary-foreground hover:border-primary',
-                        'transition-all duration-200',
+                        'hover:bg-primary hover:text-primary-foreground',
+                        'transition-all duration-150',
                       )}
                       onClick={() => handleOpenEditDialog(frame)}
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
 
-                    {/* Delete button */}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
-                          variant="secondary"
+                          variant="ghost"
                           size="icon"
                           className={cn(
-                            'h-7 w-7 rounded-lg',
+                            'h-7 w-7',
                             'bg-background/80 backdrop-blur-sm',
-                            'border border-border/50',
                             'opacity-0 group-hover:opacity-100',
-                            'hover:bg-destructive hover:text-destructive-foreground hover:border-destructive',
-                            'transition-all duration-200',
+                            'hover:bg-destructive hover:text-destructive-foreground',
+                            'transition-all duration-150',
                           )}
                           disabled={deletingId === frame.id}
                         >
@@ -563,8 +479,8 @@ export function FrameSettingsTab() {
                 </div>
 
                 {/* Frame Info */}
-                <div className="p-3">
-                  <p className="text-sm font-medium truncate">{frame.name}</p>
+                <div className="px-2.5 py-2">
+                  <p className="text-xs font-medium truncate">{frame.name}</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
                     {frame.type === 'image'
                       ? `${frame.sliceSize}${t('pxCorner')}`
@@ -608,7 +524,7 @@ export function FrameSettingsTab() {
                   onDrop={handleDrop}
                 >
                   <img
-                    src={`file://${newFrameImagePath}`}
+                    src={`file://${newFrameImagePath.replace(/\\/g, '/')}`}
                     alt={t('framePreview')}
                     className="w-full h-24 object-contain pointer-events-none"
                   />
@@ -832,7 +748,7 @@ export function FrameSettingsTab() {
                   <div
                     className="flex items-center justify-center text-white text-xl font-bold"
                     style={{
-                      borderImageSource: `url('file://${newFrameImagePath}')`,
+                      borderImageSource: `url('file://${newFrameImagePath.replace(/\\/g, '/')}')`,
                       borderImageSlice: `${newFrameSliceSize} fill`,
                       borderImageWidth: `${newFrameSliceSize}px`,
                       borderImageRepeat: 'stretch',
@@ -1035,7 +951,7 @@ export function FrameSettingsTab() {
                   <div
                     className="flex items-center justify-center text-white text-xl font-bold"
                     style={{
-                      borderImageSource: `url('file://${editingFrame.imagePath}')`,
+                      borderImageSource: `url('file://${editingFrame.imagePath.replace(/\\/g, '/')}')`,
                       borderImageSlice: `${editFrameSliceSize} fill`,
                       borderImageWidth: `${editFrameSliceSize}px`,
                       borderImageRepeat: 'stretch',

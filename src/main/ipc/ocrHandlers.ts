@@ -6,6 +6,7 @@ import log from 'electron-log';
 import {
   parseLyricsFromImage,
   parseLyricsFromImages,
+  parseLyricsFromPdf,
 } from '../services/openaiService';
 import {
   successResponse,
@@ -14,11 +15,25 @@ import {
 } from '../../shared/types';
 
 export const registerOcrHandlers = (): void => {
-  // Parse lyrics from a single image
+  // Parse lyrics from a single image or PDF
   ipcMain.handle(
     'ocr:parseImage',
-    async (_event, imageBase64: string, mimeType: string) => {
+    async (
+      _event,
+      imageBase64: string,
+      mimeType: string,
+      filename?: string,
+    ) => {
       try {
+        if (mimeType === 'application/pdf') {
+          // PDF: use dedicated parser, may return multiple songs
+          const songs = await parseLyricsFromPdf(
+            imageBase64,
+            filename || 'document.pdf',
+          );
+          // Return first song for single-file API; use parseImages for full multi-song
+          return successResponse(songs[0]);
+        }
         const result = await parseLyricsFromImage(imageBase64, mimeType);
         return successResponse(result);
       } catch (error) {
@@ -29,10 +44,13 @@ export const registerOcrHandlers = (): void => {
     },
   );
 
-  // Batch process multiple images
+  // Batch process multiple files (images and/or PDFs)
   ipcMain.handle(
     'ocr:parseImages',
-    async (_event, images: Array<{ base64: string; mimeType: string }>) => {
+    async (
+      _event,
+      images: Array<{ base64: string; mimeType: string; filename?: string }>,
+    ) => {
       try {
         const results = await parseLyricsFromImages(images);
         return successResponse(results);

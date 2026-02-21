@@ -34,6 +34,7 @@ const dbToSetlistItem = (db: DbSessionItem): SetlistItem => {
     id: db.id,
     position: db.position,
     createdAt: db.createdAt,
+    updatedAt: db.createdAt,
   };
 
   switch (db.itemType) {

@@ -595,7 +595,7 @@ export function DisplaySettingsTab({
   };
 
   const userFonts = fonts;
-  const userVideos = videos.map((path) => path.split('/').pop() || path);
+  const userVideos = videos.map((path) => path.split(/[/\\]/).pop() || path);
 
   const contentTabs: {
     id: ContentTypeTab;

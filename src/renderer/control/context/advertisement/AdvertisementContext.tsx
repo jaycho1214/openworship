@@ -278,6 +278,12 @@ export function AdvertisementProvider({
   const startRotation = useCallback(() => {
     if (advertisementsRef.current.length === 0) return;
 
+    // Clear any existing timer before starting a new one
+    if (rotationTimerRef.current) {
+      clearInterval(rotationTimerRef.current);
+      rotationTimerRef.current = null;
+    }
+
     setIsRotating(true);
     currentAdIndexRef.current = 0;
 

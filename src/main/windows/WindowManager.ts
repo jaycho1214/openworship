@@ -52,7 +52,7 @@ export const createControlWindow = async (): Promise<void> => {
       preload: getPreloadPath(),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false,
+      sandbox: true,
     },
   });
 
@@ -140,7 +140,7 @@ export const createProjectionWindow = (): BrowserWindow => {
       preload: getPreloadPath(),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false,
+      sandbox: true,
       backgroundThrottling: false,
     },
   });

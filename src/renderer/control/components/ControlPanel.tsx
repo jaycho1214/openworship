@@ -196,10 +196,10 @@ export default function ControlPanel() {
   // Get the current background display name
   const getBackgroundDisplayName = () => {
     if (backgroundType === 'video') {
-      return currentVideoPath?.split('/').pop() || t('selectVideo');
+      return currentVideoPath?.split(/[/\\]/).pop() || t('selectVideo');
     }
     if (backgroundType === 'image') {
-      return currentImagePath?.split('/').pop() || t('selectImage');
+      return currentImagePath?.split(/[/\\]/).pop() || t('selectImage');
     }
     // Color
     const colorName = {
@@ -453,7 +453,7 @@ export default function ControlPanel() {
                 </div>
               ) : (
                 embeddedVideos.map((videoPath) => {
-                  const filename = videoPath.split('/').pop() || videoPath;
+                  const filename = videoPath.split(/[/\\]/).pop() || videoPath;
                   const isSelected =
                     backgroundType === 'video' &&
                     currentVideoPath === videoPath;
@@ -493,7 +493,7 @@ export default function ControlPanel() {
                 </div>
               ) : (
                 availableImages.map((imagePath) => {
-                  const filename = imagePath.split('/').pop() || imagePath;
+                  const filename = imagePath.split(/[/\\]/).pop() || imagePath;
                   const isSelected =
                     backgroundType === 'image' &&
                     currentImagePath === imagePath;
@@ -644,7 +644,7 @@ export default function ControlPanel() {
                           ? currentAd.content.substring(0, 15) +
                             (currentAd.content.length > 15 ? '...' : '')
                           : currentAd?.content
-                              .split('/')
+                              .split(/[/\\]/)
                               .pop()
                               ?.substring(0, 15)
                         : t('advertisements')}
@@ -733,7 +733,7 @@ export default function ControlPanel() {
                         {ad.type === 'text'
                           ? ad.content.substring(0, 30) +
                             (ad.content.length > 30 ? '...' : '')
-                          : ad.content.split('/').pop()}
+                          : ad.content.split(/[/\\]/).pop()}
                       </span>
                     </DropdownMenuItem>
                   );

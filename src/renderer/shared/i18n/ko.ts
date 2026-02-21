@@ -122,7 +122,9 @@ export const ko = {
   bulkImport: '일괄 가져오기',
   bulkImportImages: '이미지 일괄 가져오기',
   processingImages: '이미지 처리 중...',
+  processingFiles: '파일 처리 중...',
   processingPdf: 'PDF 변환 중...',
+  fileTooLarge: '파일이 너무 큽니다 (최대 40 MB)',
   importProgress: '진행',
   importComplete: '가져오기 완료',
   importFailed: '일부 이미지 처리 실패',
@@ -134,10 +136,10 @@ export const ko = {
   selectSongsToImport: '가져올 곡을 선택하세요',
   convertingPdf: 'PDF를 이미지로 변환 중...',
   extractingFromPdf: 'PDF에서 가사 추출 중...',
-  dropImagesHere: '이미지를 여기에 놓으세요',
+  dropImagesHere: '파일을 여기에 놓으세요',
   releaseToImport: '놓으면 가사를 추출합니다',
   importedImages: '가져온 이미지',
-  dragImagesToImport: '이미지를 드래그하여 가사 추출',
+  dragImagesToImport: '이미지 또는 PDF를 드래그하여 가사 추출',
   addMoreImages: '이미지 추가',
 
   // Errors
@@ -145,7 +147,7 @@ export const ko = {
   errorOccurred: '오류가 발생했습니다',
   apiKeyMissing: 'API 키가 설정되지 않았습니다',
   apiKeyRequiredForOcr: '이미지 OCR을 사용하려면 설정에서 API 키를 입력하세요',
-  noImageFilesDetected: '이미지 파일이 감지되지 않았습니다',
+  noImageFilesDetected: '이미지 또는 PDF 파일이 감지되지 않았습니다',
   networkError: '네트워크 오류',
   fileNotFound: '파일을 찾을 수 없습니다',
 

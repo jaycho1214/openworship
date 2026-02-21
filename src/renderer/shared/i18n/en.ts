@@ -121,7 +121,9 @@ export const en = {
   bulkImport: 'Bulk Import',
   bulkImportImages: 'Bulk Import Images',
   processingImages: 'Processing images...',
+  processingFiles: 'Processing files...',
   processingPdf: 'Converting PDF...',
+  fileTooLarge: 'File too large (max 40 MB)',
   importProgress: 'Progress',
   importComplete: 'Import Complete',
   importFailed: 'Some images failed to process',
@@ -133,10 +135,10 @@ export const en = {
   selectSongsToImport: 'Select songs to import',
   convertingPdf: 'Converting PDF to images...',
   extractingFromPdf: 'Extracting lyrics from PDF...',
-  dropImagesHere: 'Drop images here',
+  dropImagesHere: 'Drop files here',
   releaseToImport: 'Release to extract lyrics',
   importedImages: 'Imported Images',
-  dragImagesToImport: 'Drag images to extract lyrics',
+  dragImagesToImport: 'Drag images or PDFs to extract lyrics',
   addMoreImages: 'Add more images',
 
   // Errors
@@ -145,7 +147,7 @@ export const en = {
   apiKeyMissing: 'API key is not configured',
   apiKeyRequiredForOcr:
     'API key required for image OCR. Configure in Settings.',
-  noImageFilesDetected: 'No image files detected',
+  noImageFilesDetected: 'No image or PDF files detected',
   networkError: 'Network Error',
   fileNotFound: 'File not found',
 

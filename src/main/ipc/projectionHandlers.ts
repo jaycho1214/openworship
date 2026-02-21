@@ -105,12 +105,15 @@ export const registerProjectionHandlers = (): void => {
   forwardChannels.forEach(forwardToProjection);
 
   // Forward ready signal from projection to control window (reverse direction)
+  // Uses setImmediate to ensure control window listeners are attached before delivery
   ipcMain.on('projection:ready', () => {
     log.info('[Projection] Window is ready');
-    const controlWindow = getControlWindow();
-    if (controlWindow && !controlWindow.isDestroyed()) {
-      controlWindow.webContents.send('projection:ready');
-    }
+    setImmediate(() => {
+      const controlWindow = getControlWindow();
+      if (controlWindow && !controlWindow.isDestroyed()) {
+        controlWindow.webContents.send('projection:ready');
+      }
+    });
   });
 
   // Get available displays info

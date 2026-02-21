@@ -223,7 +223,7 @@ export default function LibrarySidebar({
         }
       }
 
-      loadSongs();
+      await loadSongs();
 
       // Handle session target
       if (sessionTarget === 'library-only' || addedSongIds.length === 0) {

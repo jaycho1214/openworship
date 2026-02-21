@@ -130,6 +130,15 @@ export const registerExportHandlers = (): void => {
   // Import from a specific file path (for file association)
   ipcMain.handle('import:previewPath', async (_event, filePath: string) => {
     try {
+      // Validate file path: must be a string ending with .oworship
+      if (
+        typeof filePath !== 'string' ||
+        !filePath.endsWith('.oworship') ||
+        filePath.includes('\0')
+      ) {
+        return errorResponse('Invalid file path');
+      }
+
       if (!fs.existsSync(filePath)) {
         return errorResponse('File not found');
       }

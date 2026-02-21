@@ -66,6 +66,16 @@ import {
   getItemTitle,
 } from '../../shared/utils/setlistItemUtils';
 import { cn } from '../../lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 import SongEditor from './SongEditor';
 import { AddContentDialog } from './AddContentDialog';
 import SlideSettingsDialog from './SlideSettingsDialog';
@@ -475,6 +485,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
   const [addContentDefaultTab, setAddContentDefaultTab] = useState<
     'song' | 'bible' | 'announcement'
   >('song');
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const items = currentSetlist?.items ?? [];
@@ -782,7 +793,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
                           goToItem(originalIndex, slideIndex);
                         }}
                         onEdit={song ? () => handleEditSong(song) : undefined}
-                        onDelete={() => deleteItem(item.id)}
+                        onDelete={() => setItemToDelete(item.id)}
                         onSaveSlide={(
                           slideIndex,
                           lines,
@@ -828,6 +839,35 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
         onAddItem={addItem}
         defaultTab={addContentDefaultTab}
       />
+
+      {/* Delete Item Confirmation Dialog */}
+      <AlertDialog
+        open={!!itemToDelete}
+        onOpenChange={(open) => !open && setItemToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('confirmDelete')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('confirmDeleteSongDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (itemToDelete) {
+                  deleteItem(itemToDelete);
+                  setItemToDelete(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

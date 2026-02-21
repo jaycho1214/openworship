@@ -11,10 +11,21 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { Badge } from '../../components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 import { cn } from '../../lib/utils';
 import SongEditor from './SongEditor';
 import { Song } from '../../shared/types/song';
@@ -52,6 +63,7 @@ export default function SongLibrary({
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [editingLibrarySong, setEditingLibrarySong] =
     useState<LibrarySong | null>(null);
+  const [songToDelete, setSongToDelete] = useState<string | null>(null);
 
   // Load songs
   const loadSongs = useCallback(async () => {
@@ -108,16 +120,23 @@ export default function SongLibrary({
     };
   }, [searchQuery, songs]);
 
-  // Delete song
-  const handleDeleteSong = async (id: string) => {
+  // Delete song (called after confirmation)
+  const handleConfirmDelete = async () => {
+    if (!songToDelete) return;
+    const id = songToDelete;
+    setSongToDelete(null);
+
     try {
       const result = await window.electron.library.delete(id);
       if (result.success) {
         if (selectedSong?.id === id) setSelectedSong(null);
         loadSongs();
+      } else {
+        toast.error(t('errorOccurred'));
       }
     } catch (error) {
       console.error('Failed to delete song:', error);
+      toast.error(t('errorOccurred'));
     }
   };
 
@@ -159,6 +178,7 @@ export default function SongLibrary({
       refreshSongFromLibrary(editingLibrarySong.id);
     } catch (error) {
       console.error('Failed to save song:', error);
+      toast.error(t('errorOccurred'));
     }
   };
 
@@ -294,7 +314,7 @@ export default function SongLibrary({
                       className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-500/10"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteSong(song.id);
+                        setSongToDelete(song.id);
                       }}
                       title={t('delete')}
                     >
@@ -339,6 +359,30 @@ export default function SongLibrary({
         song={editingSong}
         onSave={handleEditorSave}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={!!songToDelete}
+        onOpenChange={(open) => !open && setSongToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('confirmDeleteSong')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('confirmDeleteSongDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

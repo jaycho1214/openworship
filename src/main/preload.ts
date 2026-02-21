@@ -366,17 +366,23 @@ const electronHandler = {
     parseImage: (
       imageBase64: string,
       mimeType: string,
+      filename?: string,
     ): Promise<{
       success: boolean;
       data?: { title: string; lyrics: string };
       error?: string;
-    }> => ipcRenderer.invoke('ocr:parseImage', imageBase64, mimeType),
+    }> => ipcRenderer.invoke('ocr:parseImage', imageBase64, mimeType, filename),
     parseImages: (
-      images: Array<{ base64: string; mimeType: string }>,
+      images: Array<{
+        base64: string;
+        mimeType: string;
+        filename?: string;
+      }>,
     ): Promise<{
       success: boolean;
       data?: Array<{
         index: number;
+        pageNumber?: number;
         success: boolean;
         data?: { title: string; lyrics: string };
         error?: string;

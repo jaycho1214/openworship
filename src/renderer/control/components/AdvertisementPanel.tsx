@@ -111,7 +111,7 @@ function SortableAdCard({
   const isText = ad.type === 'text';
   const preview = isText
     ? ad.content.substring(0, 40) + (ad.content.length > 40 ? '…' : '')
-    : ad.content.split('/').pop() || t('adTypeImage');
+    : ad.content.split(/[/\\]/).pop() || t('adTypeImage');
 
   return (
     <div
@@ -846,7 +846,7 @@ export default function AdvertisementPanel() {
                               <ImageIcon className="w-6 h-6 text-amber-500" />
                             </div>
                             <span className="text-xs text-muted-foreground max-w-[200px] truncate px-4">
-                              {adContent.split('/').pop()}
+                              {adContent.split(/[/\\]/).pop()}
                             </span>
                           </>
                         ) : (

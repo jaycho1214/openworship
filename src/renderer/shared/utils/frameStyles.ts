@@ -9,7 +9,7 @@ export function getFrameStyle(frame: Frame | null): CSSProperties {
 
   if (frame.type === 'image' && frame.imagePath) {
     return {
-      borderImageSource: `url('file://${frame.imagePath}')`,
+      borderImageSource: `url('file://${frame.imagePath.replace(/\\/g, '/')}')`,
       borderImageSlice: `${frame.sliceSize || 30} fill`,
       borderImageWidth: `${frame.sliceSize || 30}px`,
       borderImageRepeat: 'stretch',

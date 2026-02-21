@@ -34,34 +34,17 @@ import {
   SelectValue,
 } from '../../components/ui/select';
 import { parseLyricsToSlides } from '../../shared/utils/lyricsParser';
+import {
+  isOcrFile,
+  isPdfFile,
+  readFileAsBase64,
+  getFileMimeType,
+  MAX_OCR_FILE_SIZE,
+} from '../../shared/utils/fileHelpers';
 import { cn } from '../../lib/utils';
 
 // Helper to safely access electron API
 const getElectron = () => (window as any).electron;
-
-// Helper to check if a file is an image (by MIME type or extension)
-const isImageFile = (file: File): boolean => {
-  if (file.type.startsWith('image/')) return true;
-  // Fallback: check extension for common image formats
-  const ext = file.name.toLowerCase().split('.').pop();
-  return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'tif'].includes(
-    ext || '',
-  );
-};
-
-// Helper to read file as base64
-const readFileAsBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
 
 // Type for manual entry item
 interface ManualSongEntry {
@@ -302,23 +285,31 @@ export default function AddSongDialog({
     setManualEntries(newEntries);
   };
 
-  // Process image files with OCR
+  // Process image/PDF files with OCR
   const processFiles = useCallback(
     async (files: File[]) => {
-      const imageFiles = files.filter(isImageFile);
+      const ocrFiles = files.filter(isOcrFile);
 
-      if (imageFiles.length === 0) {
-        setError(t('noImageFilesDetected') || 'No image files detected');
+      if (ocrFiles.length === 0) {
+        setError(t('noImageFilesDetected'));
+        return;
+      }
+
+      // Check file size limits
+      const oversized = ocrFiles.filter((f) => f.size > MAX_OCR_FILE_SIZE);
+      if (oversized.length > 0) {
+        setError(
+          `${oversized.map((f) => f.name).join(', ')}: ${t('fileTooLarge')}`,
+        );
         return;
       }
 
       const electron = getElectron();
       if (!electron) {
-        setError(t('electronNotAvailable') || 'Electron API not available');
+        setError(t('electronNotAvailable'));
         return;
       }
 
-      // Check if API key is set
       if (!hasApiKey) {
         setError(t('apiKeyMissing'));
         return;
@@ -326,68 +317,66 @@ export default function AddSongDialog({
 
       setIsProcessing(true);
       setError(null);
-      setProcessingMessage(t('processingImages'));
-      setProcessingProgress({ current: 0, total: imageFiles.length });
+
+      const hasPdfs = ocrFiles.some(isPdfFile);
+      setProcessingMessage(
+        hasPdfs ? t('processingFiles') : t('processingImages'),
+      );
+      setProcessingProgress({ current: 0, total: ocrFiles.length });
 
       let completedCount = 0;
 
       try {
-        // Process all images in parallel
-        const processPromises = imageFiles.map(async (file) => {
-          try {
+        // Build batch payload — parseImages handles PDF multi-song expansion
+        const payload = await Promise.all(
+          ocrFiles.map(async (file) => {
             const base64 = await readFileAsBase64(file);
-            const mimeType = file.type || 'image/png';
-
-            const result = await electron.ocr.parseImage(base64, mimeType);
-
-            // Update progress as each completes
-            completedCount++;
-            setProcessingProgress({
-              current: completedCount,
-              total: imageFiles.length,
-            });
-
-            if (result.success && result.data) {
-              // Check library for existing song
-              const libraryResult = await electron.library.findByTitle(
-                result.data.title,
-              );
-              const songData =
-                libraryResult.success && libraryResult.data
-                  ? libraryResult.data
-                  : result.data;
-
-              return {
-                id: uuidv4(),
-                title: songData.title || t('untitledSong'),
-                lyrics: songData.lyrics || '',
-              };
-            }
-            setError(result.error || t('ocrError'));
             return {
-              id: uuidv4(),
-              title: '',
-              lyrics: '',
+              base64,
+              mimeType: getFileMimeType(file),
+              filename: file.name,
             };
-          } catch (err) {
-            console.error(`Failed to process ${file.name}:`, err);
-            completedCount++;
-            setProcessingProgress({
-              current: completedCount,
-              total: imageFiles.length,
-            });
-            return null;
-          }
-        });
-
-        const results = await Promise.all(processPromises);
-        const newEntries = results.filter(
-          (entry): entry is ManualSongEntry => entry !== null,
+          }),
         );
+
+        const batchResult = await electron.ocr.parseImages(payload);
+
+        if (!batchResult.success || !batchResult.data) {
+          setError(batchResult.error || t('ocrError'));
+          return;
+        }
+
+        const newEntries: ManualSongEntry[] = [];
+
+        for (const item of batchResult.data) {
+          completedCount++;
+          setProcessingProgress({
+            current: Math.min(completedCount, ocrFiles.length),
+            total: ocrFiles.length,
+          });
+
+          if (item.success && item.data) {
+            // Check library for existing song
+            const libraryResult = await electron.library.findByTitle(
+              item.data.title,
+            );
+            const songData =
+              libraryResult.success && libraryResult.data
+                ? libraryResult.data
+                : item.data;
+
+            newEntries.push({
+              id: uuidv4(),
+              title: songData.title || t('untitledSong'),
+              lyrics: songData.lyrics || '',
+            });
+          } else {
+            setError(item.error || t('ocrError'));
+          }
+        }
 
         // Add new entries to manual entries
         if (newEntries.length > 0) {
-          // If current entry is empty, replace it; otherwise append
           const currentIsEmpty =
             !manualEntries[activeEntryIndex]?.title.trim() &&
             !manualEntries[activeEntryIndex]?.lyrics.trim();
@@ -397,7 +386,7 @@ export default function AddSongDialog({
             setActiveEntryIndex(0);
           } else {
             setManualEntries([...manualEntries, ...newEntries]);
-            setActiveEntryIndex(manualEntries.length); // Select first new entry
+            setActiveEntryIndex(manualEntries.length);
           }
         }
       } catch (err) {
@@ -445,17 +434,20 @@ export default function AddSongDialog({
     [processFiles],
   );
 
-  // Check if drag contains image files
-  const hasImageFiles = (e: React.DragEvent) => {
+  // Check if drag contains image or PDF files
+  const hasOcrFiles = (e: React.DragEvent) => {
     if (e.dataTransfer.types.includes('Files')) {
-      // During dragenter/dragover, we can only check MIME types from items
       const items = e.dataTransfer.items;
       for (let i = 0; i < items.length; i++) {
-        if (items[i].type.startsWith('image/')) {
+        if (
+          items[i].type.startsWith('image/') ||
+          items[i].type === 'application/pdf'
+        ) {
           return true;
         }
       }
-      // If no MIME type detected but files are present, allow drop (we'll check extensions later)
+      // If no MIME type detected but files are present, allow drop
+      // (Windows may report empty type for PDFs — we'll check extensions on drop)
       if (items.length > 0) {
         return true;
       }
@@ -468,7 +460,7 @@ export default function AddSongDialog({
     e.preventDefault();
     e.stopPropagation();
     dragCounterRef.current++;
-    if (hasImageFiles(e)) {
+    if (hasOcrFiles(e)) {
       setShowDragOverlay(true);
     }
   };
@@ -560,7 +552,7 @@ export default function AddSongDialog({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.pdf,application/pdf"
           multiple
           className="hidden"
           onChange={handleFileChange}
@@ -573,21 +565,19 @@ export default function AddSongDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Processing State */}
-        {isProcessing && processingProgress.total > 0 && (
-          <div className="px-6 py-4 border-b border-border/50 bg-muted/30 shrink-0">
-            <div className="flex items-center gap-3">
-              <Loader2 className="w-5 h-5 text-foreground animate-spin" />
-              <div className="flex-1">
-                <div className="flex items-center justify-between text-sm mb-1.5">
-                  <span className="text-foreground font-medium">
-                    {processingMessage || t('processingImages')}
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    {processingProgress.current} / {processingProgress.total}
-                  </span>
-                </div>
-                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+        {/* Full-dialog processing overlay */}
+        {isProcessing && (
+          <div className="absolute inset-0 z-40 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center">
+            <Loader2 className="w-10 h-10 text-foreground animate-spin mb-4" />
+            <p className="text-sm font-medium text-foreground mb-2">
+              {processingMessage || t('processingFiles')}
+            </p>
+            {processingProgress.total > 0 && (
+              <>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {processingProgress.current} / {processingProgress.total}
+                </p>
+                <div className="w-48 h-1.5 bg-muted rounded-full overflow-hidden">
                   <div
                     className="h-full bg-foreground transition-all duration-300 ease-out"
                     style={{
@@ -595,8 +585,8 @@ export default function AddSongDialog({
                     }}
                   />
                 </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         )}
 

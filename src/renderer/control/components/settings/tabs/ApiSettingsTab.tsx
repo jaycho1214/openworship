@@ -1,13 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Eye,
-  EyeOff,
-  Loader2,
-  AlertCircle,
-  CheckCircle2,
-  ExternalLink,
-} from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, ExternalLink } from 'lucide-react';
 import { Input } from '../../../../components/ui/input';
 import { Button } from '../../../../components/ui/button';
 import { Label } from '../../../../components/ui/label';
@@ -26,7 +19,6 @@ interface ApiSettingsTabProps {
 export function ApiSettingsTab({ isOpen }: ApiSettingsTabProps) {
   const { t } = useTranslation();
   const [apiKey, setApiKey] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyStatus, setApiKeyStatus] = useState<ApiKeyStatus>('not-set');
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
 
@@ -111,32 +103,19 @@ export function ApiSettingsTab({ isOpen }: ApiSettingsTabProps) {
         >
           {t('apiKeyLabel')}
         </Label>
-        <div className="relative">
-          <Input
-            id="api-key"
-            type={showApiKey ? 'text' : 'password'}
-            value={apiKey}
-            onChange={(e) => handleApiKeyChange(e.target.value)}
-            placeholder="sk-..."
-            className={cn(
-              'pr-10 font-mono text-sm bg-muted/30 border-border',
-              'focus:border-foreground focus:ring-1 focus:ring-foreground',
-              apiKeyStatus === 'invalid' &&
-                'border-red-500 focus:border-red-500 focus:ring-red-500',
-            )}
-          />
-          <button
-            type="button"
-            onClick={() => setShowApiKey(!showApiKey)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {showApiKey ? (
-              <EyeOff className="w-4 h-4" />
-            ) : (
-              <Eye className="w-4 h-4" />
-            )}
-          </button>
-        </div>
+        <Input
+          id="api-key"
+          type="password"
+          value={apiKey}
+          onChange={(e) => handleApiKeyChange(e.target.value)}
+          placeholder="sk-..."
+          className={cn(
+            'font-mono text-sm bg-muted/30 border-border',
+            'focus:border-foreground focus:ring-1 focus:ring-foreground',
+            apiKeyStatus === 'invalid' &&
+              'border-red-500 focus:border-red-500 focus:ring-red-500',
+          )}
+        />
 
         {apiKeyStatus !== 'idle' && apiKeyStatus !== 'loading' && (
           <div

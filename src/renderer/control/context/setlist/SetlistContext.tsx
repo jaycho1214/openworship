@@ -9,6 +9,7 @@ import {
   ReactNode,
 } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
+import { toast } from 'sonner';
 import { Song, Slide, SlideOverrides } from '../../../shared/types/song';
 import {
   SetlistItem,
@@ -410,7 +411,11 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
                 updatedAt: dbItem.updatedAt,
               };
             } else {
-              return; // Song not found
+              console.error(
+                'Failed to fetch song from library for addItem, songId:',
+                input.songId,
+              );
+              return;
             }
           } else if (input.type === 'bible') {
             // Await Bible slides (already started in parallel)
@@ -542,11 +547,10 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
 
       // Delete from database
       if (electron?.sessionItem) {
-        electron.sessionItem
-          .delete(itemId)
-          .catch((err: unknown) =>
-            console.error('Failed to delete item:', err),
-          );
+        electron.sessionItem.delete(itemId).catch((err: unknown) => {
+          console.error('Failed to delete item:', err);
+          toast.error('Failed to delete item');
+        });
       }
     },
     [currentSessionId],

@@ -10,11 +10,7 @@ import {
   Clock,
   X,
 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Button } from '../../components/ui/button';
@@ -68,9 +64,24 @@ interface AddContentDialogProps {
 type ContentMode = 'search' | 'bible' | 'announcement';
 
 const TABS = [
-  { mode: 'search' as ContentMode, icon: Music, labelKey: 'contentSong', fallback: 'Song' },
-  { mode: 'bible' as ContentMode, icon: BookOpen, labelKey: 'contentBible', fallback: 'Bible' },
-  { mode: 'announcement' as ContentMode, icon: Megaphone, labelKey: 'contentAnnouncement', fallback: 'Note' },
+  {
+    mode: 'search' as ContentMode,
+    icon: Music,
+    labelKey: 'contentSong',
+    fallback: 'Song',
+  },
+  {
+    mode: 'bible' as ContentMode,
+    icon: BookOpen,
+    labelKey: 'contentBible',
+    fallback: 'Bible',
+  },
+  {
+    mode: 'announcement' as ContentMode,
+    icon: Megaphone,
+    labelKey: 'contentAnnouncement',
+    fallback: 'Note',
+  },
 ] as const;
 
 export function AddContentDialog({
@@ -310,10 +321,7 @@ export function AddContentDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn(
-          'p-0 gap-0',
-          mode === 'bible' ? 'max-w-3xl' : 'max-w-md',
-        )}
+        className={cn('p-0 gap-0', mode === 'bible' ? 'max-w-3xl' : 'max-w-md')}
       >
         {/* Compact header with inline tabs */}
         <div className="flex items-center gap-3 pl-4 pr-10 pt-3.5 pb-2.5">
@@ -505,11 +513,7 @@ export function AddContentDialog({
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClose}
-              >
+              <Button variant="outline" size="sm" onClick={handleClose}>
                 {t('common.cancel', 'Cancel')}
               </Button>
               <Button

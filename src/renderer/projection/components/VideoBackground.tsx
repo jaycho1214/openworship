@@ -31,9 +31,20 @@ export default function VideoBackground({
 
   const videoARef = useRef<HTMLVideoElement>(null);
   const videoBRef = useRef<HTMLVideoElement>(null);
+  const crossfadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const imageCrossfadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const crossfadeToVideo = useCallback(
     (newPath: string) => {
+      // Clear any pending crossfade timer
+      if (crossfadeTimerRef.current) {
+        clearTimeout(crossfadeTimerRef.current);
+        crossfadeTimerRef.current = null;
+      }
+
       if (activeVideo === 'A') {
         // Load new video into B, then crossfade
         setVideoBPath(newPath);
@@ -48,7 +59,8 @@ export default function VideoBackground({
         setVideoAOpacity(0);
 
         // After crossfade completes, switch active video
-        setTimeout(() => {
+        crossfadeTimerRef.current = setTimeout(() => {
+          crossfadeTimerRef.current = null;
           setActiveVideo('B');
           // Pause inactive video to save resources
           const videoA = videoARef.current;
@@ -70,7 +82,8 @@ export default function VideoBackground({
         setVideoBOpacity(0);
 
         // After crossfade completes, switch active video
-        setTimeout(() => {
+        crossfadeTimerRef.current = setTimeout(() => {
+          crossfadeTimerRef.current = null;
           setActiveVideo('A');
           // Pause inactive video to save resources
           const videoB = videoBRef.current;
@@ -98,7 +111,7 @@ export default function VideoBackground({
       videoUrl = videoPath;
     } else {
       const encodedPath = videoPath
-        .split('/')
+        .split(/[/\\]/)
         .map((part) => encodeURIComponent(part))
         .join('/');
       videoUrl = `app://media${encodedPath}`;
@@ -114,7 +127,11 @@ export default function VideoBackground({
       setVideoBOpacity(0);
       setActiveVideo('A');
       // Small delay to ensure video element is ready
-      setTimeout(() => {
+      if (initTimerRef.current) {
+        clearTimeout(initTimerRef.current);
+      }
+      initTimerRef.current = setTimeout(() => {
+        initTimerRef.current = null;
         const videoA = videoARef.current;
         if (videoA) {
           console.log('Playing video A');
@@ -153,12 +170,19 @@ export default function VideoBackground({
   // Crossfade to new image
   const crossfadeToImage = useCallback(
     (newPath: string) => {
+      // Clear any pending image crossfade timer
+      if (imageCrossfadeTimerRef.current) {
+        clearTimeout(imageCrossfadeTimerRef.current);
+        imageCrossfadeTimerRef.current = null;
+      }
+
       if (activeImage === 'A') {
         setImageBPath(newPath);
         setImageBOpacity(1);
         setImageAOpacity(0);
 
-        setTimeout(() => {
+        imageCrossfadeTimerRef.current = setTimeout(() => {
+          imageCrossfadeTimerRef.current = null;
           setActiveImage('B');
         }, crossfadeDuration);
       } else {
@@ -166,13 +190,24 @@ export default function VideoBackground({
         setImageAOpacity(1);
         setImageBOpacity(0);
 
-        setTimeout(() => {
+        imageCrossfadeTimerRef.current = setTimeout(() => {
+          imageCrossfadeTimerRef.current = null;
           setActiveImage('A');
         }, crossfadeDuration);
       }
     },
     [activeImage, crossfadeDuration],
   );
+
+  // Cleanup all timers on unmount
+  useEffect(() => {
+    return () => {
+      if (crossfadeTimerRef.current) clearTimeout(crossfadeTimerRef.current);
+      if (initTimerRef.current) clearTimeout(initTimerRef.current);
+      if (imageCrossfadeTimerRef.current)
+        clearTimeout(imageCrossfadeTimerRef.current);
+    };
+  }, []);
 
   // Handle image path changes
   useEffect(() => {
@@ -185,7 +220,7 @@ export default function VideoBackground({
       imageUrl = imagePath;
     } else {
       const encodedPath = imagePath
-        .split('/')
+        .split(/[/\\]/)
         .map((part) => encodeURIComponent(part))
         .join('/');
       imageUrl = `app://media${encodedPath}`;

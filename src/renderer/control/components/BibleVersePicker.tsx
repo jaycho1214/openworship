@@ -717,186 +717,186 @@ export function BibleVersePicker({
       {/* Right Panel - Slide Preview & Editing */}
       <div className="relative w-[340px]">
         <div className="absolute inset-0 border-l border-border pl-4 flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between mb-2">
-          <Label className="text-sm font-medium">
-            {t('bibleSlides', 'Slides')}
-          </Label>
-          {currentReference && (
-            <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
-              {currentReference}
-            </span>
-          )}
-        </div>
-
-        {isLoadingPreview ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : editableSlides.length > 0 ? (
-          <ScrollArea className="flex-1 min-h-0 -mr-4 pr-4">
-            <div className="space-y-2 pt-2 pl-2">
-              {editableSlides.map((slide, index) => {
-                const isSelected = selectedSlideIndex === index;
-                const isDeleted = slide.isDeleted;
-
-                return (
-                  <div
-                    key={slide.id}
-                    className={cn(
-                      'group relative rounded-lg border p-2.5 transition-all cursor-pointer',
-                      isDeleted
-                        ? 'opacity-40 bg-muted/30 border-dashed'
-                        : isSelected
-                          ? 'border-amber-500 bg-amber-500/5 ring-1 ring-amber-500/20'
-                          : 'hover:border-muted-foreground/30 hover:bg-muted/30',
-                    )}
-                    onClick={() =>
-                      !isDeleted &&
-                      setSelectedSlideIndex(isSelected ? null : index)
-                    }
-                  >
-                    {/* Slide number badge */}
-                    <div
-                      className={cn(
-                        'absolute -left-2 -top-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold',
-                        isDeleted
-                          ? 'bg-muted text-muted-foreground line-through'
-                          : 'bg-foreground text-background',
-                      )}
-                    >
-                      {index + 1}
-                    </div>
-
-                    {/* Slide content */}
-                    <div
-                      className={cn(
-                        'text-xs leading-relaxed',
-                        isDeleted && 'line-through',
-                      )}
-                    >
-                      {slide.lines.map((line, lineIdx) => (
-                        <p key={lineIdx} className="truncate">
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-
-                    {/* Custom font size indicator */}
-                    {slide.customFontSize && !isDeleted && (
-                      <div className="absolute top-1.5 right-1.5">
-                        <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-medium">
-                          {slide.customFontSize}px
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Delete/Restore button */}
-                    <div className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <TooltipProvider>
-                        {isDeleted ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  restoreSlide(index);
-                                }}
-                                className="p-1 rounded hover:bg-background"
-                              >
-                                <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="left">
-                              {t('bibleRestoreSlide', 'Restore slide')}
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteSlide(index);
-                                }}
-                                className="p-1 rounded hover:bg-destructive/10"
-                              >
-                                <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="left">
-                              {t('bibleRemoveSlide', 'Remove slide')}
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </TooltipProvider>
-                    </div>
-
-                    {/* Font size editor (when selected) */}
-                    {isSelected && !isDeleted && (
-                      <div
-                        className="mt-2 pt-2 border-t border-amber-500/20 flex items-center gap-2"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Type className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-[10px] text-muted-foreground">
-                          {t('slideFontSizeOverride', 'Font size')}
-                        </span>
-                        <Input
-                          type="number"
-                          min={12}
-                          max={200}
-                          placeholder={t('bibleDefault', 'Default')}
-                          value={slide.customFontSize || ''}
-                          onChange={(e) => {
-                            const val = e.target.value
-                              ? parseInt(e.target.value, 10)
-                              : undefined;
-                            updateSlideFontSize(index, val);
-                          }}
-                          className="h-6 w-16 text-xs text-center"
-                        />
-                        {slide.customFontSize && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() =>
-                              updateSlideFontSize(index, undefined)
-                            }
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground">
-            <BookOpen className="h-8 w-8 mb-2 opacity-50" />
-            <p className="text-xs">
-              {t('bibleSelectVerses', 'Select book, chapter, and verses')}
-            </p>
-          </div>
-        )}
-
-        {/* Slide count */}
-        {activeSlides.length > 0 && (
-          <div className="pt-2 mt-2 -ml-4 pl-4 border-t border-border text-xs text-muted-foreground text-center">
-            {t('bibleSlidesCount', '{{count}} slides', {
-              count: activeSlides.length,
-            })}
-            {editableSlides.length !== activeSlides.length && (
-              <span className="text-amber-600 dark:text-amber-400 ml-1">
-                ({editableSlides.length - activeSlides.length}{' '}
-                {t('bibleRemoved', 'removed')})
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-sm font-medium">
+              {t('bibleSlides', 'Slides')}
+            </Label>
+            {currentReference && (
+              <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                {currentReference}
               </span>
             )}
           </div>
-        )}
+
+          {isLoadingPreview ? (
+            <div className="flex-1 flex items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : editableSlides.length > 0 ? (
+            <ScrollArea className="flex-1 min-h-0 -mr-4 pr-4">
+              <div className="space-y-2 pt-2 pl-2">
+                {editableSlides.map((slide, index) => {
+                  const isSelected = selectedSlideIndex === index;
+                  const isDeleted = slide.isDeleted;
+
+                  return (
+                    <div
+                      key={slide.id}
+                      className={cn(
+                        'group relative rounded-lg border p-2.5 transition-all cursor-pointer',
+                        isDeleted
+                          ? 'opacity-40 bg-muted/30 border-dashed'
+                          : isSelected
+                            ? 'border-amber-500 bg-amber-500/5 ring-1 ring-amber-500/20'
+                            : 'hover:border-muted-foreground/30 hover:bg-muted/30',
+                      )}
+                      onClick={() =>
+                        !isDeleted &&
+                        setSelectedSlideIndex(isSelected ? null : index)
+                      }
+                    >
+                      {/* Slide number badge */}
+                      <div
+                        className={cn(
+                          'absolute -left-2 -top-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold',
+                          isDeleted
+                            ? 'bg-muted text-muted-foreground line-through'
+                            : 'bg-foreground text-background',
+                        )}
+                      >
+                        {index + 1}
+                      </div>
+
+                      {/* Slide content */}
+                      <div
+                        className={cn(
+                          'text-xs leading-relaxed',
+                          isDeleted && 'line-through',
+                        )}
+                      >
+                        {slide.lines.map((line, lineIdx) => (
+                          <p key={lineIdx} className="truncate">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+
+                      {/* Custom font size indicator */}
+                      {slide.customFontSize && !isDeleted && (
+                        <div className="absolute top-1.5 right-1.5">
+                          <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-medium">
+                            {slide.customFontSize}px
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Delete/Restore button */}
+                      <div className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <TooltipProvider>
+                          {isDeleted ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    restoreSlide(index);
+                                  }}
+                                  className="p-1 rounded hover:bg-background"
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">
+                                {t('bibleRestoreSlide', 'Restore slide')}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteSlide(index);
+                                  }}
+                                  className="p-1 rounded hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">
+                                {t('bibleRemoveSlide', 'Remove slide')}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </TooltipProvider>
+                      </div>
+
+                      {/* Font size editor (when selected) */}
+                      {isSelected && !isDeleted && (
+                        <div
+                          className="mt-2 pt-2 border-t border-amber-500/20 flex items-center gap-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Type className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-[10px] text-muted-foreground">
+                            {t('slideFontSizeOverride', 'Font size')}
+                          </span>
+                          <Input
+                            type="number"
+                            min={12}
+                            max={200}
+                            placeholder={t('bibleDefault', 'Default')}
+                            value={slide.customFontSize || ''}
+                            onChange={(e) => {
+                              const val = e.target.value
+                                ? parseInt(e.target.value, 10)
+                                : undefined;
+                              updateSlideFontSize(index, val);
+                            }}
+                            className="h-6 w-16 text-xs text-center"
+                          />
+                          {slide.customFontSize && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() =>
+                                updateSlideFontSize(index, undefined)
+                              }
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground">
+              <BookOpen className="h-8 w-8 mb-2 opacity-50" />
+              <p className="text-xs">
+                {t('bibleSelectVerses', 'Select book, chapter, and verses')}
+              </p>
+            </div>
+          )}
+
+          {/* Slide count */}
+          {activeSlides.length > 0 && (
+            <div className="pt-2 mt-2 -ml-4 pl-4 border-t border-border text-xs text-muted-foreground text-center">
+              {t('bibleSlidesCount', '{{count}} slides', {
+                count: activeSlides.length,
+              })}
+              {editableSlides.length !== activeSlides.length && (
+                <span className="text-amber-600 dark:text-amber-400 ml-1">
+                  ({editableSlides.length - activeSlides.length}{' '}
+                  {t('bibleRemoved', 'removed')})
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

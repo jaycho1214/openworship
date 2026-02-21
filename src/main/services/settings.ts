@@ -4,7 +4,7 @@
  */
 
 import Store from 'electron-store';
-import { safeStorage } from 'electron';
+import { app, safeStorage } from 'electron';
 import log from 'electron-log';
 import {
   ProjectionSettings,
@@ -150,14 +150,23 @@ function encryptString(value: string): string {
       const encrypted = safeStorage.encryptString(value);
       return encrypted.toString('base64');
     }
-    // Fallback: store as-is if encryption not available (dev mode)
-    log.warn(
-      '[Settings] Encryption not available, storing API key unencrypted',
+    // Fallback: only allow plaintext in dev mode
+    if (!app.isPackaged) {
+      log.warn(
+        '[Settings] Encryption not available (dev mode), storing API key unencrypted',
+      );
+      return `plain:${value}`;
+    }
+    log.error(
+      '[Settings] Encryption not available in production, refusing to store API key',
     );
-    return `plain:${value}`;
+    return '';
   } catch (error) {
     log.error('[Settings] Failed to encrypt:', error);
-    return `plain:${value}`;
+    if (!app.isPackaged) {
+      return `plain:${value}`;
+    }
+    return '';
   }
 }
 

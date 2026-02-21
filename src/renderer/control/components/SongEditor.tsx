@@ -35,24 +35,17 @@ import {
   parseLyricsToSlides,
   slidesToRawLyrics,
 } from '../../shared/utils/lyricsParser';
+import {
+  isOcrFile,
+  isPdfFile,
+  readFileAsBase64,
+  getFileMimeType,
+  MAX_OCR_FILE_SIZE,
+} from '../../shared/utils/fileHelpers';
 import { cn } from '../../lib/utils';
 
 // Helper to safely access electron API
 const getElectron = () => (window as any).electron;
-
-// Helper to read file as base64
-const readFileAsBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
 
 // Type for bulk import item
 interface ImportItem {
@@ -156,12 +149,21 @@ export default function SongEditor({
     }
   }, [lyrics, isEditMode]);
 
-  // Process image files with OCR
+  // Process image/PDF files with OCR
   const processFiles = useCallback(
     async (files: File[]) => {
-      const imageFiles = files.filter((f) => f.type.startsWith('image/'));
+      const ocrFiles = files.filter(isOcrFile);
 
-      if (imageFiles.length === 0) return;
+      if (ocrFiles.length === 0) return;
+
+      // Check file size limits
+      const oversized = ocrFiles.filter((f) => f.size > MAX_OCR_FILE_SIZE);
+      if (oversized.length > 0) {
+        setError(
+          `${oversized.map((f) => f.name).join(', ')}: ${t('fileTooLarge')}`,
+        );
+        return;
+      }
 
       const electron = getElectron();
       if (!electron) return;
@@ -172,53 +174,63 @@ export default function SongEditor({
       const allItems: ImportItem[] = [...bulkItems];
 
       try {
-        setProcessingMessage(t('processingImages'));
-        setProcessingProgress({ current: 0, total: imageFiles.length });
+        const hasPdfs = ocrFiles.some(isPdfFile);
+        setProcessingMessage(
+          hasPdfs ? t('processingFiles') : t('processingImages'),
+        );
+        setProcessingProgress({ current: 0, total: ocrFiles.length });
 
-        for (let i = 0; i < imageFiles.length; i++) {
-          const file = imageFiles[i];
-          setProcessingProgress({ current: i + 1, total: imageFiles.length });
-
-          try {
+        // Build batch payload — parseImages handles PDF multi-song expansion
+        const payload = await Promise.all(
+          ocrFiles.map(async (file) => {
             const base64 = await readFileAsBase64(file);
-            const mimeType = file.type || 'image/png';
-            const dataUrl = `data:${mimeType};base64,${base64}`;
+            return {
+              base64,
+              mimeType: getFileMimeType(file),
+              filename: file.name,
+            };
+          }),
+        );
 
-            const result = await electron.ocr.parseImage(base64, mimeType);
+        const batchResult = await electron.ocr.parseImages(payload);
 
-            if (result.success && result.data) {
-              // Check library for existing song
-              const libraryResult = await electron.library.findByTitle(
-                result.data.title,
-              );
-              const songData =
-                libraryResult.success && libraryResult.data
-                  ? libraryResult.data
-                  : result.data;
+        if (!batchResult.success || !batchResult.data) {
+          setError(batchResult.error || t('ocrError'));
+          return;
+        }
 
-              allItems.push({
-                id: uuidv4(),
-                index: allItems.length,
-                title: songData.title || t('untitledSong'),
-                lyrics: songData.lyrics || '',
-                imagePreview: dataUrl,
-                success: true,
-                selected: true,
-              });
-            } else {
-              allItems.push({
-                id: uuidv4(),
-                index: allItems.length,
-                title: t('untitledSong'),
-                lyrics: '',
-                imagePreview: dataUrl,
-                success: false,
-                error: result.error || t('ocrError'),
-                selected: false,
-              });
-            }
-          } catch (err) {
-            console.error(`Failed to process ${file.name}:`, err);
+        for (const item of batchResult.data) {
+          if (item.success && item.data) {
+            // Check library for existing song
+            const libraryResult = await electron.library.findByTitle(
+              item.data.title,
+            );
+            const songData =
+              libraryResult.success && libraryResult.data
+                ? libraryResult.data
+                : item.data;
+
+            allItems.push({
+              id: uuidv4(),
+              index: allItems.length,
+              title: songData.title || t('untitledSong'),
+              lyrics: songData.lyrics || '',
+              imagePreview: item.imagePreview,
+              success: true,
+              selected: true,
+              pageNumber: item.pageNumber,
+            });
+          } else {
+            allItems.push({
+              id: uuidv4(),
+              index: allItems.length,
+              title: t('untitledSong'),
+              lyrics: '',
+              imagePreview: item.imagePreview,
+              success: false,
+              error: item.error || t('ocrError'),
+              selected: false,
+            });
           }
         }
 
@@ -389,21 +401,19 @@ export default function SongEditor({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Processing State */}
-        {isProcessing && processingProgress.total > 0 && (
-          <div className="px-6 py-4 border-b border-border/50 bg-muted/30">
-            <div className="flex items-center gap-3">
-              <Loader2 className="w-5 h-5 text-foreground animate-spin" />
-              <div className="flex-1">
-                <div className="flex items-center justify-between text-sm mb-1.5">
-                  <span className="text-foreground font-medium">
-                    {processingMessage || t('processingImages')}
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    {processingProgress.current} / {processingProgress.total}
-                  </span>
-                </div>
-                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+        {/* Full-dialog processing overlay */}
+        {isProcessing && (
+          <div className="absolute inset-0 z-40 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center">
+            <Loader2 className="w-10 h-10 text-foreground animate-spin mb-4" />
+            <p className="text-sm font-medium text-foreground mb-2">
+              {processingMessage || t('processingFiles')}
+            </p>
+            {processingProgress.total > 0 && (
+              <>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {processingProgress.current} / {processingProgress.total}
+                </p>
+                <div className="w-48 h-1.5 bg-muted rounded-full overflow-hidden">
                   <div
                     className="h-full bg-foreground transition-all duration-300 ease-out"
                     style={{
@@ -411,8 +421,8 @@ export default function SongEditor({
                     }}
                   />
                 </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         )}
 
@@ -531,7 +541,7 @@ export default function SongEditor({
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,.pdf,application/pdf"
                     multiple
                     className="hidden"
                     onChange={handleFileChange}
