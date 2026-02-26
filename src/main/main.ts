@@ -132,7 +132,13 @@ app
     protocol.handle('app', (request) => {
       const url = new URL(request.url);
       // Resolve the file path from the URL pathname
-      const filePath = path.normalize(decodeURIComponent(url.pathname));
+      let filePath = decodeURIComponent(url.pathname);
+      // On Windows, URL pathname for drive-letter paths is /C:/Users/...
+      // Strip the leading / to get a valid Windows path like C:\Users\...
+      if (process.platform === 'win32' && /^\/[A-Za-z]:/.test(filePath)) {
+        filePath = filePath.slice(1);
+      }
+      filePath = path.normalize(filePath);
 
       // Prevent directory traversal attacks
       const userDataPath = app.getPath('userData');

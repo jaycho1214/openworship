@@ -112,9 +112,10 @@ export default function VideoBackground({
     } else {
       const encodedPath = videoPath
         .split(/[/\\]/)
+        .filter(Boolean)
         .map((part) => encodeURIComponent(part))
         .join('/');
-      videoUrl = `app://media${encodedPath}`;
+      videoUrl = `app://media/${encodedPath}`;
     }
 
     console.log('Video URL:', videoUrl);
@@ -221,9 +222,10 @@ export default function VideoBackground({
     } else {
       const encodedPath = imagePath
         .split(/[/\\]/)
+        .filter(Boolean)
         .map((part) => encodeURIComponent(part))
         .join('/');
-      imageUrl = `app://media${encodedPath}`;
+      imageUrl = `app://media/${encodedPath}`;
     }
 
     console.log('Image URL:', imageUrl);
