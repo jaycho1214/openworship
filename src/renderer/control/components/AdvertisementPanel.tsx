@@ -955,7 +955,7 @@ export default function AdvertisementPanel() {
                       value={[adFontSize]}
                       onValueChange={([v]) => setAdFontSize(v)}
                       min={24}
-                      max={120}
+                      max={280}
                       step={2}
                     />
                   </div>

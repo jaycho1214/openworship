@@ -5,7 +5,7 @@
 
 // Per-slide display overrides (optional, falls back to global ProjectionSettings)
 export interface SlideOverrides {
-  fontSize?: number; // 48-144px
+  fontSize?: number; // 48-360px
   textAlign?: {
     horizontal?: 'left' | 'center' | 'right';
     vertical?: 'top' | 'middle' | 'bottom';
@@ -26,7 +26,7 @@ export interface Slide {
   lines: string[]; // 1-3 lines max
   section?: string; // Optional section marker like "Verse", "Chorus", "Bridge"
   sectionRef?: string; // Reference to another section by name (e.g., "Chorus" to repeat)
-  fontSize?: number; // Optional per-slide font size override (48-144px) - kept for backwards compatibility
+  fontSize?: number; // Optional per-slide font size override (48-360px) - kept for backwards compatibility
   overrides?: SlideOverrides; // All per-slide display overrides
   lineRoles?: ('body' | 'reference')[]; // Role of each line (e.g., Bible reference vs body text)
 }

@@ -205,3 +205,85 @@ export const recreateControlWindow = async (): Promise<void> => {
     await createControlWindow();
   }
 };
+
+/**
+ * Register display event listeners for handling resolution changes,
+ * display removal, and display addition while projection is open.
+ */
+export const registerDisplayEventListeners = (): void => {
+  // When display metrics change (e.g., resolution change), update projection bounds
+  screen.on('display-metrics-changed', (_event, display, changedMetrics) => {
+    if (!projectionWindow || projectionWindow.isDestroyed()) return;
+
+    const settings = settingsService.getProjectionSettings();
+    if (settings.displayMode !== 'fullscreen') return;
+
+    // Only react to size/bounds changes
+    if (
+      !changedMetrics.includes('bounds') &&
+      !changedMetrics.includes('workArea')
+    )
+      return;
+
+    // Check if projection is on this display
+    const projBounds = projectionWindow.getBounds();
+    const displayBounds = display.bounds;
+    const isOnThisDisplay =
+      projBounds.x >= displayBounds.x &&
+      projBounds.x < displayBounds.x + displayBounds.width &&
+      projBounds.y >= displayBounds.y &&
+      projBounds.y < displayBounds.y + displayBounds.height;
+
+    if (isOnThisDisplay) {
+      log.info('[Windows] Display metrics changed, updating projection bounds');
+      projectionWindow.setBounds(display.bounds);
+      projectionWindow.setFullScreen(true);
+    }
+  });
+
+  // When a display is removed, close and recreate on remaining display
+  screen.on('display-removed', (_event, removedDisplay) => {
+    if (!projectionWindow || projectionWindow.isDestroyed()) return;
+
+    const projBounds = projectionWindow.getBounds();
+    const removedBounds = removedDisplay.bounds;
+    const wasOnRemovedDisplay =
+      projBounds.x >= removedBounds.x &&
+      projBounds.x < removedBounds.x + removedBounds.width &&
+      projBounds.y >= removedBounds.y &&
+      projBounds.y < removedBounds.y + removedBounds.height;
+
+    if (wasOnRemovedDisplay) {
+      log.info(
+        '[Windows] Projection display removed, recreating on available display',
+      );
+      projectionWindow.close();
+      createProjectionWindow();
+    }
+  });
+
+  // When a display is added, move projection to the new external display
+  screen.on('display-added', (_event, newDisplay) => {
+    if (!projectionWindow || projectionWindow.isDestroyed()) return;
+
+    const settings = settingsService.getProjectionSettings();
+    if (settings.displayMode !== 'fullscreen') return;
+
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const projBounds = projectionWindow.getBounds();
+    const primaryBounds = primaryDisplay.bounds;
+
+    // Only move if currently on primary (fallback) and new display is external
+    const isOnPrimary =
+      projBounds.x >= primaryBounds.x &&
+      projBounds.x < primaryBounds.x + primaryBounds.width &&
+      projBounds.y >= primaryBounds.y &&
+      projBounds.y < primaryBounds.y + primaryBounds.height;
+
+    if (isOnPrimary && newDisplay.id !== primaryDisplay.id) {
+      log.info('[Windows] External display added, moving projection to it');
+      projectionWindow.close();
+      createProjectionWindow();
+    }
+  });
+};

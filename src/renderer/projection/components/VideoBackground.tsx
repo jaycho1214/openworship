@@ -1,6 +1,24 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { BackgroundType } from '../../../shared/types';
 
+/**
+ * Convert a local file path to an app://media/ URL for Electron's custom protocol.
+ * On Windows, paths like C:\Users\... don't start with / so we must prepend one
+ * to keep the drive letter in the URL pathname (not the hostname).
+ */
+function toAppMediaUrl(filePath: string): string {
+  if (filePath.startsWith('app://') || filePath.startsWith('file://')) {
+    return filePath;
+  }
+  const encodedPath = filePath
+    .split(/[/\\]/)
+    .map((part) => encodeURIComponent(part))
+    .join('/');
+  // Windows paths don't start with / (e.g., C:\...) so we must prepend /
+  // to keep the drive letter in the URL pathname, not the hostname
+  return `app://media${encodedPath.startsWith('/') ? '' : '/'}${encodedPath}`;
+}
+
 interface VideoBackgroundProps {
   videoPath: string | null;
   imagePath?: string | null;
@@ -102,20 +120,7 @@ export default function VideoBackground({
     if (!videoPath) return;
 
     // Convert file path to app://media/ URL for Electron
-    // Uses the custom app:// protocol which works in both dev and prod modes
-    // (file:// URLs are blocked when renderer loads from http://localhost in dev)
-    // Must use explicit hostname (e.g. "media") because standard scheme URLs
-    // treat app:///Path as hostname="path" (lowercased), corrupting the file path
-    let videoUrl: string;
-    if (videoPath.startsWith('app://') || videoPath.startsWith('file://')) {
-      videoUrl = videoPath;
-    } else {
-      const encodedPath = videoPath
-        .split(/[/\\]/)
-        .map((part) => encodeURIComponent(part))
-        .join('/');
-      videoUrl = `app://media${encodedPath}`;
-    }
+    const videoUrl = toAppMediaUrl(videoPath);
 
     console.log('Video URL:', videoUrl);
 
@@ -215,16 +220,7 @@ export default function VideoBackground({
     if (!imagePath) return;
 
     // Convert file path to app://media/ URL for Electron
-    let imageUrl: string;
-    if (imagePath.startsWith('app://') || imagePath.startsWith('file://')) {
-      imageUrl = imagePath;
-    } else {
-      const encodedPath = imagePath
-        .split(/[/\\]/)
-        .map((part) => encodeURIComponent(part))
-        .join('/');
-      imageUrl = `app://media${encodedPath}`;
-    }
+    const imageUrl = toAppMediaUrl(imagePath);
 
     console.log('Image URL:', imageUrl);
 

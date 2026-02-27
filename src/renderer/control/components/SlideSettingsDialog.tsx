@@ -479,7 +479,7 @@ export default function SlideSettingsDialog({
                       value={[fontSize ?? defaultFontSize]}
                       onValueChange={(v) => setFontSize(v[0])}
                       min={48}
-                      max={144}
+                      max={360}
                       step={4}
                     />
                   </div>
@@ -502,7 +502,7 @@ export default function SlideSettingsDialog({
                         value={[referenceFontSize ?? defaultRefFontSize]}
                         onValueChange={(v) => setReferenceFontSize(v[0])}
                         min={24}
-                        max={120}
+                        max={280}
                         step={4}
                       />
                       <div className="flex items-center gap-2 pt-1">

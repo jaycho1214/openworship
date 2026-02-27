@@ -108,7 +108,7 @@ const store = new Store<AppSettings>({
     projection: {
       type: 'object',
       properties: {
-        fontSize: { type: 'number', minimum: 24, maximum: 200 },
+        fontSize: { type: 'number', minimum: 24, maximum: 360 },
         textColor: { type: 'string' },
         textShadow: { type: 'object' },
         textOutline: { type: 'object' },

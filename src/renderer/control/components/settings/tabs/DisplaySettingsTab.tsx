@@ -83,7 +83,7 @@ function TextSettingsPanel({
             value={[settings.fontSize]}
             onValueChange={([value]) => onUpdate({ fontSize: value })}
             min={48}
-            max={144}
+            max={360}
             step={4}
             className="w-24"
           />
@@ -281,7 +281,7 @@ function TextSettingsPanel({
                   onBibleReferenceUpdate({ fontSize: value })
                 }
                 min={24}
-                max={120}
+                max={280}
                 step={4}
                 className="w-24"
               />

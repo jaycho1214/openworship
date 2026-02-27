@@ -18,6 +18,7 @@ import {
   createControlWindow,
   recreateControlWindow,
   getControlWindow,
+  registerDisplayEventListeners,
 } from './windows/WindowManager';
 import { registerAllHandlers } from './ipc';
 
@@ -132,7 +133,12 @@ app
     protocol.handle('app', (request) => {
       const url = new URL(request.url);
       // Resolve the file path from the URL pathname
-      const filePath = path.normalize(decodeURIComponent(url.pathname));
+      let filePath = decodeURIComponent(url.pathname);
+      // On Windows, URL pathname is /C:/Users/... — strip leading / before drive letter
+      if (process.platform === 'win32' && /^\/[A-Za-z]:/.test(filePath)) {
+        filePath = filePath.slice(1);
+      }
+      filePath = path.normalize(filePath);
 
       // Prevent directory traversal attacks
       const userDataPath = app.getPath('userData');
@@ -159,6 +165,9 @@ app
 
     // Register all IPC handlers
     registerAllHandlers();
+
+    // Register display event listeners for resolution changes
+    registerDisplayEventListeners();
 
     // Create the main control window
     await createControlWindow();
