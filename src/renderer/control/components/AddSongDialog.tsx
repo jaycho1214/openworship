@@ -270,11 +270,12 @@ export default function AddSongDialog({
   };
 
   // Copy lyrics from existing song
-  const handleCopyExistingLyrics = (entryId: string) => {
-    const existingSong = duplicates[entryId];
+  const handleCopyExistingLyrics = () => {
+    if (!currentEntry) return;
+    const existingSong = duplicates[currentEntry.id];
     if (!existingSong) return;
 
-    const entryIndex = manualEntries.findIndex((e) => e.id === entryId);
+    const entryIndex = manualEntries.findIndex((e) => e.id === currentEntry.id);
     if (entryIndex === -1) return;
 
     const newEntries = [...manualEntries];
@@ -528,6 +529,7 @@ export default function AddSongDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="max-w-5xl h-[85vh] bg-background border-border p-0 overflow-hidden gap-0"
+        onInteractOutside={(e) => e.preventDefault()}
         onDragEnter={handleDialogDragEnter}
         onDragLeave={handleDialogDragLeave}
         onDragOver={handleDialogDragOver}
@@ -726,9 +728,7 @@ export default function AddSongDialog({
                         variant="ghost"
                         size="sm"
                         className="h-6 px-2 text-[10px] text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-500/10"
-                        onClick={() =>
-                          handleCopyExistingLyrics(currentEntry?.id)
-                        }
+                        onClick={handleCopyExistingLyrics}
                       >
                         <Copy className="w-3 h-3 mr-1" />
                         {t('useExistingLyrics')}
