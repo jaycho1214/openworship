@@ -104,9 +104,11 @@ export const createControlWindow = async (): Promise<void> => {
 /**
  * Create the projection window on external display
  */
-export const createProjectionWindow = (): BrowserWindow => {
+export const createProjectionWindow = (
+  overrideMode?: 'fullscreen' | 'windowed',
+): BrowserWindow => {
   const settings = settingsService.getProjectionSettings();
-  const isWindowed = settings.displayMode === 'windowed';
+  const isWindowed = (overrideMode ?? settings.displayMode) === 'windowed';
 
   // Find external display
   const displays = screen.getAllDisplays();
@@ -198,6 +200,43 @@ export const closeProjectionWindow = (): boolean => {
 };
 
 /**
+ * Switch projection window from fullscreen to windowed mode on primary display.
+ * Used when the external display is disconnected and only one monitor remains.
+ * Does NOT change the saved displayMode setting so reconnection can auto-restore fullscreen.
+ */
+const switchProjectionToWindowed = (): void => {
+  if (!projectionWindow || projectionWindow.isDestroyed()) return;
+
+  const repositionWindow = () => {
+    if (!projectionWindow || projectionWindow.isDestroyed()) return;
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { x, y, width, height } = primaryDisplay.bounds;
+    const windowedWidth = 1280;
+    const windowedHeight = 720;
+    projectionWindow.setBounds({
+      x: Math.round(x + (width - windowedWidth) / 2),
+      y: Math.round(y + (height - windowedHeight) / 2),
+      width: windowedWidth,
+      height: windowedHeight,
+    });
+  };
+
+  projectionWindow.setAlwaysOnTop(false);
+  projectionWindow.setSkipTaskbar(false);
+  projectionWindow.setResizable(true);
+
+  if (projectionWindow.isFullScreen()) {
+    // On macOS, setFullScreen(false) triggers an async animation.
+    // Listen for the event to reposition after it completes.
+    // On Windows/Linux, the event fires immediately.
+    projectionWindow.once('leave-full-screen', repositionWindow);
+    projectionWindow.setFullScreen(false);
+  } else {
+    repositionWindow();
+  }
+};
+
+/**
  * Recreate the control window (for macOS dock click)
  */
 export const recreateControlWindow = async (): Promise<void> => {
@@ -241,7 +280,7 @@ export const registerDisplayEventListeners = (): void => {
     }
   });
 
-  // When a display is removed, close and recreate on remaining display
+  // When a display is removed, switch to windowed or recreate on another display
   screen.on('display-removed', (_event, removedDisplay) => {
     if (!projectionWindow || projectionWindow.isDestroyed()) return;
 
@@ -254,26 +293,40 @@ export const registerDisplayEventListeners = (): void => {
       projBounds.y < removedBounds.y + removedBounds.height;
 
     if (wasOnRemovedDisplay) {
-      log.info(
-        '[Windows] Projection display removed, recreating on available display',
-      );
-      projectionWindow.close();
-      createProjectionWindow();
+      const remainingDisplays = screen.getAllDisplays();
+      if (remainingDisplays.length <= 1) {
+        // Only one monitor left — switch to windowed so control window stays accessible
+        log.info(
+          '[Windows] Projection display removed, only 1 display remains — switching to windowed',
+        );
+        switchProjectionToWindowed();
+      } else {
+        // Multiple displays remain — recreate on another one
+        log.info(
+          '[Windows] Projection display removed, recreating on available display',
+        );
+        projectionWindow.close();
+        createProjectionWindow();
+      }
     }
   });
 
-  // When a display is added, move projection to the new external display
+  // When a display is added, move projection to the new external display.
+  // This also handles restoring fullscreen after HDMI reconnect when projection
+  // was temporarily switched to windowed mode by the display-removed handler.
   screen.on('display-added', (_event, newDisplay) => {
     if (!projectionWindow || projectionWindow.isDestroyed()) return;
 
     const settings = settingsService.getProjectionSettings();
+    // Only auto-move if the user's saved preference is fullscreen
     if (settings.displayMode !== 'fullscreen') return;
 
     const primaryDisplay = screen.getPrimaryDisplay();
     const projBounds = projectionWindow.getBounds();
     const primaryBounds = primaryDisplay.bounds;
 
-    // Only move if currently on primary (fallback) and new display is external
+    // Move if currently on primary (either fullscreen fallback or windowed fallback)
+    // and the new display is external
     const isOnPrimary =
       projBounds.x >= primaryBounds.x &&
       projBounds.x < primaryBounds.x + primaryBounds.width &&

@@ -326,7 +326,7 @@ function SortableSlide({
               >
                 {slide.lines.map((line, lineIndex) => (
                   <p
-                    key={lineIndex}
+                    key={lineIndex} // eslint-disable-line react/no-array-index-key -- lines have no stable ID
                     className={cn(
                       'text-sm leading-relaxed',
                       isActive

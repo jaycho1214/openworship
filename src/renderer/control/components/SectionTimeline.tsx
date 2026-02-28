@@ -88,6 +88,7 @@ export default function SectionTimeline() {
     }
 
     return -1;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- presentationState is accessed via currentSlideIndex
   }, [currentSong, sections, presentationState.currentSlideIndex]);
 
   // Don't render if no song or no sections

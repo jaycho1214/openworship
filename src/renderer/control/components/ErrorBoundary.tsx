@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { Component, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, RefreshCw } from 'lucide-react';

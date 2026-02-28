@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import {
   createContext,
   useContext,
@@ -102,6 +103,7 @@ export function BibleProvider({ children }: BibleProviderProps) {
   useEffect(() => {
     loadTranslations();
     loadAvailableBibles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
 
   // Subscribe to import progress events
@@ -144,6 +146,7 @@ export function BibleProvider({ children }: BibleProviderProps) {
     } finally {
       setIsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadBooks called inside, not a dep
   }, [selectedTranslation]);
 
   const selectTranslation = useCallback(
@@ -159,6 +162,7 @@ export function BibleProvider({ children }: BibleProviderProps) {
         loadBooks(translation.id);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadBooks is stable
     [],
   );
 
@@ -196,6 +200,7 @@ export function BibleProvider({ children }: BibleProviderProps) {
         await loadVerses(selectedBook.id, chapter);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadVerses is stable
     [selectedBook],
   );
 

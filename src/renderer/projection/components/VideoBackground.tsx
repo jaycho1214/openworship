@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { BackgroundType } from '../../../shared/types';
 
@@ -145,7 +146,7 @@ export default function VideoBackground({
             console.error('Video A autoplay failed:', e);
             // Try again with muted (required for some browsers)
             videoA.muted = true;
-            videoA.play().catch(console.error);
+            videoA.play().catch(() => {}); // eslint-disable-line promise/no-nesting -- retry with muted
           });
         }
       }, 100);
@@ -154,6 +155,7 @@ export default function VideoBackground({
       console.log('Crossfading to new video');
       crossfadeToVideo(videoUrl);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- videoAPath/videoBPath are refs used for comparison, not deps
   }, [videoPath, crossfadeToVideo]);
 
   const handleVideoError =
@@ -236,6 +238,7 @@ export default function VideoBackground({
       console.log('Crossfading to new image');
       crossfadeToImage(imageUrl);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- imageAPath/imageBPath are refs used for comparison, not deps
   }, [imagePath, crossfadeToImage]);
 
   return (

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { useState, useRef, useEffect, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -178,7 +179,7 @@ const SlideItem = memo(function SlideItem({
           >
             {slide.lines.map((line, lineIndex) => (
               <p
-                key={lineIndex}
+                key={lineIndex} // eslint-disable-line react/no-array-index-key -- lines have no stable ID
                 className={cn(
                   'text-xs leading-relaxed truncate',
                   isActive

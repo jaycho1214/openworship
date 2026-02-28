@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import {
   createContext,
   useContext,
@@ -219,6 +220,7 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
     const frame = getFrameForType(itemType);
     sendFrameToProjection(frame, itemType);
     console.log('[Projection] Frame settings changed, sending frame:', frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to frameSettings changes; other deps handled by the item-type effect above
   }, [frameSettings]);
 
   const toggleBlank = useCallback(() => {
@@ -341,7 +343,12 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
         unsubReady();
       });
 
-      await electron.projection.open();
+      const result = await electron.projection.open();
+      if (result && result.data === false) {
+        // User cancelled the single-monitor dialog
+        unsubReady();
+        return;
+      }
       setIsProjectionOpen(true);
     } catch (error) {
       console.error('Failed to open projection:', error);

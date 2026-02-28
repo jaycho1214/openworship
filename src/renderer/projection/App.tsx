@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import ProjectionRenderer from './components/ProjectionRenderer';
@@ -57,6 +58,17 @@ export default function App() {
   const [contentTypeTextSettings, setContentTypeTextSettings] = useState<
     ContentTypeTextSettings | undefined
   >(undefined);
+
+  // Escape key closes projection window
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        window.electron.projection.close();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Update document title based on current language
   useEffect(() => {
@@ -382,7 +394,7 @@ export default function App() {
       unsubBackgroundColor();
       unsubFont();
     };
-  }, []);
+  }, [loadedFontsRef]);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black select-none cursor-none">

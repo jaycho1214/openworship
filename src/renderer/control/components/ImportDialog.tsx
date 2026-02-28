@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { useState, useEffect, useCallback } from 'react';
 import {
   Download,
@@ -94,6 +95,7 @@ export default function ImportDialog({
       // Open file dialog
       loadPreview();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only load preview when dialog opens
   }, [open, initialPreview]);
 
   const loadPreview = async () => {

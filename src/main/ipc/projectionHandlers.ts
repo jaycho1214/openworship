@@ -1,7 +1,7 @@
 /**
  * IPC handlers for projection window management
  */
-import { ipcMain, screen } from 'electron';
+import { ipcMain, screen, dialog } from 'electron';
 import log from 'electron-log';
 import {
   getControlWindow,
@@ -19,10 +19,44 @@ import {
 
 export const registerProjectionHandlers = (): void => {
   // Open projection window
-  ipcMain.handle('projection:open', () => {
+  ipcMain.handle('projection:open', async () => {
     try {
       const projectionWindow = getProjectionWindow();
       if (!projectionWindow) {
+        const settings = settingsService.getProjectionSettings();
+        const displays = screen.getAllDisplays();
+
+        // Warn if trying to open fullscreen with only one monitor
+        if (settings.displayMode === 'fullscreen' && displays.length <= 1) {
+          const parentWindow = getControlWindow();
+          const dialogOptions = {
+            type: 'warning' as const,
+            title: 'Single Monitor Detected',
+            message:
+              'You only have one monitor connected. Opening the projection in fullscreen will cover your control window.',
+            detail:
+              'You can press Escape at any time to close the projection window.',
+            buttons: ['Open in Window', 'Open Fullscreen', 'Cancel'],
+            defaultId: 0,
+            cancelId: 2,
+          };
+          // Pass parent window so the dialog appears as a sheet on macOS
+          const { response } = parentWindow
+            ? await dialog.showMessageBox(parentWindow, dialogOptions)
+            : await dialog.showMessageBox(dialogOptions);
+
+          if (response === 2) {
+            // Cancel
+            return successResponse(false);
+          }
+          if (response === 0) {
+            // Open in Window — override mode without changing saved settings
+            createProjectionWindow('windowed');
+            return successResponse(true);
+          }
+          // response === 1: Open Fullscreen — fall through to normal creation
+        }
+
         createProjectionWindow();
         return successResponse(true);
       }

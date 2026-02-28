@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import {
   createContext,
   useContext,
@@ -109,6 +110,7 @@ export function MediaProvider({ children }: MediaProviderProps) {
   // Load videos on mount
   useEffect(() => {
     loadVideos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
 
   // FIX: Load background settings on mount
@@ -195,6 +197,7 @@ export function MediaProvider({ children }: MediaProviderProps) {
   // Load images on mount
   useEffect(() => {
     loadImages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
 
   // Select image
@@ -280,6 +283,7 @@ export function MediaProvider({ children }: MediaProviderProps) {
   // Load fonts on mount
   useEffect(() => {
     loadFonts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
 
   const setFontFamily = useCallback((font: string) => {

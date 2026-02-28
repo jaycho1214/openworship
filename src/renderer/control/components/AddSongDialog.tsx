@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Plus,
@@ -237,6 +238,7 @@ export default function AddSongDialog({
     }, 300);
 
     return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only check duplicates when title/id change
   }, [currentEntry?.title, currentEntry?.id]);
 
   // Add new manual entry
@@ -801,7 +803,7 @@ export default function AddSongDialog({
                       <div className="space-y-0.5">
                         {slide.lines.map((line, lineIndex) => (
                           <p
-                            key={lineIndex}
+                            key={lineIndex} // eslint-disable-line react/no-array-index-key -- lines have no stable ID
                             className="text-xs text-foreground leading-relaxed"
                           >
                             {line || (

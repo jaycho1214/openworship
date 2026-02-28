@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { useEffect, useRef, useState } from 'react';
 import type { DetectedFont } from '../../../shared/types/song';
 

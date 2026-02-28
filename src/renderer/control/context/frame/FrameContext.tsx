@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import {
   createContext,
   useContext,
@@ -70,6 +71,7 @@ export function FrameProvider({ children }: FrameProviderProps) {
   useEffect(() => {
     loadFrames();
     loadSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
 
   const loadFrames = useCallback(async () => {

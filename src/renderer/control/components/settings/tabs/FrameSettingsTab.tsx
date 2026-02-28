@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { useState, useCallback, DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import {

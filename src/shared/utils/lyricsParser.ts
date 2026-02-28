@@ -274,7 +274,7 @@ export function countSlides(
 export function normalizeForMatching(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[\s\.,!?'"~\-_]/g, '') // Remove whitespace and common punctuation
+    .replace(/[\s.,!?'"~\-_]/g, '') // Remove whitespace and common punctuation
     .replace(/[ㄱ-ㅎㅏ-ㅣ]/g, ''); // Remove standalone Korean consonants/vowels
 }
 

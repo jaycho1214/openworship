@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -775,6 +776,7 @@ export function BibleVersePicker({
                         )}
                       >
                         {slide.lines.map((line, lineIdx) => (
+                          // eslint-disable-next-line react/no-array-index-key -- lines have no stable ID
                           <p key={lineIdx} className="truncate">
                             {line}
                           </p>

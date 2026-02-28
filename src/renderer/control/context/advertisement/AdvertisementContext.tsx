@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import {
   createContext,
   useContext,
@@ -214,6 +215,7 @@ export function AdvertisementProvider({
       }
       return false;
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hideAdvertisement is stable
     [currentAd],
   );
 

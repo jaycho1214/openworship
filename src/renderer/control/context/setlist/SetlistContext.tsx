@@ -1,4 +1,5 @@
 /* eslint-disable no-underscore-dangle */
+/* eslint-disable no-console */
 import {
   createContext,
   useContext,
@@ -553,6 +554,7 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
         });
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- currentSessionId is read from ref-like state
     [currentSessionId],
   );
 

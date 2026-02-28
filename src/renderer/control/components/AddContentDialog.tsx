@@ -135,6 +135,7 @@ export function AddContentDialog({
       setAnnouncementContent('');
       loadRecentItems();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load recent items when dialog opens
   }, [open, defaultTab]);
 
   // Focus search input when switching to search mode
@@ -423,7 +424,7 @@ export function AddContentDialog({
                   </div>
                   {recentSongs.slice(0, 5).map((item, index) => (
                     <button
-                      key={`recent-song-${index}`}
+                      key={`recent-song-${index}`} // eslint-disable-line react/no-array-index-key -- recent items have no stable ID
                       onClick={() => handleAddRecentItem(item)}
                       className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-muted transition-colors group"
                     >
@@ -463,7 +464,7 @@ export function AddContentDialog({
                 <div className="flex flex-wrap gap-1">
                   {recentBible.slice(0, 4).map((item, index) => (
                     <button
-                      key={`recent-bible-${index}`}
+                      key={`recent-bible-${index}`} // eslint-disable-line react/no-array-index-key -- recent items have no stable ID
                       onClick={() => handleAddRecentItem(item)}
                       className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-muted hover:bg-muted/80 transition-colors"
                     >

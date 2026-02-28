@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Save,
@@ -500,7 +501,7 @@ export default function SongEditor({
                           <div className="space-y-0.5">
                             {slide.lines.map((line, lineIndex) => (
                               <p
-                                key={lineIndex}
+                                key={lineIndex} // eslint-disable-line react/no-array-index-key -- lines have no stable ID
                                 className="text-xs text-foreground leading-relaxed"
                               >
                                 {line || (
