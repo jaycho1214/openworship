@@ -32,6 +32,7 @@ export const ko = {
     '가사를 입력하세요...\n\n[Verse], [Chorus] 등의 섹션 마커를 사용하면\n자동으로 새 슬라이드가 생성됩니다.',
   lyricsHint:
     '[Verse], [Chorus] 등의 섹션 마커로 슬라이드 구분 | 빈 줄로 슬라이드 구분',
+  slideCardHint: 'Tab으로 나누기 · Backspace로 합치기',
   slidePreview: '슬라이드 미리보기',
   noSlides: '가사를 입력하면 슬라이드가 생성됩니다',
 
@@ -218,8 +219,8 @@ export const ko = {
   untitledSong: '제목 없음',
   addAnother: '추가',
   alsoAddToSession: '현재 세션에도 추가',
-  existingSongFound: '동일한 제목의 곡이 있습니다',
-  useExistingLyrics: '기존 가사 사용',
+  existingSongFound: '유사한 곡 발견',
+  useExistingLyrics: '사용',
 
   // Library Drawer
   browseLibrary: '라이브러리 탐색',

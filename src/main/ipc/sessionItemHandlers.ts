@@ -77,23 +77,16 @@ const dbToSetlistItem = (db: DbSessionItem): SetlistItem => {
 /**
  * Generate slides for an announcement
  */
-const announcementToSlides = (title: string, content: string): Slide[] => {
-  // Split content by double newlines for multiple slides
-  const paragraphs = content.split(/\n\n+/).filter((p) => p.trim());
-
-  if (paragraphs.length === 0) {
-    return [
-      {
-        id: uuidv4(),
-        lines: [title],
-        section: 'Announcement',
-      },
-    ];
+const announcementToSlides = (_title: string, content: string): Slide[] => {
+  const text = content.trim();
+  if (!text) {
+    return [{ id: uuidv4(), lines: [''], section: 'Announcement' }];
   }
 
+  const paragraphs = text.split(/\n\n+/).filter((p) => p.trim());
   return paragraphs.map((paragraph, index) => ({
     id: uuidv4(),
-    lines: index === 0 ? [title, paragraph] : [paragraph],
+    lines: paragraph.split('\n').filter((line) => line.trim()),
     section: index === 0 ? 'Announcement' : undefined,
   }));
 };

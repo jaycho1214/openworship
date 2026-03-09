@@ -125,29 +125,19 @@ interface SetlistProviderProps {
 }
 
 // Helper to convert announcement content to slides
-function announcementToSlides(title: string, content: string): Slide[] {
-  const slides: Slide[] = [];
-
-  // Title slide
-  slides.push({
-    id: generateId(),
-    lines: [title],
-    section: 'Title',
-  });
-
-  // Content slides (split by blank lines)
-  if (content.trim()) {
-    const paragraphs = content.split(/\n\s*\n/).filter((p) => p.trim());
-    paragraphs.forEach((paragraph, index) => {
-      slides.push({
-        id: generateId(),
-        lines: paragraph.split('\n').filter((line) => line.trim()),
-        section: `Paragraph ${index + 1}`,
-      });
-    });
+function announcementToSlides(_title: string, content: string): Slide[] {
+  const text = content.trim();
+  if (!text) {
+    return [{ id: generateId(), lines: [''], section: 'Announcement' }];
   }
 
-  return slides;
+  // Split by blank lines into slides
+  const paragraphs = text.split(/\n\s*\n/).filter((p) => p.trim());
+  return paragraphs.map((paragraph, index) => ({
+    id: generateId(),
+    lines: paragraph.split('\n').filter((line) => line.trim()),
+    section: index === 0 ? 'Announcement' : undefined,
+  }));
 }
 
 // Helper to convert DbSessionItem to SetlistItem

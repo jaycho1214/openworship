@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import ProjectionRenderer from './components/ProjectionRenderer';
 import {
@@ -396,6 +396,42 @@ export default function App() {
     };
   }, [loadedFontsRef]);
 
+  // Deep merge projection settings with defaults to ensure all nested properties exist
+  // Matches the same merge done in LivePreview for consistent rendering
+  const mergedSettings = useMemo(
+    () => ({
+      ...defaultProjectionSettings,
+      ...projectionSettings,
+      textShadow: {
+        ...defaultProjectionSettings.textShadow,
+        ...projectionSettings.textShadow,
+      },
+      textOutline: {
+        ...defaultProjectionSettings.textOutline,
+        ...projectionSettings.textOutline,
+      },
+      textAlign: {
+        ...defaultProjectionSettings.textAlign,
+        ...projectionSettings.textAlign,
+      },
+      padding: {
+        top:
+          projectionSettings.padding?.top ??
+          defaultProjectionSettings.padding!.top,
+        bottom:
+          projectionSettings.padding?.bottom ??
+          defaultProjectionSettings.padding!.bottom,
+        left:
+          projectionSettings.padding?.left ??
+          defaultProjectionSettings.padding!.left,
+        right:
+          projectionSettings.padding?.right ??
+          defaultProjectionSettings.padding!.right,
+      },
+    }),
+    [projectionSettings],
+  );
+
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black select-none cursor-none">
       <ProjectionRenderer
@@ -405,7 +441,7 @@ export default function App() {
         backgroundType={backgroundType}
         lines={currentLines}
         fontFamily={fontFamily}
-        settings={projectionSettings}
+        settings={mergedSettings}
         slideFontSize={slideFontSize}
         slideOverrides={slideOverrides}
         isBlank={isBlank}

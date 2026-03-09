@@ -111,13 +111,39 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
     }
   }, [currentSlide, currentContentType]);
 
-  // Update projection blank state
+  // Track previous blank state for re-sync on un-blank
+  const prevIsBlankRef = useRef(false);
+
+  // Update projection blank state and re-sync background when showing screen
   useEffect(() => {
     const electron = getElectron();
-    if (electron) {
-      electron.projection.setBlank(isBlank);
+    if (!electron) return;
+
+    electron.projection.setBlank(isBlank);
+
+    // Re-sync background when transitioning from blank to visible
+    // This ensures projection matches control after changes made while blanked
+    if (prevIsBlankRef.current && !isBlank) {
+      if (backgroundType === 'video' && currentVideoPath) {
+        electron.projection.setVideo(currentVideoPath);
+      } else if (backgroundType === 'image' && currentImagePath) {
+        electron.projection.setImage(currentImagePath);
+      } else if (backgroundType === 'color') {
+        electron.projection.setBackgroundColor(backgroundColor);
+      }
+      if (fontFamily && fontFamily !== 'inherit') {
+        electron.projection.setFont(fontFamily);
+      }
     }
-  }, [isBlank]);
+    prevIsBlankRef.current = isBlank;
+  }, [
+    isBlank,
+    backgroundType,
+    currentVideoPath,
+    currentImagePath,
+    backgroundColor,
+    fontFamily,
+  ]);
 
   // Update projection verse hidden state
   useEffect(() => {

@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Plus,
   X,
@@ -23,7 +23,6 @@ import {
 } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import {
@@ -34,7 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { parseLyricsToSlides } from '../../shared/utils/lyricsParser';
 import {
   isOcrFile,
   isPdfFile,
@@ -54,7 +52,7 @@ interface ManualSongEntry {
   lyrics: string;
 }
 
-// Type for existing song found by title
+// Type for existing song found by search
 interface ExistingSong {
   id: string;
   title: string;
@@ -103,10 +101,13 @@ export default function AddSongDialog({
   const [activeEntryIndex, setActiveEntryIndex] = useState(0);
 
   // Duplicate detection state
-  const [duplicates, setDuplicates] = useState<
-    Record<string, ExistingSong | null>
-  >({});
+  const [duplicates, setDuplicates] = useState<Record<string, ExistingSong[]>>(
+    {},
+  );
   const [checkingDuplicate, setCheckingDuplicate] = useState<string | null>(
+    null,
+  );
+  const [expandedDuplicate, setExpandedDuplicate] = useState<string | null>(
     null,
   );
 
@@ -129,6 +130,10 @@ export default function AddSongDialog({
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Card-based lyrics editing state
+  const [slideCards, setSlideCards] = useState<string[]>(['']);
+  const cardRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
   // Check if API key is set and load sessions on mount
   useEffect(() => {
@@ -172,8 +177,6 @@ export default function AddSongDialog({
 
   // Current manual entry
   const currentEntry = manualEntries[activeEntryIndex] || manualEntries[0];
-  const previewSlides = parseLyricsToSlides(currentEntry?.lyrics || '');
-
   // Valid manual entries count
   const validManualEntries = manualEntries.filter(
     (e) => e.title.trim() && e.lyrics.trim(),
@@ -186,6 +189,7 @@ export default function AddSongDialog({
       setActiveEntryIndex(0);
       setError(null);
       setDuplicates({});
+      setExpandedDuplicate(null);
       setShowDragOverlay(false);
       dragCounterRef.current = 0;
       // Default to current session if there is one, otherwise library-only
@@ -194,12 +198,13 @@ export default function AddSongDialog({
     }
   }, [open, currentSessionId]);
 
-  // Check for duplicate title with debounce
+  // Check for duplicates by title and lyrics with debounce
   useEffect(() => {
     const currentTitle = currentEntry?.title?.trim();
+    const currentLyrics = currentEntry?.lyrics?.trim();
     const entryId = currentEntry?.id;
 
-    if (!currentTitle || !entryId) {
+    if ((!currentTitle && !currentLyrics) || !entryId) {
       if (entryId && duplicates[entryId]) {
         setDuplicates((prev) => {
           const next = { ...prev };
@@ -210,6 +215,12 @@ export default function AddSongDialog({
       return;
     }
 
+    // Use title for search, or first meaningful line of lyrics
+    const searchQuery =
+      currentTitle ||
+      (currentLyrics ? currentLyrics.split('\n')[0].substring(0, 50) : '');
+    if (!searchQuery) return;
+
     // Debounce the check
     const timeoutId = setTimeout(async () => {
       const electron = getElectron();
@@ -217,11 +228,11 @@ export default function AddSongDialog({
 
       setCheckingDuplicate(entryId);
       try {
-        const result = await electron.library.findByTitle(currentTitle);
-        if (result.success && result.data) {
+        const result = await electron.library.search(searchQuery);
+        if (result.success && result.data && result.data.length > 0) {
           setDuplicates((prev) => ({
             ...prev,
-            [entryId]: result.data,
+            [entryId]: result.data.slice(0, 5), // Limit to 5 candidates
           }));
         } else {
           setDuplicates((prev) => {
@@ -238,8 +249,8 @@ export default function AddSongDialog({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only check duplicates when title/id change
-  }, [currentEntry?.title, currentEntry?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only check duplicates when title/lyrics/id change
+  }, [currentEntry?.title, currentEntry?.lyrics, currentEntry?.id]);
 
   // Add new manual entry
   const handleAddManualEntry = () => {
@@ -260,22 +271,21 @@ export default function AddSongDialog({
     }
   };
 
-  // Update manual entry
-  const handleUpdateEntry = (
-    index: number,
-    field: 'title' | 'lyrics',
-    value: string,
-  ) => {
-    const newEntries = [...manualEntries];
-    newEntries[index] = { ...newEntries[index], [field]: value };
-    setManualEntries(newEntries);
-  };
+  // Update manual entry (uses functional update to avoid stale closures)
+  const handleUpdateEntry = useCallback(
+    (index: number, field: 'title' | 'lyrics', value: string) => {
+      setManualEntries((prev) => {
+        const newEntries = [...prev];
+        newEntries[index] = { ...newEntries[index], [field]: value };
+        return newEntries;
+      });
+    },
+    [],
+  );
 
-  // Copy lyrics from existing song
-  const handleCopyExistingLyrics = () => {
+  // Copy lyrics from an existing song candidate
+  const handleCopyExistingLyrics = (song: ExistingSong) => {
     if (!currentEntry) return;
-    const existingSong = duplicates[currentEntry.id];
-    if (!existingSong) return;
 
     const entryIndex = manualEntries.findIndex((e) => e.id === currentEntry.id);
     if (entryIndex === -1) return;
@@ -283,10 +293,190 @@ export default function AddSongDialog({
     const newEntries = [...manualEntries];
     newEntries[entryIndex] = {
       ...newEntries[entryIndex],
-      lyrics: existingSong.lyrics,
+      title: song.title,
+      lyrics: song.lyrics,
     };
     setManualEntries(newEntries);
   };
+
+  // Sync slideCards from current entry's lyrics when switching entries
+  const currentEntryId = currentEntry?.id;
+  const currentEntryLyrics = currentEntry?.lyrics;
+  useEffect(() => {
+    const lyrics = currentEntryLyrics || '';
+    if (lyrics.trim()) {
+      const cards = lyrics.split(/\n\n+/).filter((c) => c.trim());
+      setSlideCards(cards.length > 0 ? cards : ['']);
+    } else {
+      setSlideCards(['']);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only sync when switching entries
+  }, [activeEntryIndex, currentEntryId]);
+
+  // Update lyrics from card changes
+  const updateLyricsFromCards = useCallback(
+    (cards: string[]) => {
+      setSlideCards(cards);
+      const lyrics = cards
+        .map((c) => c.trim())
+        .filter(Boolean)
+        .join('\n\n');
+      handleUpdateEntry(activeEntryIndex, 'lyrics', lyrics);
+    },
+    [activeEntryIndex], // eslint-disable-line react-hooks/exhaustive-deps -- handleUpdateEntry is stable
+  );
+
+  // Update a single card's content
+  const handleCardChange = useCallback(
+    (index: number, value: string) => {
+      const newCards = [...slideCards];
+      newCards[index] = value;
+      updateLyricsFromCards(newCards);
+    },
+    [slideCards, updateLyricsFromCards],
+  );
+
+  // Handle keyboard shortcuts in cards
+  const handleCardKeyDown = useCallback(
+    (index: number, e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const textarea = e.currentTarget;
+
+      // Tab to split card at cursor
+      if (e.key === 'Tab' && !e.shiftKey) {
+        e.preventDefault();
+        const { selectionStart } = textarea;
+        const before = slideCards[index].substring(0, selectionStart);
+        const after = slideCards[index].substring(selectionStart);
+
+        const newCards = [...slideCards];
+        newCards[index] = before.trimEnd();
+        newCards.splice(index + 1, 0, after.trimStart());
+        updateLyricsFromCards(newCards);
+
+        // Focus the new card
+        requestAnimationFrame(() => {
+          const newCard = cardRefs.current[index + 1];
+          newCard?.focus();
+          newCard?.setSelectionRange(0, 0);
+        });
+      }
+
+      // Shift+Tab to merge with previous card
+      if (e.key === 'Tab' && e.shiftKey && index > 0) {
+        e.preventDefault();
+        const prevContent = slideCards[index - 1];
+        const cursorPos = prevContent.length;
+
+        const newCards = [...slideCards];
+        newCards[index - 1] =
+          prevContent + (slideCards[index] ? `\n${slideCards[index]}` : '');
+        newCards.splice(index, 1);
+        updateLyricsFromCards(newCards);
+
+        requestAnimationFrame(() => {
+          const prev = cardRefs.current[index - 1];
+          prev?.focus();
+          prev?.setSelectionRange(cursorPos, cursorPos);
+        });
+      }
+
+      // Backspace at beginning of card to merge with previous
+      if (
+        e.key === 'Backspace' &&
+        textarea.selectionStart === 0 &&
+        textarea.selectionEnd === 0 &&
+        index > 0
+      ) {
+        e.preventDefault();
+        const prevContent = slideCards[index - 1];
+        const cursorPos = prevContent.length;
+
+        const newCards = [...slideCards];
+        newCards[index - 1] =
+          prevContent + (slideCards[index] ? `\n${slideCards[index]}` : '');
+        newCards.splice(index, 1);
+        updateLyricsFromCards(newCards);
+
+        requestAnimationFrame(() => {
+          const prev = cardRefs.current[index - 1];
+          prev?.focus();
+          prev?.setSelectionRange(cursorPos, cursorPos);
+        });
+      }
+    },
+    [slideCards, updateLyricsFromCards],
+  );
+
+  // Handle paste - auto-split on blank lines
+  const handleCardPaste = useCallback(
+    (index: number, e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      // Check for image paste first (handled by dialog-level paste handler)
+      const items = e.clipboardData?.items;
+      if (items) {
+        for (const item of items) {
+          if (item.type.startsWith('image/')) return; // Let dialog handler deal with images
+        }
+      }
+
+      const text = e.clipboardData.getData('text');
+      if (!text.includes('\n\n')) return; // No blank lines, let default paste handle it
+
+      e.preventDefault();
+      const textarea = e.currentTarget;
+      const { selectionStart, selectionEnd } = textarea;
+
+      // Split pasted text by blank lines
+      const pastedCards = text
+        .split(/\n\n+/)
+        .map((c) => c.trim())
+        .filter(Boolean);
+      if (pastedCards.length <= 1) {
+        // Single segment, insert normally
+        document.execCommand('insertText', false, text);
+        return;
+      }
+
+      // Merge with existing content around cursor
+      const before = slideCards[index].substring(0, selectionStart);
+      const after = slideCards[index].substring(selectionEnd);
+
+      pastedCards[0] = (before + pastedCards[0]).trim();
+      pastedCards[pastedCards.length - 1] = (
+        pastedCards[pastedCards.length - 1] + after
+      ).trim();
+
+      const newCards = [...slideCards];
+      newCards.splice(index, 1, ...pastedCards);
+      updateLyricsFromCards(newCards);
+
+      // Focus last pasted card
+      const lastIndex = index + pastedCards.length - 1;
+      requestAnimationFrame(() => {
+        cardRefs.current[lastIndex]?.focus();
+      });
+    },
+    [slideCards, updateLyricsFromCards],
+  );
+
+  // Remove a card
+  const handleRemoveCard = useCallback(
+    (index: number) => {
+      if (slideCards.length <= 1) return;
+      const newCards = slideCards.filter((_, i) => i !== index);
+      updateLyricsFromCards(newCards);
+      const focusIndex = Math.min(index, newCards.length - 1);
+      requestAnimationFrame(() => {
+        cardRefs.current[focusIndex]?.focus();
+      });
+    },
+    [slideCards, updateLyricsFromCards],
+  );
+
+  // Count non-empty cards for display
+  const filledCardCount = useMemo(
+    () => slideCards.filter((c) => c.trim()).length,
+    [slideCards],
+  );
 
   // Process image/PDF files with OCR
   const processFiles = useCallback(
@@ -359,19 +549,10 @@ export default function AddSongDialog({
           });
 
           if (item.success && item.data) {
-            // Check library for existing song
-            const libraryResult = await electron.library.findByTitle(
-              item.data.title,
-            );
-            const songData =
-              libraryResult.success && libraryResult.data
-                ? libraryResult.data
-                : item.data;
-
             newEntries.push({
               id: uuidv4(),
-              title: songData.title || t('untitledSong'),
-              lyrics: songData.lyrics || '',
+              title: item.data.title || t('untitledSong'),
+              lyrics: item.data.lyrics || '',
             });
           } else {
             setError(item.error || t('ocrError'));
@@ -530,7 +711,7 @@ export default function AddSongDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-5xl h-[85vh] bg-background border-border p-0 overflow-hidden gap-0"
+        className="max-w-2xl h-[85vh] bg-background border-border p-0 overflow-hidden gap-0"
         onInteractOutside={(e) => e.preventDefault()}
         onDragEnter={handleDialogDragEnter}
         onDragLeave={handleDialogDragLeave}
@@ -628,8 +809,8 @@ export default function AddSongDialog({
 
         {/* Song Entry Form */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Left: Song List + Editor */}
-          <div className="flex-1 flex flex-col border-r border-border/50 min-w-0">
+          {/* Song List + Editor */}
+          <div className="flex-1 flex flex-col min-w-0">
             {/* Song entries list */}
             <div className="px-4 py-3 border-b border-border/50 flex items-center gap-2">
               <div className="flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
@@ -716,114 +897,130 @@ export default function AddSongDialog({
                   )}
                 </div>
 
-                {/* Duplicate Song Warning */}
-                {duplicates[currentEntry?.id] && (
+                {/* Similar Songs Found */}
+                {duplicates[currentEntry?.id]?.length > 0 && (
                   <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 overflow-hidden">
-                    <div className="px-3 py-2 flex items-center justify-between border-b border-amber-500/20 bg-amber-500/10">
-                      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                        <BookOpen className="w-3.5 h-3.5" />
-                        <span className="text-xs font-medium">
-                          {t('existingSongFound')}
-                        </span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-[10px] text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-500/10"
-                        onClick={handleCopyExistingLyrics}
-                      >
-                        <Copy className="w-3 h-3 mr-1" />
-                        {t('useExistingLyrics')}
-                      </Button>
+                    <div className="px-3 py-2 flex items-center gap-2 border-b border-amber-500/20 bg-amber-500/10">
+                      <BookOpen className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                      <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                        {t('existingSongFound')} (
+                        {duplicates[currentEntry?.id].length})
+                      </span>
                     </div>
-                    <div className="px-3 py-2 max-h-24 overflow-y-auto">
-                      <p className="text-[10px] text-muted-foreground whitespace-pre-line line-clamp-4 font-mono leading-relaxed">
-                        {duplicates[currentEntry?.id]?.lyrics.substring(0, 200)}
-                        {(duplicates[currentEntry?.id]?.lyrics?.length || 0) >
-                          200 && '...'}
-                      </p>
+                    <div className="max-h-40 overflow-y-auto">
+                      {duplicates[currentEntry?.id].map((song) => (
+                        <div
+                          key={song.id}
+                          className="border-b border-amber-500/10 last:border-b-0"
+                        >
+                          <button
+                            type="button"
+                            className="w-full px-3 py-2 flex items-center justify-between hover:bg-amber-500/5 transition-colors text-left"
+                            onClick={() =>
+                              setExpandedDuplicate(
+                                expandedDuplicate === song.id ? null : song.id,
+                              )
+                            }
+                          >
+                            <span className="text-xs font-medium text-foreground truncate flex-1 mr-2">
+                              {song.title}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 px-1.5 text-[10px] text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-500/10 shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopyExistingLyrics(song);
+                              }}
+                            >
+                              <Copy className="w-3 h-3 mr-1" />
+                              {t('useExistingLyrics')}
+                            </Button>
+                          </button>
+                          {expandedDuplicate === song.id && (
+                            <div className="px-3 pb-2">
+                              <p className="text-[10px] text-muted-foreground whitespace-pre-line font-mono leading-relaxed">
+                                {song.lyrics}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
               </div>
 
               <div className="flex-1 flex flex-col min-h-0">
-                <Label
-                  htmlFor="lyrics"
-                  className="text-xs text-muted-foreground mb-1.5"
-                >
-                  {t('lyrics')}
-                </Label>
-                <Textarea
-                  id="lyrics"
-                  value={currentEntry?.lyrics || ''}
-                  onChange={(e) =>
-                    handleUpdateEntry(
-                      activeEntryIndex,
-                      'lyrics',
-                      e.target.value,
-                    )
-                  }
-                  placeholder={t('lyricsPlaceholder')}
-                  className="flex-1 resize-none bg-muted/50 border-border text-foreground placeholder:text-muted-foreground font-mono text-sm leading-relaxed"
-                />
-                <p className="text-[10px] text-muted-foreground mt-2">
-                  {t('lyricsHint')}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Preview */}
-          <div className="w-80 flex flex-col bg-card/50 shrink-0">
-            <div className="px-4 py-3 border-b border-border/50">
-              <h3 className="text-xs font-medium text-muted-foreground">
-                {t('slidePreview')} ({previewSlides.length} {t('slides')})
-              </h3>
-            </div>
-            <ScrollArea className="flex-1">
-              <div className="p-3 space-y-2 w-full">
-                {previewSlides.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-xs text-muted-foreground">
-                      {t('noSlides')}
-                    </p>
-                  </div>
-                ) : (
-                  previewSlides.map((slide, index) => (
-                    <div
-                      key={slide.id}
-                      className="p-3 rounded-lg bg-muted/30 border border-border/30"
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                <div className="flex items-center justify-between mb-1.5">
+                  <Label className="text-xs text-muted-foreground">
+                    {t('lyrics')}{' '}
+                    {filledCardCount > 0 && (
+                      <span className="text-muted-foreground/60">
+                        ({filledCardCount} {t('slides')})
+                      </span>
+                    )}
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground">
+                    {t('slideCardHint')}
+                  </p>
+                </div>
+                <ScrollArea className="flex-1">
+                  <div className="space-y-1.5 p-1 pr-2 pb-2">
+                    {slideCards.map((card, index) => (
+                      <div
+                        key={index} // eslint-disable-line react/no-array-index-key -- positional cards
+                        className="group relative flex items-start gap-1.5"
+                      >
+                        <span className="text-[10px] font-mono font-medium text-muted-foreground/50 w-5 text-right pt-2 shrink-0 select-none">
                           {index + 1}
                         </span>
-                      </div>
-                      <div className="space-y-0.5">
-                        {slide.lines.map((line, lineIndex) => (
-                          <p
-                            key={lineIndex} // eslint-disable-line react/no-array-index-key -- lines have no stable ID
-                            className="text-xs text-foreground leading-relaxed"
-                          >
-                            {line || (
-                              <span className="text-muted-foreground">—</span>
+                        <div className="flex-1 relative">
+                          <textarea
+                            ref={(el) => {
+                              cardRefs.current[index] = el;
+                            }}
+                            value={card}
+                            onChange={(e) =>
+                              handleCardChange(index, e.target.value)
+                            }
+                            onKeyDown={(e) => handleCardKeyDown(index, e)}
+                            onPaste={(e) => handleCardPaste(index, e)}
+                            rows={Math.max(1, card.split('\n').length || 1)}
+                            className={cn(
+                              'w-full resize-none rounded-md border bg-muted/20 px-3 py-1.5 text-sm font-mono leading-relaxed text-foreground placeholder:text-muted-foreground/40',
+                              'focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring focus:bg-muted/40',
+                              'border-border/30 hover:border-border/60 transition-colors',
                             )}
-                          </p>
-                        ))}
+                            placeholder={
+                              index === 0 ? t('lyricsPlaceholder') : ''
+                            }
+                          />
+                        </div>
+                        {slideCards.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCard(index)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity pt-1.5 px-0.5 shrink-0"
+                            tabIndex={-1}
+                          >
+                            <X className="w-3 h-3 text-muted-foreground/40 hover:text-muted-foreground" />
+                          </button>
+                        )}
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))}
+                  </div>
+                </ScrollArea>
               </div>
-            </ScrollArea>
+            </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-border/50 flex items-center justify-between gap-4">
+        <div className="px-6 py-3 border-t border-border/50 flex flex-col gap-3 shrink-0">
           {/* Session Selection */}
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex items-center gap-2">
             <Label className="text-xs text-muted-foreground whitespace-nowrap">
               {t('addTo')}:
             </Label>
@@ -834,7 +1031,7 @@ export default function AddSongDialog({
               }
               disabled={isLoadingSessions}
             >
-              <SelectTrigger className="h-8 text-xs w-48">
+              <SelectTrigger className="h-8 text-xs flex-1 min-w-0">
                 <SelectValue placeholder={t('selectDestination')} />
               </SelectTrigger>
               <SelectContent>
@@ -863,30 +1060,28 @@ export default function AddSongDialog({
                 ))}
               </SelectContent>
             </Select>
-
-            {/* New session name input */}
             {sessionTarget === 'new-session' && (
               <Input
                 value={newSessionName}
                 onChange={(e) => setNewSessionName(e.target.value)}
                 placeholder={t('newSessionName')}
-                className="h-8 text-xs w-40"
+                className="h-8 text-xs flex-1 min-w-0"
               />
             )}
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 shrink-0">
+          <div className="flex items-center justify-end gap-2">
             <Button
               variant="ghost"
+              size="sm"
               onClick={() => onOpenChange(false)}
               className="text-muted-foreground hover:text-foreground"
             >
-              <X className="w-4 h-4 mr-1" />
               {t('cancel')}
             </Button>
-
             <Button
+              size="sm"
               onClick={handleSave}
               disabled={!canSave || isSaving}
               className="bg-foreground text-background hover:bg-foreground/90 font-semibold"

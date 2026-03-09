@@ -31,6 +31,7 @@ export const en = {
   lyricsPlaceholder:
     'Enter lyrics here...\n\nUse section markers like [Verse], [Chorus]\nto automatically create new slides.',
   lyricsHint: 'Use [Verse], [Chorus] markers or blank lines to separate slides',
+  slideCardHint: 'Tab to split · Backspace to merge',
   slidePreview: 'Slide Preview',
   noSlides: 'Slides will appear when you enter lyrics',
 
@@ -218,8 +219,8 @@ export const en = {
   untitledSong: 'Untitled',
   addAnother: 'Add',
   alsoAddToSession: 'Also add to current session',
-  existingSongFound: 'Existing song with same title',
-  useExistingLyrics: 'Use existing lyrics',
+  existingSongFound: 'Similar songs found',
+  useExistingLyrics: 'Use',
 
   // Library Drawer
   browseLibrary: 'Browse Library',

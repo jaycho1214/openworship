@@ -83,27 +83,23 @@ export default function ProjectionRenderer({
         />
       )}
 
-      {/* Lyrics Overlay */}
-      {!isBlank && (
-        <LyricsOverlay
-          lines={lines}
-          fontFamily={fontFamily}
-          settings={settings}
-          slideFontSize={slideFontSize}
-          slideOverrides={slideOverrides}
-          isHidden={isVerseHidden}
-          isBannerAdVisible={
-            isAdVisible && currentAd?.displayStyle === 'banner'
-          }
-          bannerAdPosition={adDisplaySettings.position}
-          bannerAdPadding={adDisplaySettings.padding}
-          bannerAdFontSize={currentAd?.fontSize}
-          frame={frame}
-          contentType={contentType}
-          lineRoles={lineRoles}
-          contentTypeTextSettings={contentTypeTextSettings}
-        />
-      )}
+      {/* Lyrics Overlay - always rendered; BlankScreen (z-50) covers it visually */}
+      <LyricsOverlay
+        lines={lines}
+        fontFamily={fontFamily}
+        settings={settings}
+        slideFontSize={slideFontSize}
+        slideOverrides={slideOverrides}
+        isHidden={isVerseHidden}
+        isBannerAdVisible={isAdVisible && currentAd?.displayStyle === 'banner'}
+        bannerAdPosition={adDisplaySettings.position}
+        bannerAdPadding={adDisplaySettings.padding}
+        bannerAdFontSize={currentAd?.fontSize}
+        frame={frame}
+        contentType={contentType}
+        lineRoles={lineRoles}
+        contentTypeTextSettings={contentTypeTextSettings}
+      />
 
       {/* Advertisement Overlay */}
       <AdvertisementOverlay

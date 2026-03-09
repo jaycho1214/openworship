@@ -99,7 +99,6 @@ export function AddContentDialog({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Announcement state
-  const [announcementTitle, setAnnouncementTitle] = useState('');
   const [announcementContent, setAnnouncementContent] = useState('');
 
   // Filter recent items by current mode
@@ -131,7 +130,6 @@ export function AddContentDialog({
       );
       setSearchQuery('');
       setSearchResults([]);
-      setAnnouncementTitle('');
       setAnnouncementContent('');
       loadRecentItems();
     }
@@ -305,15 +303,21 @@ export function AddContentDialog({
 
   // Add announcement to setlist
   const handleAddAnnouncement = useCallback(() => {
-    if (!announcementTitle.trim()) return;
+    const trimmed = announcementContent.trim();
+    if (!trimmed) return;
+
+    // Derive title from first line of content
+    const firstLine =
+      trimmed.split('\n')[0].substring(0, 50) ||
+      t('contentAnnouncement', 'Announcement');
 
     onAddItem({
       type: 'announcement',
-      title: announcementTitle.trim(),
-      content: announcementContent.trim(),
+      title: firstLine,
+      content: trimmed,
     });
     onOpenChange(false);
-  }, [announcementTitle, announcementContent, onAddItem, onOpenChange]);
+  }, [announcementContent, onAddItem, onOpenChange, t]);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
@@ -487,31 +491,17 @@ export function AddContentDialog({
         {/* Announcement Mode */}
         {mode === 'announcement' && (
           <div className="px-4 pb-4 space-y-3">
-            <div className="space-y-1.5">
-              <Input
-                placeholder={t(
-                  'announcementTitlePlaceholder',
-                  'Announcement title',
-                )}
-                value={announcementTitle}
-                onChange={(e) => setAnnouncementTitle(e.target.value)}
-                className="h-9 text-sm"
-                autoFocus
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Textarea
-                placeholder={t(
-                  'announcementContentPlaceholder',
-                  'Content (optional). Separate slides with blank lines.',
-                )}
-                value={announcementContent}
-                onChange={(e) => setAnnouncementContent(e.target.value)}
-                rows={3}
-                className="resize-none text-sm"
-              />
-            </div>
+            <Textarea
+              placeholder={t(
+                'announcementContentPlaceholder',
+                'Enter announcement text. Separate slides with blank lines.',
+              )}
+              value={announcementContent}
+              onChange={(e) => setAnnouncementContent(e.target.value)}
+              rows={5}
+              className="resize-none text-sm"
+              autoFocus
+            />
 
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={handleClose}>
@@ -520,7 +510,7 @@ export function AddContentDialog({
               <Button
                 size="sm"
                 onClick={handleAddAnnouncement}
-                disabled={!announcementTitle.trim()}
+                disabled={!announcementContent.trim()}
               >
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
                 {t('add', 'Add')}

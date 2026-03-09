@@ -195,7 +195,11 @@ export default function LivePreview() {
                 currentAd={currentAd}
                 adDisplaySettings={adDisplaySettings}
                 frame={currentFrame}
-                contentType={currentItem?.type}
+                slideFontSize={
+                  currentSlide?.fontSize ?? currentSlide?.overrides?.fontSize
+                }
+                slideOverrides={currentSlide?.overrides}
+                contentType={currentItem?.type ?? 'song'}
                 lineRoles={currentSlide?.lineRoles}
                 contentTypeTextSettings={contentTypeTextSettings ?? undefined}
               />
