@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Loader2,
@@ -48,6 +48,18 @@ import { SettingsRow } from '../components/SettingsRow';
 
 // Helper to safely access electron API
 const getElectron = () => (window as any).electron;
+
+// Convert file path to app:// media URL for video preview
+function toAppMediaUrl(filePath: string): string {
+  if (filePath.startsWith('app://') || filePath.startsWith('file://')) {
+    return filePath;
+  }
+  const encodedPath = filePath
+    .split(/[/\\]/)
+    .map((part) => encodeURIComponent(part))
+    .join('/');
+  return `app://media${encodedPath.startsWith('/') ? '' : '/'}${encodedPath}`;
+}
 
 type ContentTypeTab = 'song' | 'bible' | 'announcement';
 
@@ -351,8 +363,24 @@ export function DisplaySettingsTab({
   const [isAddingVideo, setIsAddingVideo] = useState(false);
   const [isFontsOpen, setIsFontsOpen] = useState(true);
   const [isVideosOpen, setIsVideosOpen] = useState(true);
+  const [hoveredVideo, setHoveredVideo] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleVideoMouseEnter = useCallback((videoPath: string) => {
+    hoverTimerRef.current = setTimeout(() => {
+      setHoveredVideo(videoPath);
+    }, 300);
+  }, []);
+
+  const handleVideoMouseLeave = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    setHoveredVideo(null);
+  }, []);
 
   // Load settings on mount
   useEffect(() => {
@@ -850,19 +878,35 @@ export function DisplaySettingsTab({
               {userVideos.map((videoName, index) => (
                 <div
                   key={videos[index]}
-                  className="flex items-start gap-2 px-2 py-1.5 rounded bg-muted/30 group"
+                  className="relative"
+                  onMouseEnter={() => handleVideoMouseEnter(videos[index])}
+                  onMouseLeave={handleVideoMouseLeave}
                 >
-                  <Video className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                  <span className="text-xs text-foreground flex-1 break-all">
-                    {videoName}
-                  </span>
-                  <button
-                    onClick={() => handleDeleteVideo(videos[index])}
-                    className="p-1 text-muted-foreground hover:text-red-500 transition-all flex-shrink-0"
-                    title={t('deleteVideo')}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-start gap-2 px-2 py-1.5 rounded bg-muted/30 group">
+                    <Video className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    <span className="text-xs text-foreground flex-1 break-all">
+                      {videoName}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteVideo(videos[index])}
+                      className="p-1 text-muted-foreground hover:text-red-500 transition-all flex-shrink-0"
+                      title={t('deleteVideo')}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {hoveredVideo === videos[index] && (
+                    <div className="mt-1 rounded-lg overflow-hidden border border-border bg-black">
+                      <video
+                        src={toAppMediaUrl(videos[index])}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        className="w-full aspect-video object-cover"
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
