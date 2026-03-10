@@ -135,6 +135,7 @@ export const registerProjectionHandlers = (): void => {
     'projection:backgroundColor',
     'projection:advertisement',
     'projection:frame',
+    'projection:overlayNote',
   ];
   forwardChannels.forEach(forwardToProjection);
 

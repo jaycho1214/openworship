@@ -60,6 +60,7 @@ export type Channels =
   | 'projection:advertisement'
   | 'projection:frame'
   | 'projection:contentTypeText'
+  | 'projection:overlayNote'
   | 'file:open'
   | 'bible:importProgress';
 
@@ -244,6 +245,37 @@ const electronHandler = {
       ipcRenderer.on('projection:closed', subscription);
       return () =>
         ipcRenderer.removeListener('projection:closed', subscription);
+    },
+    // Overlay notes
+    sendOverlayNote: (data: {
+      action: 'show' | 'hide';
+      content?: string;
+      contentType?: 'text' | 'image';
+      imagePath?: string;
+      position?: 'top' | 'bottom';
+    }) => ipcRenderer.send('projection:overlayNote', data),
+    onOverlayNote: (
+      callback: (data: {
+        action: 'show' | 'hide';
+        content?: string;
+        contentType?: 'text' | 'image';
+        imagePath?: string;
+        position?: 'top' | 'bottom';
+      }) => void,
+    ) => {
+      const subscription = (
+        _event: IpcRendererEvent,
+        data: {
+          action: 'show' | 'hide';
+          content?: string;
+          contentType?: 'text' | 'image';
+          imagePath?: string;
+          position?: 'top' | 'bottom';
+        },
+      ) => callback(data);
+      ipcRenderer.on('projection:overlayNote', subscription);
+      return () =>
+        ipcRenderer.removeListener('projection:overlayNote', subscription);
     },
     // Signal that projection window is ready to receive messages
     sendReady: () => ipcRenderer.send('projection:ready'),
@@ -1141,6 +1173,10 @@ const extendedElectronHandler = {
         startVerse?: number;
         endVerse?: number;
         displayMode?: string;
+        noteDisplayMode?: string;
+        noteContentType?: string;
+        imagePath?: string;
+        overlayPosition?: string;
       },
     ): Promise<{
       success: boolean;

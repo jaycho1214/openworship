@@ -28,7 +28,7 @@ import {
   X,
   ChevronLeft,
   BookOpen,
-  Megaphone,
+  StickyNote,
   Plus,
   Copy,
   ChevronsDownUp,
@@ -58,6 +58,7 @@ import {
 import { Song, Slide, SlideOverrides } from '../../shared/types/song';
 import {
   SetlistItem,
+  AnnouncementSetlistItem,
   isSongItem,
   isBibleItem,
   isAnnouncementItem,
@@ -80,13 +81,14 @@ import {
 import SongEditor from './SongEditor';
 import { AddContentDialog } from './AddContentDialog';
 import SlideSettingsDialog from './SlideSettingsDialog';
+import NoteSettingsDialog from './NoteSettingsDialog';
 
 // Constants for item type icons - hoisted to module scope to prevent recreation
 const ITEM_TYPE_ICONS = {
   song: { icon: Music2, color: 'text-blue-500', bg: 'bg-blue-500/10' },
   bible: { icon: BookOpen, color: 'text-amber-500', bg: 'bg-amber-500/10' },
   announcement: {
-    icon: Megaphone,
+    icon: StickyNote,
     color: 'text-green-500',
     bg: 'bg-green-500/10',
   },
@@ -230,8 +232,19 @@ interface SortableItemGroupProps {
   currentSlideIndex: number;
   sectionIndices: number[];
   defaultFontSize: number;
+  isOverlay?: boolean;
+  isOverlayActive?: boolean;
   onSelectSlide: (slideIndex: number) => void;
+  onToggleOverlay?: () => void;
   onEdit?: () => void;
+  onEditNote?: (updates: {
+    title: string;
+    content: string;
+    displayMode: 'slide' | 'overlay';
+    contentType: 'text' | 'image';
+    imagePath?: string;
+    overlayPosition: 'top' | 'bottom';
+  }) => void;
   onDelete: () => void;
   onSaveSlide: (
     slideIndex: number,
@@ -254,8 +267,12 @@ const SortableItemGroup = memo(function SortableItemGroup({
   currentSlideIndex,
   sectionIndices,
   defaultFontSize,
+  isOverlay,
+  isOverlayActive,
   onSelectSlide,
+  onToggleOverlay,
   onEdit,
+  onEditNote,
   onDelete,
   onSaveSlide,
   onDuplicateSlide,
@@ -266,6 +283,7 @@ const SortableItemGroup = memo(function SortableItemGroup({
     slide: Slide;
     index: number;
   } | null>(null);
+  const [isNoteSettingsOpen, setIsNoteSettingsOpen] = useState(false);
 
   const {
     attributes,
@@ -284,6 +302,7 @@ const SortableItemGroup = memo(function SortableItemGroup({
   const slides = getItemSlides(item);
   const { icon: Icon, color, bg } = getItemTypeIcon(item);
   const title = getItemTitle(item, t);
+  const isNote = isAnnouncementItem(item);
 
   // Check if the item has any sections defined
   const hasSections = slides.some((slide) => slide.section);
@@ -297,6 +316,231 @@ const SortableItemGroup = memo(function SortableItemGroup({
     return null;
   };
 
+  // Header row shared by all item types
+  const headerRow = (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          className={cn(
+            'group flex items-center gap-1 rounded-md transition-all',
+            isOverlay && isOverlayActive
+              ? 'bg-amber-500/15'
+              : isCurrentItem
+                ? 'bg-active'
+                : 'hover:bg-muted/50',
+          )}
+        >
+          {/* Drag handle */}
+          <button
+            className="touch-none p-1.5 opacity-50 hover:opacity-100 transition-all cursor-grab active:cursor-grabbing flex-shrink-0"
+            {...attributes}
+            {...listeners}
+            aria-label={t('dragToReorder')}
+          >
+            <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
+
+          {/* Item number */}
+          <span
+            className={cn(
+              'text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded shrink-0',
+              isCurrentItem
+                ? 'text-active-foreground'
+                : 'text-muted-foreground',
+            )}
+          >
+            {itemIndex + 1}
+          </span>
+
+          {/* Type icon */}
+          <div
+            className={cn(
+              'w-5 h-5 rounded flex items-center justify-center shrink-0',
+              isCurrentItem ? 'bg-active-foreground/10' : bg,
+            )}
+          >
+            <Icon
+              className={cn(
+                'w-3 h-3',
+                isCurrentItem ? 'text-active-foreground' : color,
+              )}
+            />
+          </div>
+
+          {/* Title area — varies by type */}
+          {isOverlay ? (
+            // Overlay notes: click to toggle banner
+            <button
+              className="flex-1 flex items-center gap-2 py-2 pr-2 min-w-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleOverlay?.();
+              }}
+            >
+              <p
+                className={cn(
+                  'text-sm truncate flex-1 text-left',
+                  isOverlayActive
+                    ? 'text-amber-600 dark:text-amber-400 font-semibold'
+                    : 'text-foreground font-medium',
+                )}
+              >
+                {title}
+              </p>
+              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0">
+                {isOverlayActive ? t('live') : t('noteDisplayOverlay')}
+              </span>
+            </button>
+          ) : isNote ? (
+            // Slide-mode notes: no collapsible, just a title (slides shown inline below)
+            <div className="flex-1 flex items-center gap-2 py-2 pr-2 min-w-0">
+              <p
+                className={cn(
+                  'text-sm truncate flex-1 text-left',
+                  isCurrentItem
+                    ? 'text-active-foreground font-semibold'
+                    : 'text-foreground font-medium',
+                )}
+              >
+                {title}
+              </p>
+            </div>
+          ) : (
+            // Songs / Bible: collapsible with slide count + chevron
+            <CollapsibleTrigger className="flex-1 flex items-center gap-2 py-2 pr-2 min-w-0">
+              <p
+                className={cn(
+                  'text-sm truncate flex-1 text-left',
+                  isCurrentItem
+                    ? 'text-active-foreground font-semibold'
+                    : 'text-foreground font-medium',
+                )}
+              >
+                {title}
+              </p>
+              <span
+                className={cn(
+                  'text-[10px] shrink-0',
+                  isCurrentItem
+                    ? 'text-active-foreground/60'
+                    : 'text-muted-foreground',
+                )}
+              >
+                {slides.length}
+              </span>
+              <ChevronRight
+                className={cn(
+                  'w-3.5 h-3.5 shrink-0 transition-transform duration-200',
+                  isCurrentItem
+                    ? 'text-active-foreground/60'
+                    : 'text-muted-foreground',
+                  isOpen && 'rotate-90',
+                )}
+              />
+            </CollapsibleTrigger>
+          )}
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-48">
+        {onEdit && isSongItem(item) && (
+          <>
+            <ContextMenuItem onClick={onEdit} className="gap-2">
+              <Pencil className="w-4 h-4" />
+              {t('editSong')}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+          </>
+        )}
+        {isNote && (
+          <>
+            <ContextMenuItem
+              onClick={() => setIsNoteSettingsOpen(true)}
+              className="gap-2"
+            >
+              <Pencil className="w-4 h-4" />
+              {t('slideSettings')}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+          </>
+        )}
+        <ContextMenuItem
+          onClick={onDelete}
+          className="gap-2 text-red-400 focus:text-red-300 focus:bg-red-500/20"
+        >
+          <Trash2 className="w-4 h-4" />
+          {t('delete')}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  );
+
+  // Slides list (shared between collapsible content and always-visible note slides)
+  const slidesList = (
+    <div className="pl-4 pr-1 pb-2 pt-1 space-y-0.5">
+      {slides.map((slide, slideIndex) => (
+        <SlideItem
+          key={slide.id}
+          slide={slide}
+          slideIndex={slideIndex}
+          isActive={isCurrentItem && slideIndex === currentSlideIndex}
+          sectionNumber={getSectionNumber(slideIndex)}
+          hasSections={hasSections}
+          onClick={() => onSelectSlide(slideIndex)}
+          onOpenSettings={() => setSettingsSlide({ slide, index: slideIndex })}
+          onDuplicate={() => onDuplicateSlide(slideIndex)}
+          onDelete={() => onDeleteSlide(slideIndex)}
+          canDelete={slides.length > 1}
+          t={t}
+        />
+      ))}
+    </div>
+  );
+
+  // Notes are never collapsible — overlay notes show no slides, slide notes show them inline
+  if (isNote) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={cn('mb-1 transition-all', isDragging && 'opacity-50')}
+      >
+        {headerRow}
+        {/* Slide-mode notes: always show slides. Overlay notes: no slides. */}
+        {!isOverlay && slidesList}
+
+        <SlideSettingsDialog
+          open={settingsSlide !== null}
+          onOpenChange={(open) => {
+            if (!open) setSettingsSlide(null);
+          }}
+          slide={settingsSlide?.slide ?? null}
+          defaultFontSize={defaultFontSize}
+          onSave={(lines, section, overrides, lineRoles) => {
+            if (settingsSlide !== null) {
+              onSaveSlide(
+                settingsSlide.index,
+                lines,
+                section,
+                overrides,
+                lineRoles,
+              );
+            }
+          }}
+        />
+
+        {isAnnouncementItem(item) && (
+          <NoteSettingsDialog
+            open={isNoteSettingsOpen}
+            onOpenChange={setIsNoteSettingsOpen}
+            item={item}
+            onSave={(updates) => onEditNote?.(updates)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Songs / Bible: use Collapsible
   return (
     <Collapsible open={isOpen} onOpenChange={onOpenChange}>
       <div
@@ -304,127 +548,8 @@ const SortableItemGroup = memo(function SortableItemGroup({
         style={style}
         className={cn('mb-1 transition-all', isDragging && 'opacity-50')}
       >
-        <ContextMenu>
-          <ContextMenuTrigger asChild>
-            <div
-              className={cn(
-                'group flex items-center gap-1 rounded-md transition-all',
-                isCurrentItem ? 'bg-active' : 'hover:bg-muted/50',
-              )}
-            >
-              {/* Drag handle - always visible with subtle styling */}
-              <button
-                className="touch-none p-1.5 opacity-50 hover:opacity-100 transition-all cursor-grab active:cursor-grabbing flex-shrink-0"
-                {...attributes}
-                {...listeners}
-                aria-label={t('dragToReorder')}
-              >
-                <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
-              </button>
-
-              {/* Item number */}
-              <span
-                className={cn(
-                  'text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded shrink-0',
-                  isCurrentItem
-                    ? 'text-active-foreground'
-                    : 'text-muted-foreground',
-                )}
-              >
-                {itemIndex + 1}
-              </span>
-
-              {/* Type icon */}
-              <div
-                className={cn(
-                  'w-5 h-5 rounded flex items-center justify-center shrink-0',
-                  isCurrentItem ? 'bg-active-foreground/10' : bg,
-                )}
-              >
-                <Icon
-                  className={cn(
-                    'w-3 h-3',
-                    isCurrentItem ? 'text-active-foreground' : color,
-                  )}
-                />
-              </div>
-
-              {/* Collapsible trigger - only toggles open/close */}
-              <CollapsibleTrigger className="flex-1 flex items-center gap-2 py-2 pr-2 min-w-0">
-                <p
-                  className={cn(
-                    'text-sm truncate flex-1 text-left',
-                    isCurrentItem
-                      ? 'text-active-foreground font-semibold'
-                      : 'text-foreground font-medium',
-                  )}
-                >
-                  {title}
-                </p>
-                <span
-                  className={cn(
-                    'text-[10px] shrink-0',
-                    isCurrentItem
-                      ? 'text-active-foreground/60'
-                      : 'text-muted-foreground',
-                  )}
-                >
-                  {slides.length}
-                </span>
-                <ChevronRight
-                  className={cn(
-                    'w-3.5 h-3.5 shrink-0 transition-transform duration-200',
-                    isCurrentItem
-                      ? 'text-active-foreground/60'
-                      : 'text-muted-foreground',
-                    isOpen && 'rotate-90',
-                  )}
-                />
-              </CollapsibleTrigger>
-            </div>
-          </ContextMenuTrigger>
-          <ContextMenuContent className="w-48">
-            {onEdit && isSongItem(item) && (
-              <>
-                <ContextMenuItem onClick={onEdit} className="gap-2">
-                  <Pencil className="w-4 h-4" />
-                  {t('editSong')}
-                </ContextMenuItem>
-                <ContextMenuSeparator />
-              </>
-            )}
-            <ContextMenuItem
-              onClick={onDelete}
-              className="gap-2 text-red-400 focus:text-red-300 focus:bg-red-500/20"
-            >
-              <Trash2 className="w-4 h-4" />
-              {t('delete')}
-            </ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenu>
-
-        <CollapsibleContent>
-          <div className="pl-4 pr-1 pb-2 pt-1 space-y-0.5">
-            {slides.map((slide, slideIndex) => (
-              <SlideItem
-                key={slide.id}
-                slide={slide}
-                slideIndex={slideIndex}
-                isActive={isCurrentItem && slideIndex === currentSlideIndex}
-                sectionNumber={getSectionNumber(slideIndex)}
-                hasSections={hasSections}
-                onClick={() => onSelectSlide(slideIndex)}
-                onOpenSettings={() =>
-                  setSettingsSlide({ slide, index: slideIndex })
-                }
-                onDuplicate={() => onDuplicateSlide(slideIndex)}
-                onDelete={() => onDeleteSlide(slideIndex)}
-                canDelete={slides.length > 1}
-                t={t}
-              />
-            ))}
-          </div>
-        </CollapsibleContent>
+        {headerRow}
+        <CollapsibleContent>{slidesList}</CollapsibleContent>
       </div>
 
       {/* Slide Settings Dialog */}
@@ -464,6 +589,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
     reorderItems,
     deleteItem,
     addItem,
+    updateItem,
     duplicateSlide,
     deleteSlide,
     updateSlide,
@@ -475,7 +601,12 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
     goToItem,
     getSectionIndices,
   } = usePresentation();
-  const { projectionSettings } = useProjection();
+  const {
+    projectionSettings,
+    overlayNote,
+    isOverlayNoteVisible,
+    toggleOverlayNote,
+  } = useProjection();
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingSong, setEditingSong] = useState<Song | null>(null);
@@ -768,6 +899,14 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
                     // eslint-disable-next-line no-underscore-dangle
                     const song = isSongItem(item) ? item._song : undefined;
 
+                    const isOverlayNote =
+                      isAnnouncementItem(item) &&
+                      item.displayMode === 'overlay';
+                    const isOverlayActive =
+                      isOverlayNote &&
+                      isOverlayNoteVisible &&
+                      overlayNote?.id === item.id;
+
                     return (
                       <SortableItemGroup
                         key={item.id}
@@ -789,11 +928,40 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
                         currentSlideIndex={presentationState.currentSlideIndex}
                         sectionIndices={isCurrentItem ? sectionIndices : []}
                         defaultFontSize={projectionSettings.fontSize}
+                        isOverlay={isOverlayNote}
+                        isOverlayActive={isOverlayActive}
                         onSelectSlide={(slideIndex) => {
-                          // Navigate to the item and slide using item index
                           goToItem(originalIndex, slideIndex);
                         }}
+                        onToggleOverlay={
+                          isOverlayNote && isAnnouncementItem(item)
+                            ? () =>
+                                toggleOverlayNote(
+                                  item as AnnouncementSetlistItem,
+                                )
+                            : undefined
+                        }
                         onEdit={song ? () => handleEditSong(song) : undefined}
+                        onEditNote={
+                          isAnnouncementItem(item)
+                            ? async (updates) => {
+                                const electron = (window as any).electron;
+                                if (!electron?.sessionItem?.update) return;
+                                const result =
+                                  await electron.sessionItem.update(item.id, {
+                                    title: updates.title,
+                                    content: updates.content,
+                                    noteDisplayMode: updates.displayMode,
+                                    noteContentType: updates.contentType,
+                                    imagePath: updates.imagePath,
+                                    overlayPosition: updates.overlayPosition,
+                                  });
+                                if (result.success && result.data) {
+                                  updateItem(item.id, result.data);
+                                }
+                              }
+                            : undefined
+                        }
                         onDelete={() => setItemToDelete(item.id)}
                         onSaveSlide={(
                           slideIndex,

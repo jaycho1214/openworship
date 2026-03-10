@@ -495,15 +495,23 @@ export const ko = {
   toSelect: '선택',
   open: '열기',
 
-  // Announcements
-  announcement: '공지',
-  announcements: '공지사항',
+  // Notes (formerly Announcements)
+  announcement: '노트',
+  announcements: '노트',
   announcementTitle: '제목',
-  announcementTitlePlaceholder: '공지 제목을 입력하세요',
+  announcementTitlePlaceholder: '노트 제목을 입력하세요',
   announcementContent: '내용',
-  announcementContentPlaceholder: '공지 내용을 입력하세요 (선택사항)',
+  announcementContentPlaceholder:
+    '노트 내용을 입력하세요. 빈 줄로 슬라이드를 구분합니다.',
   announcementHint: '빈 줄로 여러 슬라이드를 구분합니다',
-  addAnnouncement: '공지 추가',
+  addAnnouncement: '노트 추가',
+  noteDisplaySlide: '슬라이드',
+  noteDisplayOverlay: '오버레이',
+  noteContentText: '텍스트',
+  noteContentImage: '이미지',
+  notePositionTop: '상단',
+  notePositionBottom: '하단',
+  noteOverlayActive: '오버레이 활성',
 
   // Frames
   frame: {

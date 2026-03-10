@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,12 +12,6 @@ import {
   Palette,
   ChevronDown,
   Shuffle,
-  Megaphone,
-  Play,
-  Square,
-  Type,
-  ImageIcon,
-  Settings,
   Undo2,
   Redo2,
   Pipette,
@@ -39,21 +33,13 @@ import {
   TooltipTrigger,
 } from '../../components/ui/tooltip';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../components/ui/dialog';
-import {
   useSetlist,
   usePresentation,
   useProjection,
   useMedia,
-  useAdvertisement,
   useUndo,
 } from '../context';
 import { cn } from '../../lib/utils';
-import AdvertisementPanel from './AdvertisementPanel';
 
 export default function ControlPanel() {
   const { t } = useTranslation();
@@ -83,19 +69,7 @@ export default function ControlPanel() {
     selectImage,
     backgroundColor,
   } = useMedia();
-  const {
-    advertisements,
-    isAdVisible,
-    currentAd,
-    showAdvertisement,
-    hideAdvertisement,
-    isRotating,
-    startRotation,
-    stopRotation,
-  } = useAdvertisement();
   const { canUndo, canRedo, undo, redo, pushState } = useUndo();
-
-  const [isAdManageOpen, setIsAdManageOpen] = useState(false);
   const colorInputRef = useRef<HTMLInputElement>(null);
 
   // Handle undo action
@@ -620,129 +594,6 @@ export default function ControlPanel() {
           </Tooltip>
         </div>
 
-        {/* Divider */}
-        <div className="h-8 w-px bg-border" />
-
-        {/* Advertisement Controls */}
-        <div className="flex items-center gap-1">
-          <DropdownMenu>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'h-10 gap-2 px-3 bg-muted border-border',
-                      isAdVisible &&
-                        'bg-amber-500/25 border-amber-500/50 text-amber-700 dark:text-amber-200',
-                    )}
-                  >
-                    <Megaphone className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-xs">
-                      {isAdVisible
-                        ? currentAd?.type === 'text'
-                          ? currentAd.content.substring(0, 15) +
-                            (currentAd.content.length > 15 ? '...' : '')
-                          : currentAd?.content
-                              .split(/[/\\]/)
-                              .pop()
-                              ?.substring(0, 15)
-                        : t('advertisements')}
-                    </span>
-                    <ChevronDown className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p>{t('advertisements')} (A)</p>
-              </TooltipContent>
-            </Tooltip>
-            <DropdownMenuContent align="start" className="w-64">
-              {/* Hide current ad */}
-              {isAdVisible && (
-                <>
-                  <DropdownMenuItem
-                    onClick={hideAdvertisement}
-                    className="gap-2 cursor-pointer text-amber-600 dark:text-amber-400"
-                  >
-                    <EyeOff className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="text-xs">{t('adHide')}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-
-              {/* Rotation control */}
-              <DropdownMenuItem
-                onClick={isRotating ? stopRotation : startRotation}
-                disabled={advertisements.length === 0}
-                className="gap-2 cursor-pointer"
-              >
-                {isRotating ? (
-                  <>
-                    <Square className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="text-xs">{t('adStopRotation')}</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="text-xs">{t('adStartRotation')}</span>
-                  </>
-                )}
-              </DropdownMenuItem>
-
-              {/* Manage advertisements */}
-              <DropdownMenuItem
-                onClick={() => setIsAdManageOpen(true)}
-                className="gap-2 cursor-pointer"
-              >
-                <Settings className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="text-xs">{t('adManage')}</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              {/* Advertisements list */}
-              <DropdownMenuLabel className="text-xs text-muted-foreground">
-                {t('advertisements')}
-              </DropdownMenuLabel>
-              {advertisements.length === 0 ? (
-                <div className="px-3 py-2 text-center">
-                  <p className="text-xs text-muted-foreground">
-                    {t('noAdvertisements')}
-                  </p>
-                </div>
-              ) : (
-                advertisements.map((ad) => {
-                  const isSelected = currentAd?.id === ad.id && isAdVisible;
-                  return (
-                    <DropdownMenuItem
-                      key={ad.id}
-                      onClick={() => showAdvertisement(ad)}
-                      className={cn(
-                        'gap-2 cursor-pointer',
-                        isSelected && 'bg-active text-active-foreground',
-                      )}
-                    >
-                      {ad.type === 'text' ? (
-                        <Type className="w-3.5 h-3.5 flex-shrink-0" />
-                      ) : (
-                        <ImageIcon className="w-3.5 h-3.5 flex-shrink-0" />
-                      )}
-                      <span className="text-xs truncate flex-1">
-                        {ad.type === 'text'
-                          ? ad.content.substring(0, 30) +
-                            (ad.content.length > 30 ? '...' : '')
-                          : ad.content.split(/[/\\]/).pop()}
-                      </span>
-                    </DropdownMenuItem>
-                  );
-                })
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
         {/* Spacer */}
         <div className="flex-1" />
 
@@ -754,18 +605,6 @@ export default function ControlPanel() {
           <span className="font-bold">⌘Z</span> {t('undo')}
         </div>
       </div>
-
-      {/* Advertisement Management Dialog */}
-      <Dialog open={isAdManageOpen} onOpenChange={setIsAdManageOpen}>
-        <DialogContent className="max-w-lg max-h-[80vh] p-0 overflow-hidden">
-          <DialogHeader className="px-4 pt-4 pb-2">
-            <DialogTitle>{t('adManage')}</DialogTitle>
-          </DialogHeader>
-          <div className="h-[60vh] overflow-hidden">
-            <AdvertisementPanel />
-          </div>
-        </DialogContent>
-      </Dialog>
     </TooltipProvider>
   );
 }

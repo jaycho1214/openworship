@@ -58,6 +58,19 @@ export default function App() {
   const [contentTypeTextSettings, setContentTypeTextSettings] = useState<
     ContentTypeTextSettings | undefined
   >(undefined);
+  const [isOverlayNoteVisible, setIsOverlayNoteVisible] = useState(false);
+  const [overlayNoteContent, setOverlayNoteContent] = useState<
+    string | undefined
+  >(undefined);
+  const [overlayNoteContentType, setOverlayNoteContentType] = useState<
+    'text' | 'image' | undefined
+  >(undefined);
+  const [overlayNoteImagePath, setOverlayNoteImagePath] = useState<
+    string | undefined
+  >(undefined);
+  const [overlayNotePosition, setOverlayNotePosition] = useState<
+    'top' | 'bottom' | undefined
+  >(undefined);
 
   // Escape key closes projection window
   useEffect(() => {
@@ -250,6 +263,28 @@ export default function App() {
 
     return () => {
       unsubFrame();
+    };
+  }, []);
+
+  // Subscribe to overlay note changes from control window
+  useEffect(() => {
+    const unsubOverlayNote = window.electron.projection.onOverlayNote(
+      (data) => {
+        console.log('[Projection] Received overlay note:', data.action);
+        if (data.action === 'show') {
+          setOverlayNoteContent(data.content);
+          setOverlayNoteContentType(data.contentType);
+          setOverlayNoteImagePath(data.imagePath);
+          setOverlayNotePosition(data.position);
+          setIsOverlayNoteVisible(true);
+        } else {
+          setIsOverlayNoteVisible(false);
+        }
+      },
+    );
+
+    return () => {
+      unsubOverlayNote();
     };
   }, []);
 
@@ -453,6 +488,11 @@ export default function App() {
         contentType={contentType}
         lineRoles={lineRoles}
         contentTypeTextSettings={contentTypeTextSettings}
+        isOverlayNoteVisible={isOverlayNoteVisible}
+        overlayNoteContent={overlayNoteContent}
+        overlayNoteContentType={overlayNoteContentType}
+        overlayNoteImagePath={overlayNoteImagePath}
+        overlayNotePosition={overlayNotePosition}
       />
     </div>
   );

@@ -67,6 +67,10 @@ const dbToSetlistItem = (db: DbSessionItem): SetlistItem => {
         type: 'announcement',
         title: db.title!,
         content: db.content!,
+        displayMode: (db.noteDisplayMode as 'slide' | 'overlay') || 'slide',
+        contentType: (db.noteContentType as 'text' | 'image') || 'text',
+        imagePath: db.imagePath || undefined,
+        overlayPosition: (db.overlayPosition as 'top' | 'bottom') || 'bottom',
       } as AnnouncementSetlistItem;
 
     default:
@@ -127,10 +131,33 @@ const populateItemSlides = (item: SetlistItem): SetlistItem => {
     );
   } else if (item.type === 'announcement') {
     const announcementItem = item as AnnouncementSetlistItem;
-    announcementItem._slides = announcementToSlides(
-      announcementItem.title,
-      announcementItem.content,
-    );
+    if (announcementItem.contentType === 'image') {
+      // Image note: single slide with image path as content
+      announcementItem._slides = [
+        {
+          id: uuidv4(),
+          lines: [announcementItem.imagePath || ''],
+          section: 'Note',
+        },
+      ];
+    } else if (announcementItem.displayMode === 'overlay') {
+      // Overlay note: single slide for the banner content
+      announcementItem._slides = [
+        {
+          id: uuidv4(),
+          lines: announcementItem.content
+            .trim()
+            .split('\n')
+            .filter((l) => l.trim()),
+          section: 'Note',
+        },
+      ];
+    } else {
+      announcementItem._slides = announcementToSlides(
+        announcementItem.title,
+        announcementItem.content,
+      );
+    }
   }
   return item;
 };
@@ -175,6 +202,14 @@ export const registerSessionItemHandlers = (): void => {
           displayMode: input.type === 'bible' ? input.displayMode : undefined,
           title: input.type === 'announcement' ? input.title : undefined,
           content: input.type === 'announcement' ? input.content : undefined,
+          noteDisplayMode:
+            input.type === 'announcement' ? input.displayMode : undefined,
+          noteContentType:
+            input.type === 'announcement' ? input.contentType : undefined,
+          imagePath:
+            input.type === 'announcement' ? input.imagePath : undefined,
+          overlayPosition:
+            input.type === 'announcement' ? input.overlayPosition : undefined,
         });
 
         const item = populateItemSlides(dbToSetlistItem(dbItem));
@@ -198,6 +233,10 @@ export const registerSessionItemHandlers = (): void => {
         startVerse: number;
         endVerse: number;
         displayMode: string;
+        noteDisplayMode: string;
+        noteContentType: string;
+        imagePath: string;
+        overlayPosition: string;
       }>,
     ) => {
       try {

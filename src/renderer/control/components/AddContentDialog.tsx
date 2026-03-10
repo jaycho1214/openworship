@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Music,
   BookOpen,
-  Megaphone,
+  StickyNote,
   Search,
   Plus,
   Loader2,
@@ -12,10 +12,10 @@ import {
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
-import { Textarea } from '../../components/ui/textarea';
 import { Button } from '../../components/ui/button';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { BibleVersePicker } from './BibleVersePicker';
+import NoteForm, { NoteFormState, isNoteFormValid } from './NoteForm';
 import {
   SetlistItemInput,
   BibleDisplayMode,
@@ -78,7 +78,7 @@ const TABS = [
   },
   {
     mode: 'announcement' as ContentMode,
-    icon: Megaphone,
+    icon: StickyNote,
     labelKey: 'contentAnnouncement',
     fallback: 'Note',
   },
@@ -98,8 +98,17 @@ export function AddContentDialog({
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Announcement state
-  const [announcementContent, setAnnouncementContent] = useState('');
+  // Note state
+  const defaultNoteState: NoteFormState = {
+    content: '',
+    contentType: 'text',
+    displayMode: 'slide',
+    overlayPosition: 'bottom',
+    imagePath: undefined,
+    imagePreview: null,
+  };
+  const [noteFormState, setNoteFormState] =
+    useState<NoteFormState>(defaultNoteState);
 
   // Filter recent items by current mode
   const recentSongs = useMemo(
@@ -130,7 +139,7 @@ export function AddContentDialog({
       );
       setSearchQuery('');
       setSearchResults([]);
-      setAnnouncementContent('');
+      setNoteFormState(defaultNoteState);
       loadRecentItems();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load recent items when dialog opens
@@ -301,23 +310,31 @@ export function AddContentDialog({
     [onAddItem, onOpenChange, saveRecentBibleItem],
   );
 
-  // Add announcement to setlist
+  // Add note to setlist
   const handleAddAnnouncement = useCallback(() => {
-    const trimmed = announcementContent.trim();
-    if (!trimmed) return;
+    if (!isNoteFormValid(noteFormState)) return;
 
-    // Derive title from first line of content
-    const firstLine =
-      trimmed.split('\n')[0].substring(0, 50) ||
-      t('contentAnnouncement', 'Announcement');
+    const title =
+      noteFormState.contentType === 'image'
+        ? noteFormState.imagePath?.split(/[/\\]/).pop() ||
+          t('contentAnnouncement', 'Note')
+        : noteFormState.content.trim().split('\n')[0]?.substring(0, 50) ||
+          t('contentAnnouncement', 'Note');
 
     onAddItem({
       type: 'announcement',
-      title: firstLine,
-      content: trimmed,
+      title,
+      content:
+        noteFormState.contentType === 'image'
+          ? noteFormState.imagePath || ''
+          : noteFormState.content.trim(),
+      displayMode: noteFormState.displayMode,
+      contentType: noteFormState.contentType,
+      imagePath: noteFormState.imagePath,
+      overlayPosition: noteFormState.overlayPosition,
     });
     onOpenChange(false);
-  }, [announcementContent, onAddItem, onOpenChange, t]);
+  }, [noteFormState, onAddItem, onOpenChange, t]);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
@@ -488,19 +505,13 @@ export function AddContentDialog({
           </div>
         )}
 
-        {/* Announcement Mode */}
+        {/* Note Mode */}
         {mode === 'announcement' && (
           <div className="px-4 pb-4 space-y-3">
-            <Textarea
-              placeholder={t(
-                'announcementContentPlaceholder',
-                'Enter announcement text. Separate slides with blank lines.',
-              )}
-              value={announcementContent}
-              onChange={(e) => setAnnouncementContent(e.target.value)}
-              rows={5}
-              className="resize-none text-sm"
-              autoFocus
+            <NoteForm
+              state={noteFormState}
+              onChange={setNoteFormState}
+              autoFocusTextarea
             />
 
             <div className="flex justify-end gap-2">
@@ -510,7 +521,7 @@ export function AddContentDialog({
               <Button
                 size="sm"
                 onClick={handleAddAnnouncement}
-                disabled={!announcementContent.trim()}
+                disabled={!isNoteFormValid(noteFormState)}
               >
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
                 {t('add', 'Add')}

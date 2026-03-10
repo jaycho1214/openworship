@@ -273,6 +273,22 @@ const runMigrations = (): void => {
       )
       .get() as { count: number };
 
+    // Add note columns if missing (note feature migration)
+    const hasNoteDisplayMode = db
+      .prepare(
+        "SELECT COUNT(*) as count FROM pragma_table_info('session_items') WHERE name='note_display_mode'",
+      )
+      .get() as { count: number };
+
+    if (hasNoteDisplayMode.count === 0) {
+      log.info('[Database] Adding note columns to session_items...');
+      db.exec('ALTER TABLE session_items ADD COLUMN note_display_mode TEXT');
+      db.exec('ALTER TABLE session_items ADD COLUMN note_content_type TEXT');
+      db.exec('ALTER TABLE session_items ADD COLUMN image_path TEXT');
+      db.exec('ALTER TABLE session_items ADD COLUMN overlay_position TEXT');
+      log.info('[Database] Note columns added');
+    }
+
     if (sessionSongsCount.count > 0 && sessionItemsCount.count === 0) {
       log.info('[Database] Migrating session_songs to session_items...');
 
@@ -1121,6 +1137,11 @@ export interface DbSessionItem {
   // Announcement fields
   title?: string;
   content?: string;
+  // Note fields (announcement extensions)
+  noteDisplayMode?: string;
+  noteContentType?: string;
+  imagePath?: string;
+  overlayPosition?: string;
   createdAt: string;
 }
 
@@ -1145,6 +1166,10 @@ export const getSessionItems = (sessionId: string): DbSessionItem[] => {
       display_mode as displayMode,
       title,
       content,
+      note_display_mode as noteDisplayMode,
+      note_content_type as noteContentType,
+      image_path as imagePath,
+      overlay_position as overlayPosition,
       created_at as createdAt
     FROM session_items
     WHERE session_id = ?
@@ -1170,8 +1195,9 @@ export const addSessionItem = (
       id, session_id, item_type, position, song_id,
       translation_id, translation_name, book_id, book_name,
       chapter, start_verse, end_verse, display_mode,
-      title, content, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      title, content, note_display_mode, note_content_type,
+      image_path, overlay_position, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const updateStmt = db.prepare(
     'UPDATE sessions SET updated_at = ? WHERE id = ?',
@@ -1199,6 +1225,10 @@ export const addSessionItem = (
         itm.displayMode || null,
         itm.title || null,
         itm.content || null,
+        itm.noteDisplayMode || null,
+        itm.noteContentType || null,
+        itm.imagePath || null,
+        itm.overlayPosition || null,
         now,
       );
 
@@ -1248,6 +1278,10 @@ export const updateSessionItem = (
       display_mode as displayMode,
       title,
       content,
+      note_display_mode as noteDisplayMode,
+      note_content_type as noteContentType,
+      image_path as imagePath,
+      overlay_position as overlayPosition,
       created_at as createdAt
     FROM session_items
     WHERE id = ?
@@ -1274,7 +1308,11 @@ export const updateSessionItem = (
       end_verse = ?,
       display_mode = ?,
       title = ?,
-      content = ?
+      content = ?,
+      note_display_mode = ?,
+      note_content_type = ?,
+      image_path = ?,
+      overlay_position = ?
     WHERE id = ?
   `);
 
@@ -1292,6 +1330,10 @@ export const updateSessionItem = (
     updated.displayMode || null,
     updated.title || null,
     updated.content || null,
+    updated.noteDisplayMode || null,
+    updated.noteContentType || null,
+    updated.imagePath || null,
+    updated.overlayPosition || null,
     id,
   );
 

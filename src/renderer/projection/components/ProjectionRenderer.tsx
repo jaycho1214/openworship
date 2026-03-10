@@ -2,6 +2,7 @@ import VideoBackground from './VideoBackground';
 import LyricsOverlay from './LyricsOverlay';
 import BlankScreen from './BlankScreen';
 import AdvertisementOverlay from './AdvertisementOverlay';
+import NoteOverlay from './NoteOverlay';
 import type {
   ProjectionSettings,
   SlideOverrides,
@@ -42,6 +43,13 @@ interface ProjectionRendererProps {
   contentType?: SetlistItemType;
   lineRoles?: ('body' | 'reference')[];
   contentTypeTextSettings?: ContentTypeTextSettings;
+
+  // Overlay note
+  isOverlayNoteVisible?: boolean;
+  overlayNoteContent?: string;
+  overlayNoteContentType?: 'text' | 'image';
+  overlayNoteImagePath?: string;
+  overlayNotePosition?: 'top' | 'bottom';
 }
 
 export default function ProjectionRenderer({
@@ -63,6 +71,11 @@ export default function ProjectionRenderer({
   contentType,
   lineRoles,
   contentTypeTextSettings,
+  isOverlayNoteVisible = false,
+  overlayNoteContent,
+  overlayNoteContentType,
+  overlayNoteImagePath,
+  overlayNotePosition,
 }: ProjectionRendererProps) {
   return (
     <>
@@ -95,10 +108,21 @@ export default function ProjectionRenderer({
         bannerAdPosition={adDisplaySettings.position}
         bannerAdPadding={adDisplaySettings.padding}
         bannerAdFontSize={currentAd?.fontSize}
+        isOverlayNoteVisible={isOverlayNoteVisible}
+        overlayNotePosition={overlayNotePosition}
         frame={frame}
         contentType={contentType}
         lineRoles={lineRoles}
         contentTypeTextSettings={contentTypeTextSettings}
+      />
+
+      {/* Note Overlay */}
+      <NoteOverlay
+        isVisible={isOverlayNoteVisible}
+        content={overlayNoteContent}
+        contentType={overlayNoteContentType}
+        imagePath={overlayNoteImagePath}
+        position={overlayNotePosition}
       />
 
       {/* Advertisement Overlay */}

@@ -27,6 +27,8 @@ interface LyricsOverlayProps {
   frame?: Frame | null;
   slideFontSize?: number; // Per-slide font size override
   slideOverrides?: SlideOverrides; // Per-slide overrides (position, padding)
+  isOverlayNoteVisible?: boolean;
+  overlayNotePosition?: 'top' | 'bottom';
   contentType?: SetlistItemType;
   lineRoles?: ('body' | 'reference')[];
   contentTypeTextSettings?: ContentTypeTextSettings;
@@ -44,6 +46,8 @@ export default function LyricsOverlay({
   frame = null,
   slideFontSize,
   slideOverrides,
+  isOverlayNoteVisible = false,
+  overlayNotePosition = 'bottom',
   contentType,
   lineRoles,
   contentTypeTextSettings,
@@ -105,14 +109,26 @@ export default function LyricsOverlay({
     ? bannerAdPadding.top + bannerAdFontSize * 1.4 + bannerAdPadding.bottom
     : 0;
 
+  // Overlay note banner height (approximate: 48px padding top + 36*1.4 content + 48px padding bottom)
+  const noteOverlayHeight = isOverlayNoteVisible ? 48 + 36 * 1.4 + 48 : 0;
+
   // Calculate pixel offset based on banner position
-  const topOffset =
+  let topOffset =
     isBannerAdVisible && bannerAdPosition === 'top' ? bannerHeight : 0;
-  const bottomOffset =
+  let bottomOffset =
     isBannerAdVisible && bannerAdPosition === 'bottom' ? bannerHeight : 0;
   // For middle position, add offset to both sides
   const middleOffset =
     isBannerAdVisible && bannerAdPosition === 'middle' ? bannerHeight / 2 : 0;
+
+  // Add overlay note offsets
+  if (isOverlayNoteVisible) {
+    if (overlayNotePosition === 'top') {
+      topOffset += noteOverlayHeight;
+    } else {
+      bottomOffset += noteOverlayHeight;
+    }
+  }
   // Snapshot of display state — only updates when invisible (between fade-out and fade-in)
   // This prevents layout from jumping before the text has faded out
   const [displayed, setDisplayed] = useState({

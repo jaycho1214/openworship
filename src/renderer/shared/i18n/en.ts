@@ -496,15 +496,23 @@ export const en = {
   toSelect: 'to select',
   open: 'Open',
 
-  // Announcements
-  announcement: 'Announcement',
-  announcements: 'Announcements',
+  // Notes (formerly Announcements)
+  announcement: 'Note',
+  announcements: 'Notes',
   announcementTitle: 'Title',
-  announcementTitlePlaceholder: 'Enter announcement title',
+  announcementTitlePlaceholder: 'Enter note title',
   announcementContent: 'Content',
-  announcementContentPlaceholder: 'Enter announcement content (optional)',
+  announcementContentPlaceholder:
+    'Enter note text. Separate slides with blank lines.',
   announcementHint: 'Separate paragraphs with blank lines for multiple slides',
-  addAnnouncement: 'Add announcement',
+  addAnnouncement: 'Add note',
+  noteDisplaySlide: 'Slide',
+  noteDisplayOverlay: 'Overlay',
+  noteContentText: 'Text',
+  noteContentImage: 'Image',
+  notePositionTop: 'Top',
+  notePositionBottom: 'Bottom',
+  noteOverlayActive: 'Overlay active',
 
   // Frames
   frame: {

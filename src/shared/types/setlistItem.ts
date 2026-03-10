@@ -71,6 +71,14 @@ export interface AnnouncementSetlistItem extends BaseSetlistItem {
   title: string;
   /** Announcement content (supports multi-line) */
   content: string;
+  /** Display mode: 'slide' for sequential slides, 'overlay' for banner overlay */
+  displayMode?: 'slide' | 'overlay';
+  /** Content type: 'text' or 'image' */
+  contentType?: 'text' | 'image';
+  /** Image file path (for image notes) */
+  imagePath?: string;
+  /** Overlay position (for overlay mode) */
+  overlayPosition?: 'top' | 'bottom';
   /** Cached slides (populated when loading) */
   _slides?: Slide[];
 }
@@ -136,6 +144,10 @@ export interface AnnouncementSetlistItemInput {
   type: 'announcement';
   title: string;
   content: string;
+  displayMode?: 'slide' | 'overlay';
+  contentType?: 'text' | 'image';
+  imagePath?: string;
+  overlayPosition?: 'top' | 'bottom';
 }
 
 /**

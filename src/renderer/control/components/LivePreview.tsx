@@ -25,6 +25,8 @@ export default function LivePreview() {
     isVerseHidden,
     projectionSettings,
     contentTypeTextSettings,
+    overlayNote,
+    isOverlayNoteVisible,
   } = useProjection();
   const {
     fontFamily,
@@ -202,6 +204,11 @@ export default function LivePreview() {
                 contentType={currentItem?.type ?? 'song'}
                 lineRoles={currentSlide?.lineRoles}
                 contentTypeTextSettings={contentTypeTextSettings ?? undefined}
+                isOverlayNoteVisible={isOverlayNoteVisible}
+                overlayNoteContent={overlayNote?.content}
+                overlayNoteContentType={overlayNote?.contentType}
+                overlayNoteImagePath={overlayNote?.imagePath}
+                overlayNotePosition={overlayNote?.overlayPosition}
               />
             </div>
           </div>

@@ -17,7 +17,10 @@ import { usePresentation } from '../presentation/PresentationContext';
 import { useMedia } from '../media/MediaContext';
 import { useFrame } from '../frame/FrameContext';
 import { useSetlist } from '../setlist/SetlistContext';
-import type { SetlistItemType } from '../../../../shared/types/setlistItem';
+import type {
+  SetlistItemType,
+  AnnouncementSetlistItem,
+} from '../../../../shared/types/setlistItem';
 import type {
   ContentTypeTextSettings,
   TextStyleSettings,
@@ -44,6 +47,10 @@ interface ProjectionContextType {
   updateBibleReferenceStyle: (
     updates: Partial<BibleReferenceStyle>,
   ) => Promise<void>;
+  overlayNote: AnnouncementSetlistItem | null;
+  isOverlayNoteVisible: boolean;
+  toggleOverlayNote: (item: AnnouncementSetlistItem) => void;
+  hideOverlayNote: () => void;
 }
 
 const ProjectionContext = createContext<ProjectionContextType | null>(null);
@@ -87,6 +94,9 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
     useState<ProjectionSettings>(defaultProjectionSettings);
   const [contentTypeTextSettings, setContentTypeTextSettings] =
     useState<ContentTypeTextSettings | null>(null);
+  const [overlayNote, setOverlayNote] =
+    useState<AnnouncementSetlistItem | null>(null);
+  const [isOverlayNoteVisible, setIsOverlayNoteVisible] = useState(false);
 
   // Determine current content type
   const currentItemIndex = presentationState.currentSongIndex;
@@ -312,6 +322,41 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
     [],
   );
 
+  const toggleOverlayNote = useCallback(
+    (item: AnnouncementSetlistItem) => {
+      const electron = getElectron();
+      if (!electron) return;
+
+      if (isOverlayNoteVisible && overlayNote?.id === item.id) {
+        // Same note visible → hide
+        electron.projection.sendOverlayNote({ action: 'hide' });
+        setIsOverlayNoteVisible(false);
+        setOverlayNote(null);
+      } else {
+        // Show new overlay note
+        electron.projection.sendOverlayNote({
+          action: 'show',
+          content: item.content,
+          contentType: item.contentType || 'text',
+          imagePath: item.imagePath,
+          position: item.overlayPosition || 'bottom',
+        });
+        setOverlayNote(item);
+        setIsOverlayNoteVisible(true);
+      }
+    },
+    [isOverlayNoteVisible, overlayNote],
+  );
+
+  const hideOverlayNote = useCallback(() => {
+    const electron = getElectron();
+    if (!electron) return;
+
+    electron.projection.sendOverlayNote({ action: 'hide' });
+    setIsOverlayNoteVisible(false);
+    setOverlayNote(null);
+  }, []);
+
   const openProjection = useCallback(async () => {
     const electron = getElectron();
     if (!electron) return;
@@ -423,6 +468,10 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
       updateProjectionSettings,
       updateContentTypeTextSettings,
       updateBibleReferenceStyle,
+      overlayNote,
+      isOverlayNoteVisible,
+      toggleOverlayNote,
+      hideOverlayNote,
     }),
     [
       isProjectionOpen,
@@ -437,6 +486,10 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
       updateProjectionSettings,
       updateContentTypeTextSettings,
       updateBibleReferenceStyle,
+      overlayNote,
+      isOverlayNoteVisible,
+      toggleOverlayNote,
+      hideOverlayNote,
     ],
   );
 
