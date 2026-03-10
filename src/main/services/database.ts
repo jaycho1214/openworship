@@ -166,6 +166,7 @@ const setupDatabase = (dbPath: string): void => {
       title TEXT,
       content TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
       FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE SET NULL
     );
@@ -194,11 +195,15 @@ const setupDatabase = (dbPath: string): void => {
     );
   `);
 
-  // Run migrations
+  // Run schema migrations (never throws — failures are logged and retried next start)
   runMigrations();
 
-  // Run FTS5 migrations (full-text search)
-  runFtsMigrations(db);
+  // Run FTS5 migrations (non-fatal — app works without full-text search)
+  try {
+    runFtsMigrations(db);
+  } catch (error) {
+    log.error('[Database] FTS migration failed (non-fatal):', error);
+  }
 };
 
 // Initialize database
@@ -250,63 +255,173 @@ export const initDatabase = (): void => {
   }
 };
 
-// Run database migrations
+// --- Version-based Migration System ---
+
+interface Migration {
+  version: number;
+  name: string;
+  up: (database: Database.Database) => void;
+}
+
+const migrations: Migration[] = [
+  {
+    version: 1,
+    name: 'add-note-columns',
+    up: (database) => {
+      database.exec(
+        'ALTER TABLE session_items ADD COLUMN note_display_mode TEXT',
+      );
+      database.exec(
+        'ALTER TABLE session_items ADD COLUMN note_content_type TEXT',
+      );
+      database.exec('ALTER TABLE session_items ADD COLUMN image_path TEXT');
+      database.exec(
+        'ALTER TABLE session_items ADD COLUMN overlay_position TEXT',
+      );
+    },
+  },
+  {
+    version: 2,
+    name: 'add-session-items-updated-at',
+    up: (database) => {
+      database.exec(
+        'ALTER TABLE session_items ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP',
+      );
+      database.exec(
+        'UPDATE session_items SET updated_at = created_at WHERE updated_at IS NULL',
+      );
+    },
+  },
+  {
+    version: 3,
+    name: 'migrate-session-songs-to-items',
+    up: (database) => {
+      const songCount = database
+        .prepare('SELECT COUNT(*) as count FROM session_songs')
+        .get() as { count: number };
+      const itemCount = database
+        .prepare(
+          "SELECT COUNT(*) as count FROM session_items WHERE item_type = 'song'",
+        )
+        .get() as { count: number };
+      if (songCount.count > 0 && itemCount.count === 0) {
+        database.exec(`
+          INSERT INTO session_items (id, session_id, item_type, position, song_id, created_at)
+          SELECT lower(hex(randomblob(16))), session_id, 'song', position, song_id, created_at
+          FROM session_songs
+        `);
+      }
+    },
+  },
+];
+
+// Detect already-applied migrations for existing databases that predate the version table
+const bootstrapVersionTable = (): void => {
+  if (!db) return;
+
+  const hasAnyVersion = db
+    .prepare('SELECT COUNT(*) as count FROM _schema_version')
+    .get() as { count: number };
+  if (hasAnyVersion.count > 0) return;
+
+  const columnExists = (table: string, column: string): boolean => {
+    const result = db!
+      .prepare(
+        `SELECT COUNT(*) as count FROM pragma_table_info('${table}') WHERE name=?`,
+      )
+      .get(column) as { count: number };
+    return result.count > 0;
+  };
+
+  const alreadyApplied: { version: number; name: string }[] = [];
+
+  if (columnExists('session_items', 'note_display_mode')) {
+    alreadyApplied.push({ version: 1, name: 'add-note-columns' });
+  }
+
+  if (columnExists('session_items', 'updated_at')) {
+    alreadyApplied.push({
+      version: 2,
+      name: 'add-session-items-updated-at',
+    });
+  }
+
+  const itemCount = db
+    .prepare(
+      "SELECT COUNT(*) as count FROM session_items WHERE item_type = 'song'",
+    )
+    .get() as { count: number };
+  if (itemCount.count > 0) {
+    alreadyApplied.push({
+      version: 3,
+      name: 'migrate-session-songs-to-items',
+    });
+  }
+
+  if (alreadyApplied.length > 0) {
+    const insert = db.prepare(
+      'INSERT OR IGNORE INTO _schema_version (version, name) VALUES (?, ?)',
+    );
+    for (const m of alreadyApplied) {
+      insert.run(m.version, m.name);
+    }
+    log.info(
+      `[Database] Bootstrapped ${alreadyApplied.length} existing migrations`,
+    );
+  }
+};
+
+// Run database migrations — each migration runs in its own transaction.
+// Failures are logged but NEVER thrown, so they cannot trigger the corruption recovery path.
 const runMigrations = (): void => {
   if (!db) return;
 
-  // Check if session_items migration has been done
-  const hasSessionItems = db
-    .prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='session_items'",
+  // Ensure version table exists
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS _schema_version (
+      version INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
-    .get();
+  `);
 
-  if (hasSessionItems) {
-    // Check if we need to migrate session_songs data to session_items
-    const sessionSongsCount = db
-      .prepare('SELECT COUNT(*) as count FROM session_songs')
-      .get() as { count: number };
+  // Bootstrap for databases that predate the version table
+  bootstrapVersionTable();
 
-    const sessionItemsCount = db
-      .prepare(
-        "SELECT COUNT(*) as count FROM session_items WHERE item_type = 'song'",
-      )
-      .get() as { count: number };
+  // Get already applied versions
+  const applied = new Set(
+    (
+      db.prepare('SELECT version FROM _schema_version').all() as {
+        version: number;
+      }[]
+    ).map((r) => r.version),
+  );
 
-    // Add note columns if missing (note feature migration)
-    const hasNoteDisplayMode = db
-      .prepare(
-        "SELECT COUNT(*) as count FROM pragma_table_info('session_items') WHERE name='note_display_mode'",
-      )
-      .get() as { count: number };
+  const applyMigration = (migration: Migration): void => {
+    const run = db!.transaction(() => {
+      migration.up(db!);
+      db!
+        .prepare('INSERT INTO _schema_version (version, name) VALUES (?, ?)')
+        .run(migration.version, migration.name);
+    });
+    run();
+  };
 
-    if (hasNoteDisplayMode.count === 0) {
-      log.info('[Database] Adding note columns to session_items...');
-      db.exec('ALTER TABLE session_items ADD COLUMN note_display_mode TEXT');
-      db.exec('ALTER TABLE session_items ADD COLUMN note_content_type TEXT');
-      db.exec('ALTER TABLE session_items ADD COLUMN image_path TEXT');
-      db.exec('ALTER TABLE session_items ADD COLUMN overlay_position TEXT');
-      log.info('[Database] Note columns added');
-    }
+  for (const migration of migrations) {
+    if (applied.has(migration.version)) continue;
 
-    if (sessionSongsCount.count > 0 && sessionItemsCount.count === 0) {
-      log.info('[Database] Migrating session_songs to session_items...');
-
-      // Migrate session_songs to session_items
-      const migrateStmt = db.prepare(`
-        INSERT INTO session_items (id, session_id, item_type, position, song_id, created_at)
-        SELECT
-          lower(hex(randomblob(16))) as id,
-          session_id,
-          'song' as item_type,
-          position,
-          song_id,
-          created_at
-        FROM session_songs
-      `);
-
-      migrateStmt.run();
-      log.info('[Database] Migration complete');
+    try {
+      applyMigration(migration);
+      log.info(
+        `[Database] Migration v${migration.version} (${migration.name}) applied`,
+      );
+    } catch (error) {
+      log.error(
+        `[Database] Migration v${migration.version} (${migration.name}) failed:`,
+        error,
+      );
+      // DO NOT throw — continue with remaining migrations.
+      // The failed migration will be retried on next app start.
     }
   }
 };
@@ -768,7 +883,7 @@ const reorderSessionSongsAfterDelete = (sessionId: string): void => {
   });
 };
 
-// Reorder songs in session
+// Reorder songs in session (all updates in single transaction)
 export const reorderSessionSongs = (
   sessionId: string,
   songIds: string[],
@@ -779,20 +894,19 @@ export const reorderSessionSongs = (
     UPDATE session_songs SET position = ?
     WHERE session_id = ? AND song_id = ?
   `);
+  const updateTimeStmt = db.prepare(
+    'UPDATE sessions SET updated_at = ? WHERE id = ?',
+  );
 
   const transaction = db.transaction(() => {
     songIds.forEach((songId, index) => {
       updateStmt.run(index, sessionId, songId);
     });
+    updateTimeStmt.run(new Date().toISOString(), sessionId);
   });
 
   try {
     transaction();
-    // Update session timestamp
-    const updateTimeStmt = db.prepare(
-      'UPDATE sessions SET updated_at = ? WHERE id = ?',
-    );
-    updateTimeStmt.run(new Date().toISOString(), sessionId);
     log.info('[Database] Reordered songs in session:', sessionId);
     return true;
   } catch (error) {
@@ -1143,6 +1257,7 @@ export interface DbSessionItem {
   imagePath?: string;
   overlayPosition?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 // Get all items for a session
@@ -1170,7 +1285,8 @@ export const getSessionItems = (sessionId: string): DbSessionItem[] => {
       note_content_type as noteContentType,
       image_path as imagePath,
       overlay_position as overlayPosition,
-      created_at as createdAt
+      created_at as createdAt,
+      COALESCE(updated_at, created_at) as updatedAt
     FROM session_items
     WHERE session_id = ?
     ORDER BY position
@@ -1181,7 +1297,7 @@ export const getSessionItems = (sessionId: string): DbSessionItem[] => {
 
 // Add item to session
 export const addSessionItem = (
-  item: Omit<DbSessionItem, 'id' | 'position' | 'createdAt'>,
+  item: Omit<DbSessionItem, 'id' | 'position' | 'createdAt' | 'updatedAt'>,
 ): DbSessionItem => {
   if (!db) throw new Error('Database not initialized');
 
@@ -1196,15 +1312,17 @@ export const addSessionItem = (
       translation_id, translation_name, book_id, book_name,
       chapter, start_verse, end_verse, display_mode,
       title, content, note_display_mode, note_content_type,
-      image_path, overlay_position, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      image_path, overlay_position, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const updateStmt = db.prepare(
     'UPDATE sessions SET updated_at = ? WHERE id = ?',
   );
 
   const addItemTx = db.transaction(
-    (itm: Omit<DbSessionItem, 'id' | 'position' | 'createdAt'>) => {
+    (
+      itm: Omit<DbSessionItem, 'id' | 'position' | 'createdAt' | 'updatedAt'>,
+    ) => {
       const newId = uuidv4();
       const now = new Date().toISOString();
       const { nextPos } = posStmt.get(itm.sessionId) as { nextPos: number };
@@ -1230,11 +1348,12 @@ export const addSessionItem = (
         itm.imagePath || null,
         itm.overlayPosition || null,
         now,
+        now,
       );
 
       updateStmt.run(now, itm.sessionId);
 
-      return { id: newId, position: nextPos, createdAt: now };
+      return { id: newId, position: nextPos, createdAt: now, updatedAt: now };
     },
   );
 
@@ -1253,10 +1372,12 @@ export const addSessionItem = (
   };
 };
 
-// Update session item
+// Update session item (wrapped in transaction for atomicity)
 export const updateSessionItem = (
   id: string,
-  updates: Partial<Omit<DbSessionItem, 'id' | 'sessionId' | 'createdAt'>>,
+  updates: Partial<
+    Omit<DbSessionItem, 'id' | 'sessionId' | 'createdAt' | 'updatedAt'>
+  >,
 ): DbSessionItem | null => {
   if (!db) throw new Error('Database not initialized');
 
@@ -1282,17 +1403,11 @@ export const updateSessionItem = (
       note_content_type as noteContentType,
       image_path as imagePath,
       overlay_position as overlayPosition,
-      created_at as createdAt
+      created_at as createdAt,
+      COALESCE(updated_at, created_at) as updatedAt
     FROM session_items
     WHERE id = ?
   `);
-  const existing = getStmt.get(id) as DbSessionItem | undefined;
-  if (!existing) return null;
-
-  const updated: DbSessionItem = {
-    ...existing,
-    ...updates,
-  };
 
   const stmt = db.prepare(`
     UPDATE session_items SET
@@ -1312,38 +1427,61 @@ export const updateSessionItem = (
       note_display_mode = ?,
       note_content_type = ?,
       image_path = ?,
-      overlay_position = ?
+      overlay_position = ?,
+      updated_at = ?
     WHERE id = ?
   `);
 
-  stmt.run(
-    updated.itemType,
-    updated.position,
-    updated.songId || null,
-    updated.translationId || null,
-    updated.translationName || null,
-    updated.bookId || null,
-    updated.bookName || null,
-    updated.chapter ?? null,
-    updated.startVerse ?? null,
-    updated.endVerse ?? null,
-    updated.displayMode || null,
-    updated.title || null,
-    updated.content || null,
-    updated.noteDisplayMode || null,
-    updated.noteContentType || null,
-    updated.imagePath || null,
-    updated.overlayPosition || null,
-    id,
-  );
-
-  // Update session timestamp
-  const updateStmt = db.prepare(
+  const updateTimeStmt = db.prepare(
     'UPDATE sessions SET updated_at = ? WHERE id = ?',
   );
-  updateStmt.run(new Date().toISOString(), existing.sessionId);
 
-  return updated;
+  const updateItemTx = db.transaction(
+    (
+      itemId: string,
+      upd: Partial<
+        Omit<DbSessionItem, 'id' | 'sessionId' | 'createdAt' | 'updatedAt'>
+      >,
+    ) => {
+      const existing = getStmt.get(itemId) as DbSessionItem | undefined;
+      if (!existing) return null;
+
+      const now = new Date().toISOString();
+      const updated: DbSessionItem = {
+        ...existing,
+        ...upd,
+        updatedAt: now,
+      };
+
+      stmt.run(
+        updated.itemType,
+        updated.position,
+        updated.songId || null,
+        updated.translationId || null,
+        updated.translationName || null,
+        updated.bookId || null,
+        updated.bookName || null,
+        updated.chapter ?? null,
+        updated.startVerse ?? null,
+        updated.endVerse ?? null,
+        updated.displayMode || null,
+        updated.title || null,
+        updated.content || null,
+        updated.noteDisplayMode || null,
+        updated.noteContentType || null,
+        updated.imagePath || null,
+        updated.overlayPosition || null,
+        now,
+        itemId,
+      );
+
+      updateTimeStmt.run(now, existing.sessionId);
+
+      return updated;
+    },
+  );
+
+  return updateItemTx(id, updates);
 };
 
 // Delete session item
@@ -1396,7 +1534,7 @@ const reorderSessionItemsAfterDelete = (sessionId: string): void => {
   });
 };
 
-// Reorder session items
+// Reorder session items (all updates in single transaction)
 export const reorderSessionItems = (
   sessionId: string,
   itemIds: string[],
@@ -1406,20 +1544,19 @@ export const reorderSessionItems = (
   const updateStmt = db.prepare(
     'UPDATE session_items SET position = ? WHERE id = ?',
   );
+  const updateTimeStmt = db.prepare(
+    'UPDATE sessions SET updated_at = ? WHERE id = ?',
+  );
 
   const transaction = db.transaction(() => {
     itemIds.forEach((itemId, index) => {
       updateStmt.run(index, itemId);
     });
+    updateTimeStmt.run(new Date().toISOString(), sessionId);
   });
 
   try {
     transaction();
-    // Update session timestamp
-    const updateTimeStmt = db.prepare(
-      'UPDATE sessions SET updated_at = ? WHERE id = ?',
-    );
-    updateTimeStmt.run(new Date().toISOString(), sessionId);
     log.info('[Database] Reordered session items:', sessionId);
     return true;
   } catch (error) {

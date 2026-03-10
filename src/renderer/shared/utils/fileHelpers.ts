@@ -2,6 +2,14 @@
  * Shared file utilities for OCR import (AddSongDialog + SongEditor).
  */
 
+/**
+ * Extract the filename from a file path, handling both Unix (/) and Windows (\) separators.
+ * This is a browser-safe alternative to Node's `path.basename()`.
+ */
+export function basename(filePath: string): string {
+  return filePath.split(/[/\\]/).pop() || filePath;
+}
+
 const IMAGE_EXTENSIONS = [
   'jpg',
   'jpeg',

@@ -16,6 +16,7 @@ import {
   BookOpen,
   Megaphone,
 } from 'lucide-react';
+import { basename } from '../../../../shared/utils/fileHelpers';
 import { Button } from '../../../../components/ui/button';
 import { Label } from '../../../../components/ui/label';
 import { Separator } from '../../../../components/ui/separator';
@@ -624,7 +625,7 @@ export function DisplaySettingsTab({
   };
 
   const userFonts = fonts;
-  const userVideos = videos.map((path) => path.split(/[/\\]/).pop() || path);
+  const userVideos = videos.map((path) => basename(path));
 
   const contentTabs: {
     id: ContentTypeTab;

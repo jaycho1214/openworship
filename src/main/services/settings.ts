@@ -147,6 +147,13 @@ function encryptString(value: string): string {
 
   try {
     if (safeStorage.isEncryptionAvailable()) {
+      // Warn if the backend is plaintext (Linux without a keyring)
+      const backend = safeStorage.getSelectedStorageBackend?.();
+      if (backend === 'basic_text') {
+        log.warn(
+          '[Settings] safeStorage is using the basic_text backend — API key will be stored with weak encryption. Install a keyring (gnome-keyring, kwallet) for stronger protection.',
+        );
+      }
       const encrypted = safeStorage.encryptString(value);
       return encrypted.toString('base64');
     }

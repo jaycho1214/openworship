@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { basename } from '../../shared/utils/fileHelpers';
 import {
   Dialog,
   DialogContent,
@@ -57,7 +58,8 @@ export default function NoteSettingsDialog({
   const handleSave = useCallback(() => {
     const title =
       formState.contentType === 'image'
-        ? formState.imagePath?.split(/[/\\]/).pop() || t('contentAnnouncement')
+        ? (formState.imagePath ? basename(formState.imagePath) : null) ||
+          t('contentAnnouncement')
         : formState.content.trim().split('\n')[0]?.substring(0, 50) ||
           t('contentAnnouncement');
 
@@ -80,7 +82,7 @@ export default function NoteSettingsDialog({
       <DialogContent className="max-w-md p-0 gap-0">
         <DialogHeader className="px-4 pt-3.5 pb-2.5">
           <DialogTitle className="text-sm font-semibold">
-            {t('slideSettings')}
+            {t('noteSettings')}
           </DialogTitle>
         </DialogHeader>
 

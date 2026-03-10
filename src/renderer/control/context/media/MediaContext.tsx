@@ -88,6 +88,10 @@ export function MediaProvider({ children }: MediaProviderProps) {
   const [detectedFonts, setDetectedFonts] = useState<DetectedFont[]>([]);
   const [fontsLoading, setFontsLoading] = useState<boolean>(true);
 
+  // Track current video path via ref to avoid dependency in loadVideos
+  const currentVideoPathRef = useRef(currentVideoPath);
+  currentVideoPathRef.current = currentVideoPath;
+
   // Load videos
   const loadVideos = useCallback(async (): Promise<void> => {
     const electron = getElectron();
@@ -98,14 +102,14 @@ export function MediaProvider({ children }: MediaProviderProps) {
       console.log('Loaded embedded videos:', videos);
       setEmbeddedVideos(videos);
       // Select initial random video if none selected
-      if (videos.length > 0 && !currentVideoPath) {
+      if (videos.length > 0 && !currentVideoPathRef.current) {
         const randomVideo = videos[Math.floor(Math.random() * videos.length)];
         setCurrentVideoPath(randomVideo);
       }
     } catch (error) {
       console.error('Failed to load videos:', error);
     }
-  }, [currentVideoPath]);
+  }, []);
 
   // Load videos on mount
   useEffect(() => {

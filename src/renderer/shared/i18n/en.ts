@@ -71,6 +71,7 @@ export const en = {
   colorBlue: 'Blue',
   customColor: 'Custom Color',
   selectImage: 'Select Image',
+  failedToUploadImage: 'Failed to upload image',
   noImagesFound: 'No images found',
 
   // Video
@@ -102,6 +103,8 @@ export const en = {
   edit: 'Edit',
   delete: 'Delete',
   cancel: 'Cancel',
+  confirm: 'Confirm',
+  goBack: 'Go back',
   close: 'Close',
   new: 'New',
   add: 'Add',
@@ -347,6 +350,7 @@ export const en = {
   deleteSlide: 'Delete Slide',
   slideEdit: 'Edit Slide',
   slideSettings: 'Slide Settings',
+  noteSettings: 'Note Settings',
   slideEditHint: 'Enter to save · Shift+Enter for new line · Esc to cancel',
   slideEditHintSimple: 'Each line becomes a separate line on the slide',
   slideFontSizeOverride: 'Custom font size for this slide',

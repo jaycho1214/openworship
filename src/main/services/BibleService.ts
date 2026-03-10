@@ -301,8 +301,24 @@ export const downloadAndImportBible = async (
 
   onProgress?.(0, 'Downloading...');
 
-  // Download the file
-  const response = await fetch(downloadInfo.downloadUrl);
+  // Download the file with 60s timeout
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+  let response: Response;
+  try {
+    response = await fetch(downloadInfo.downloadUrl, {
+      signal: controller.signal,
+    });
+  } catch (err: unknown) {
+    clearTimeout(timeout);
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(
+        'Download timed out. Please check your internet connection and try again.',
+      );
+    }
+    throw err;
+  }
+  clearTimeout(timeout);
   if (!response.ok) {
     throw new Error(`Failed to download: ${response.statusText}`);
   }

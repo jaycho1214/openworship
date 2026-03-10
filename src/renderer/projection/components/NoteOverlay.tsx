@@ -45,7 +45,7 @@ export default function NoteOverlay({
         {contentType === 'image' && imagePath ? (
           <img
             src={`file://${imagePath}`}
-            alt=""
+            alt="Note overlay"
             style={{
               maxHeight: '120px',
               maxWidth: '100%',

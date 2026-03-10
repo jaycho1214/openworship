@@ -72,6 +72,7 @@ export const ko = {
   colorBlue: '파랑',
   customColor: '사용자 지정 색상',
   selectImage: '이미지 선택',
+  failedToUploadImage: '이미지 업로드에 실패했습니다',
   noImagesFound: '이미지를 찾을 수 없습니다',
 
   // Video
@@ -103,6 +104,8 @@ export const ko = {
   edit: '편집',
   delete: '삭제',
   cancel: '취소',
+  confirm: '확인',
+  goBack: '뒤로 가기',
   close: '닫기',
   new: '새로 만들기',
   add: '추가',
@@ -346,6 +349,7 @@ export const ko = {
   deleteSlide: '슬라이드 삭제',
   slideEdit: '슬라이드 편집',
   slideSettings: '슬라이드 설정',
+  noteSettings: '공지 설정',
   slideEditHint: 'Enter 저장 · Shift+Enter 줄바꿈 · Esc 취소',
   slideEditHintSimple: '각 줄은 슬라이드에서 별도의 줄로 표시됩니다',
   slideFontSizeOverride: '이 슬라이드 전용 글꼴 크기',

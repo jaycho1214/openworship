@@ -236,15 +236,11 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
     // Try to load unified items first, fall back to legacy songs
     const loadSession = async () => {
       try {
-        // First try to get unified items
+        // First try to get unified items - if sessionItem API exists, use it exclusively
         if (electron.sessionItem) {
           const itemsResult =
             await electron.sessionItem.getAll(currentSessionId);
-          if (
-            itemsResult.success &&
-            itemsResult.data &&
-            itemsResult.data.length > 0
-          ) {
+          if (itemsResult.success && itemsResult.data) {
             // The handler already returns fully populated SetlistItem[] with _song and _slides
             const items: SetlistItem[] = itemsResult.data;
 
@@ -469,6 +465,7 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
         }
       } catch (error) {
         console.error('Failed to add item:', error);
+        toast.error('Failed to add item');
       }
     },
     [currentSessionId],
@@ -635,9 +632,10 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
             await addItem({ type: 'song', songId });
           },
         )
-        .catch((err: unknown) =>
-          console.error('Failed to check/add song:', err),
-        );
+        .catch((err: unknown) => {
+          console.error('Failed to check/add song:', err);
+          toast.error('Failed to add song');
+        });
     },
     [addItem],
   );

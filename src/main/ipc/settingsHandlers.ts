@@ -139,11 +139,19 @@ export const registerSettingsHandlers = (): void => {
       settingsService.setProjectionSettings(settings);
       // Forward to projection window if open
       const projectionWindow = getProjectionWindow();
-      if (projectionWindow && !projectionWindow.isDestroyed()) {
-        projectionWindow.webContents.send(
-          'projection:settings',
-          settingsService.getProjectionSettings(),
-        );
+      try {
+        if (
+          projectionWindow &&
+          !projectionWindow.isDestroyed() &&
+          !projectionWindow.webContents.isDestroyed()
+        ) {
+          projectionWindow.webContents.send(
+            'projection:settings',
+            settingsService.getProjectionSettings(),
+          );
+        }
+      } catch {
+        // Window may have been destroyed between check and send
       }
       return successResponse(true);
     },
@@ -216,11 +224,19 @@ export const registerSettingsHandlers = (): void => {
         );
         // Forward to projection window if open
         const projectionWindow = getProjectionWindow();
-        if (projectionWindow && !projectionWindow.isDestroyed()) {
-          projectionWindow.webContents.send(
-            'projection:contentTypeText',
-            updated,
-          );
+        try {
+          if (
+            projectionWindow &&
+            !projectionWindow.isDestroyed() &&
+            !projectionWindow.webContents.isDestroyed()
+          ) {
+            projectionWindow.webContents.send(
+              'projection:contentTypeText',
+              updated,
+            );
+          }
+        } catch {
+          // Window may have been destroyed between check and send
         }
         // Also notify the control window so ProjectionContext updates
         event.sender.send('projection:contentTypeText', updated);
@@ -244,11 +260,19 @@ export const registerSettingsHandlers = (): void => {
         const updated = settingsService.setBibleReferenceStyle(updates);
         // Forward to projection window if open
         const projectionWindow = getProjectionWindow();
-        if (projectionWindow && !projectionWindow.isDestroyed()) {
-          projectionWindow.webContents.send(
-            'projection:contentTypeText',
-            updated,
-          );
+        try {
+          if (
+            projectionWindow &&
+            !projectionWindow.isDestroyed() &&
+            !projectionWindow.webContents.isDestroyed()
+          ) {
+            projectionWindow.webContents.send(
+              'projection:contentTypeText',
+              updated,
+            );
+          }
+        } catch {
+          // Window may have been destroyed between check and send
         }
         // Also notify the control window so ProjectionContext updates
         event.sender.send('projection:contentTypeText', updated);
@@ -262,15 +286,33 @@ export const registerSettingsHandlers = (): void => {
   );
 
   // Factory reset
+  let isResetting = false;
   ipcMain.handle('settings:factoryReset', async () => {
+    if (isResetting) {
+      return errorResponse('Factory reset already in progress');
+    }
+    isResetting = true;
+
     try {
+      const userDataPath = app.getPath('userData');
+      const dbPath = path.join(userDataPath, 'songs.db');
+
+      // Create backup before deletion
+      const backupDir = path.join(userDataPath, 'backups');
+      if (!fs.existsSync(backupDir)) {
+        fs.mkdirSync(backupDir, { recursive: true });
+      }
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupDbPath = path.join(backupDir, `songs-backup-${timestamp}.db`);
+      if (fs.existsSync(dbPath)) {
+        fs.copyFileSync(dbPath, backupDbPath);
+        log.info('[FactoryReset] Created backup at:', backupDbPath);
+      }
+
       // Close database connection
       databaseService.close();
 
-      const userDataPath = app.getPath('userData');
-
       // Delete database file
-      const dbPath = path.join(userDataPath, 'songs.db');
       if (fs.existsSync(dbPath)) {
         fs.unlinkSync(dbPath);
         log.info('[FactoryReset] Deleted database:', dbPath);
@@ -318,6 +360,7 @@ export const registerSettingsHandlers = (): void => {
 
       return successResponse(true);
     } catch (error) {
+      isResetting = false;
       const message = getErrorMessage(error);
       log.error('[FactoryReset] Error:', message);
       return errorResponse(message);

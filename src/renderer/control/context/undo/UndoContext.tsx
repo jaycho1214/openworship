@@ -99,30 +99,37 @@ export function UndoProvider({
     [maxStackSize],
   );
 
-  const undo = useCallback((): ProjectionStateSnapshot | null => {
-    if (undoStack.length <= 1) return null;
+  const undoStackRef = useRef(undoStack);
+  undoStackRef.current = undoStack;
+  const redoStackRef = useRef(redoStack);
+  redoStackRef.current = redoStack;
 
-    const currentState = undoStack[undoStack.length - 1];
-    const previousState = undoStack[undoStack.length - 2];
+  const undo = useCallback((): ProjectionStateSnapshot | null => {
+    const stack = undoStackRef.current;
+    if (stack.length <= 1) return null;
+
+    const currentState = stack[stack.length - 1];
+    const previousState = stack[stack.length - 2];
 
     setUndoStack((prev) => prev.slice(0, -1));
     setRedoStack((prev) => [...prev, currentState]);
     setLastAction('undo');
 
     return previousState;
-  }, [undoStack]);
+  }, []);
 
   const redo = useCallback((): ProjectionStateSnapshot | null => {
-    if (redoStack.length === 0) return null;
+    const stack = redoStackRef.current;
+    if (stack.length === 0) return null;
 
-    const nextState = redoStack[redoStack.length - 1];
+    const nextState = stack[stack.length - 1];
 
     setRedoStack((prev) => prev.slice(0, -1));
     setUndoStack((prev) => [...prev, nextState]);
     setLastAction('redo');
 
     return nextState;
-  }, [redoStack]);
+  }, []);
 
   const clearHistory = useCallback(() => {
     setUndoStack([]);

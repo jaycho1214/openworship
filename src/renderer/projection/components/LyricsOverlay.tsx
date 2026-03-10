@@ -322,7 +322,7 @@ export default function LyricsOverlay({
 
             return (
               <p
-                key={index} // eslint-disable-line react/no-array-index-key -- lines are positional
+                key={`${index}-${line}`} // eslint-disable-line react/no-array-index-key -- index needed for duplicate lines
                 className={cn('font-bold leading-tight', textAlignClass)}
                 style={{
                   fontFamily:

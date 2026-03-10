@@ -770,6 +770,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
               size="icon"
               className="h-7 w-7 -ml-1"
               onClick={onBack}
+              aria-label={t('goBack')}
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
@@ -800,6 +801,11 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
                     ? t('collapseAll')
                     : t('expandAll')
                 }
+                aria-label={
+                  items.every((item) => openItemIds.has(item.id))
+                    ? t('collapseAll')
+                    : t('expandAll')
+                }
               >
                 {items.every((item) => openItemIds.has(item.id)) ? (
                   <ChevronsDownUp className="w-4 h-4" />
@@ -813,6 +819,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
               size="icon"
               className="h-7 w-7"
               onClick={() => setIsAddContentOpen(true)}
+              aria-label={t('addContent')}
             >
               <Plus className="w-4 h-4" />
             </Button>

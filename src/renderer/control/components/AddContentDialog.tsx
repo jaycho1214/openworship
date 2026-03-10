@@ -10,6 +10,7 @@ import {
   Clock,
   X,
 } from 'lucide-react';
+import { basename } from '../../shared/utils/fileHelpers';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
@@ -316,8 +317,9 @@ export function AddContentDialog({
 
     const title =
       noteFormState.contentType === 'image'
-        ? noteFormState.imagePath?.split(/[/\\]/).pop() ||
-          t('contentAnnouncement', 'Note')
+        ? (noteFormState.imagePath
+            ? basename(noteFormState.imagePath)
+            : null) || t('contentAnnouncement', 'Note')
         : noteFormState.content.trim().split('\n')[0]?.substring(0, 50) ||
           t('contentAnnouncement', 'Note');
 

@@ -294,6 +294,7 @@ export default function SongLibrary({
                         handleImportToSession(song);
                       }}
                       title={t('importToSession')}
+                      aria-label={t('importToSession')}
                     >
                       <Plus className="w-3 h-3" />
                     </Button>
@@ -306,6 +307,7 @@ export default function SongLibrary({
                         handleEditSong(song);
                       }}
                       title={t('edit')}
+                      aria-label={t('edit')}
                     >
                       <Edit2 className="w-3 h-3" />
                     </Button>
@@ -318,6 +320,7 @@ export default function SongLibrary({
                         setSongToDelete(song.id);
                       }}
                       title={t('delete')}
+                      aria-label={t('delete')}
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>

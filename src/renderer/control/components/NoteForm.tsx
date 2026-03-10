@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import {
   Type,
   ImageIcon,
@@ -63,12 +64,14 @@ export default function NoteForm({
             imagePath: result.data,
             imagePreview: reader.result as string,
           });
+        } else {
+          toast.error(t('failedToUploadImage'));
         }
       };
       reader.readAsDataURL(file);
     };
     input.click();
-  }, [state, onChange]);
+  }, [state, onChange, t]);
 
   return (
     <div className="space-y-3">

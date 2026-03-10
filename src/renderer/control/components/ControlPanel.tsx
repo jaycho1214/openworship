@@ -17,6 +17,7 @@ import {
   Pipette,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { basename } from '../../shared/utils/fileHelpers';
 import { Button } from '../../components/ui/button';
 import {
   DropdownMenu,
@@ -45,8 +46,8 @@ export default function ControlPanel() {
   const { t } = useTranslation();
   const { currentSetlist } = useSetlist();
   const {
-    currentSong,
     currentItemIndex,
+    currentItemSlides,
     presentationState,
     nextSlide,
     prevSlide,
@@ -131,7 +132,8 @@ export default function ControlPanel() {
     nextSong();
   };
 
-  const canNavigate = currentSong && currentSong.slides.length > 0;
+  // Use unified item slides for navigation (works for songs, bible, announcements)
+  const canNavigate = currentItemSlides.length > 0;
 
   // Memoized disabled states to prevent unnecessary re-renders
   const isPrevDisabled = useMemo(
@@ -149,15 +151,14 @@ export default function ControlPanel() {
   const isNextDisabled = useMemo(
     () =>
       !canNavigate ||
-      (presentationState.currentSlideIndex >=
-        (currentSong?.slides.length ?? 0) - 1 &&
+      (presentationState.currentSlideIndex >= currentItemSlides.length - 1 &&
         presentationState.currentSongIndex >=
           (currentSetlist?.items.length ?? 0) - 1),
     [
       canNavigate,
       presentationState.currentSlideIndex,
       presentationState.currentSongIndex,
-      currentSong?.slides.length,
+      currentItemSlides.length,
       currentSetlist?.items.length,
     ],
   );
@@ -170,10 +171,16 @@ export default function ControlPanel() {
   // Get the current background display name
   const getBackgroundDisplayName = () => {
     if (backgroundType === 'video') {
-      return currentVideoPath?.split(/[/\\]/).pop() || t('selectVideo');
+      return (
+        (currentVideoPath ? basename(currentVideoPath) : null) ||
+        t('selectVideo')
+      );
     }
     if (backgroundType === 'image') {
-      return currentImagePath?.split(/[/\\]/).pop() || t('selectImage');
+      return (
+        (currentImagePath ? basename(currentImagePath) : null) ||
+        t('selectImage')
+      );
     }
     // Color
     const colorName = {
@@ -427,7 +434,7 @@ export default function ControlPanel() {
                 </div>
               ) : (
                 embeddedVideos.map((videoPath) => {
-                  const filename = videoPath.split(/[/\\]/).pop() || videoPath;
+                  const filename = basename(videoPath);
                   const isSelected =
                     backgroundType === 'video' &&
                     currentVideoPath === videoPath;
@@ -467,7 +474,7 @@ export default function ControlPanel() {
                 </div>
               ) : (
                 availableImages.map((imagePath) => {
-                  const filename = imagePath.split(/[/\\]/).pop() || imagePath;
+                  const filename = basename(imagePath);
                   const isSelected =
                     backgroundType === 'image' &&
                     currentImagePath === imagePath;

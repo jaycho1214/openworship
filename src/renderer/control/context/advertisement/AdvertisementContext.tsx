@@ -89,9 +89,11 @@ export function AdvertisementProvider({
   const rotationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const currentAdIndexRef = useRef(0);
   const advertisementsRef = useRef<Advertisement[]>([]);
+  const rotationIntervalRef = useRef(rotationInterval);
 
-  // Keep ref in sync with state for use in interval callbacks
+  // Keep refs in sync with state for use in interval callbacks
   advertisementsRef.current = advertisements;
+  rotationIntervalRef.current = rotationInterval;
 
   // Load advertisements and display settings
   const loadAdvertisements = useCallback(async () => {
@@ -299,8 +301,8 @@ export function AdvertisementProvider({
       currentAdIndexRef.current = (currentAdIndexRef.current + 1) % ads.length;
       const nextAd = ads[currentAdIndexRef.current];
       showAdvertisement(nextAd);
-    }, rotationInterval * 1000);
-  }, [rotationInterval, showAdvertisement]);
+    }, rotationIntervalRef.current * 1000);
+  }, [showAdvertisement]);
 
   // Stop rotation
   const stopRotation = useCallback(() => {
@@ -340,19 +342,28 @@ export function AdvertisementProvider({
 
   // Update rotation timer when interval or ads change
   useEffect(() => {
-    if (isRotating && rotationTimerRef.current) {
+    if (!isRotating) return;
+
+    // Clear existing timer and create a new one with updated ref values
+    if (rotationTimerRef.current) {
       clearInterval(rotationTimerRef.current);
-      rotationTimerRef.current = setInterval(() => {
-        const ads = advertisementsRef.current;
-        if (ads.length === 0) return;
-        currentAdIndexRef.current =
-          (currentAdIndexRef.current + 1) % ads.length;
-        const nextAd = ads[currentAdIndexRef.current];
-        if (nextAd) {
-          showAdvertisement(nextAd);
-        }
-      }, rotationInterval * 1000);
     }
+    rotationTimerRef.current = setInterval(() => {
+      const ads = advertisementsRef.current;
+      if (ads.length === 0) return;
+      currentAdIndexRef.current = (currentAdIndexRef.current + 1) % ads.length;
+      const nextAd = ads[currentAdIndexRef.current];
+      if (nextAd) {
+        showAdvertisement(nextAd);
+      }
+    }, rotationIntervalRef.current * 1000);
+
+    return () => {
+      if (rotationTimerRef.current) {
+        clearInterval(rotationTimerRef.current);
+        rotationTimerRef.current = null;
+      }
+    };
   }, [rotationInterval, advertisements.length, isRotating, showAdvertisement]);
 
   const contextValue = useMemo(

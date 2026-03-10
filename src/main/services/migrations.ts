@@ -156,7 +156,7 @@ export function runMigrations(db: Database.Database): void {
 
     log.info('[Migrations] All migrations complete');
   } catch (error) {
-    log.error('[Migrations] Migration failed:', error);
-    throw error;
+    log.error('[Migrations] FTS migration failed (non-fatal):', error);
+    // Do NOT throw — FTS is optional, app works without it
   }
 }

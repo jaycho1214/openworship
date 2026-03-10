@@ -214,6 +214,7 @@ export default function SessionList({
               variant="ghost"
               className="h-8 w-8 text-green-500 hover:text-green-400"
               onClick={handleCreateSession}
+              aria-label={t('confirm')}
             >
               <Check className="w-4 h-4" />
             </Button>
@@ -225,6 +226,7 @@ export default function SessionList({
                 setIsCreating(false);
                 setNewSessionName('');
               }}
+              aria-label={t('cancel')}
             >
               <X className="w-4 h-4" />
             </Button>
@@ -302,6 +304,7 @@ export default function SessionList({
                                 e.stopPropagation();
                                 handleSaveRename();
                               }}
+                              aria-label={t('confirm')}
                             >
                               <Check className="w-3 h-3" />
                             </Button>
@@ -313,6 +316,7 @@ export default function SessionList({
                                 e.stopPropagation();
                                 handleCancelRename();
                               }}
+                              aria-label={t('cancel')}
                             >
                               <X className="w-3 h-3" />
                             </Button>
@@ -354,6 +358,7 @@ export default function SessionList({
                               e.stopPropagation();
                               handleStartRename(session);
                             }}
+                            aria-label={t('rename')}
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </Button>
@@ -365,6 +370,7 @@ export default function SessionList({
                               e.stopPropagation();
                               setSessionToDelete(session.id);
                             }}
+                            aria-label={t('delete')}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>

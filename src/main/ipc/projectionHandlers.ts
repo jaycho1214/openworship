@@ -118,8 +118,17 @@ export const registerProjectionHandlers = (): void => {
   const forwardToProjection = (channel: string) => {
     ipcMain.on(channel, (_event, data) => {
       const projectionWindow = getProjectionWindow();
-      if (projectionWindow && !projectionWindow.isDestroyed()) {
-        projectionWindow.webContents.send(channel, data);
+      try {
+        if (
+          projectionWindow &&
+          !projectionWindow.isDestroyed() &&
+          !projectionWindow.webContents.isDestroyed()
+        ) {
+          projectionWindow.webContents.send(channel, data);
+        }
+      } catch (err) {
+        // Window may have been destroyed between check and send
+        log.warn(`[Projection] Failed to forward ${channel}:`, err);
       }
     });
   };
@@ -145,8 +154,16 @@ export const registerProjectionHandlers = (): void => {
     log.info('[Projection] Window is ready');
     setImmediate(() => {
       const controlWindow = getControlWindow();
-      if (controlWindow && !controlWindow.isDestroyed()) {
-        controlWindow.webContents.send('projection:ready');
+      try {
+        if (
+          controlWindow &&
+          !controlWindow.isDestroyed() &&
+          !controlWindow.webContents.isDestroyed()
+        ) {
+          controlWindow.webContents.send('projection:ready');
+        }
+      } catch (err) {
+        log.warn('[Projection] Failed to forward ready signal:', err);
       }
     });
   });

@@ -34,7 +34,7 @@ const dbToSetlistItem = (db: DbSessionItem): SetlistItem => {
     id: db.id,
     position: db.position,
     createdAt: db.createdAt,
-    updatedAt: db.createdAt,
+    updatedAt: db.updatedAt,
   };
 
   switch (db.itemType) {
@@ -132,11 +132,11 @@ const populateItemSlides = (item: SetlistItem): SetlistItem => {
   } else if (item.type === 'announcement') {
     const announcementItem = item as AnnouncementSetlistItem;
     if (announcementItem.contentType === 'image') {
-      // Image note: single slide with image path as content
+      // Image note: single slide with empty lines (image rendered via overlay, not text)
       announcementItem._slides = [
         {
           id: uuidv4(),
-          lines: [announcementItem.imagePath || ''],
+          lines: [''],
           section: 'Note',
         },
       ];
@@ -243,6 +243,30 @@ export const registerSessionItemHandlers = (): void => {
         const dbItem = databaseService.updateSessionItem(id, updates);
         if (!dbItem) {
           return errorResponse('Item not found');
+        }
+
+        // Warn if unexpected fields were passed for the item type
+        const allowedFields: Record<string, string[]> = {
+          song: ['position'],
+          bible: ['startVerse', 'endVerse', 'displayMode'],
+          announcement: [
+            'title',
+            'content',
+            'noteDisplayMode',
+            'noteContentType',
+            'imagePath',
+            'overlayPosition',
+          ],
+        };
+        const allowed = new Set(allowedFields[dbItem.itemType] ?? []);
+        const unexpected = Object.keys(updates).filter(
+          (k) =>
+            updates[k as keyof typeof updates] !== undefined && !allowed.has(k),
+        );
+        if (unexpected.length > 0) {
+          log.warn(
+            `[SessionItem] Unexpected fields for '${dbItem.itemType}' item: ${unexpected.join(', ')}`,
+          );
         }
 
         const item = populateItemSlides(dbToSetlistItem(dbItem));

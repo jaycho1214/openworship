@@ -31,7 +31,17 @@ export const registerExportHandlers = (): void => {
         return { success: false, canceled: true };
       }
 
-      fs.writeFileSync(filePath, JSON.stringify(exportData, null, 2));
+      try {
+        fs.writeFileSync(filePath, JSON.stringify(exportData, null, 2));
+      } catch (writeErr: unknown) {
+        const code = (writeErr as NodeJS.ErrnoException).code;
+        if (code === 'ENOSPC') {
+          return errorResponse(
+            'Not enough disk space to save the file. Please free up space and try again.',
+          );
+        }
+        throw writeErr;
+      }
       log.info('[Export] Song exported to:', filePath);
       return successResponse(filePath);
     } catch (error) {
@@ -59,7 +69,17 @@ export const registerExportHandlers = (): void => {
         return { success: false, canceled: true };
       }
 
-      fs.writeFileSync(filePath, JSON.stringify(exportData, null, 2));
+      try {
+        fs.writeFileSync(filePath, JSON.stringify(exportData, null, 2));
+      } catch (writeErr: unknown) {
+        const code = (writeErr as NodeJS.ErrnoException).code;
+        if (code === 'ENOSPC') {
+          return errorResponse(
+            'Not enough disk space to save the file. Please free up space and try again.',
+          );
+        }
+        throw writeErr;
+      }
       log.info('[Export] Session exported to:', filePath);
       return successResponse(filePath);
     } catch (error) {
@@ -87,7 +107,17 @@ export const registerExportHandlers = (): void => {
         return { success: false, canceled: true };
       }
 
-      fs.writeFileSync(filePath, JSON.stringify(exportData, null, 2));
+      try {
+        fs.writeFileSync(filePath, JSON.stringify(exportData, null, 2));
+      } catch (writeErr: unknown) {
+        const code = (writeErr as NodeJS.ErrnoException).code;
+        if (code === 'ENOSPC') {
+          return errorResponse(
+            'Not enough disk space to save the file. Please free up space and try again.',
+          );
+        }
+        throw writeErr;
+      }
       log.info('[Export] Library exported to:', filePath);
       return successResponse(filePath);
     } catch (error) {
