@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Save,
   X,
@@ -31,11 +31,8 @@ import { ScrollArea } from '../../components/ui/scroll-area';
 import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
 import { useSetlist } from '../context';
-import { Song, Slide } from '../../shared/types/song';
-import {
-  parseLyricsToSlides,
-  slidesToRawLyrics,
-} from '../../shared/utils/lyricsParser';
+import { Song } from '../../shared/types/song';
+import { slidesToRawLyrics } from '../../shared/utils/lyricsParser';
 import {
   isOcrFile,
   isPdfFile,
@@ -90,8 +87,11 @@ export default function SongEditor({
   // Edit mode state (for editing existing songs)
   const [title, setTitle] = useState('');
   const [lyrics, setLyrics] = useState('');
-  const [previewSlides, setPreviewSlides] = useState<Slide[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Card-based lyrics editing state (edit mode)
+  const [slideCards, setSlideCards] = useState<string[]>(['']);
+  const cardRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
   // Bulk import state
   const [bulkItems, setBulkItems] = useState<ImportItem[]>([]);
@@ -130,10 +130,19 @@ export default function SongEditor({
     if (open) {
       if (song) {
         setTitle(song.title);
-        setLyrics(slidesToRawLyrics(song.slides));
+        const rawLyrics = slidesToRawLyrics(song.slides);
+        setLyrics(rawLyrics);
+        // Initialize slide cards from lyrics
+        if (rawLyrics.trim()) {
+          const cards = rawLyrics.split(/\n\n+/).filter((c) => c.trim());
+          setSlideCards(cards.length > 0 ? cards : ['']);
+        } else {
+          setSlideCards(['']);
+        }
       } else {
         setTitle('');
         setLyrics('');
+        setSlideCards(['']);
       }
       setError(null);
       setAddToLibrary(false);
@@ -142,13 +151,157 @@ export default function SongEditor({
     }
   }, [open, song]);
 
-  // Update preview when lyrics change (edit mode)
-  useEffect(() => {
-    if (isEditMode) {
-      const slides = parseLyricsToSlides(lyrics);
-      setPreviewSlides(slides);
-    }
-  }, [lyrics, isEditMode]);
+  // Card-based editing helpers (edit mode)
+  const updateLyricsFromCards = useCallback((cards: string[]) => {
+    setSlideCards(cards);
+    const newLyrics = cards
+      .map((c) => c.trim())
+      .filter(Boolean)
+      .join('\n\n');
+    setLyrics(newLyrics);
+  }, []);
+
+  const handleCardChange = useCallback(
+    (index: number, value: string) => {
+      const newCards = [...slideCards];
+      newCards[index] = value;
+      updateLyricsFromCards(newCards);
+    },
+    [slideCards, updateLyricsFromCards],
+  );
+
+  const handleCardKeyDown = useCallback(
+    (index: number, e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const textarea = e.currentTarget;
+
+      // Tab to split card at cursor
+      if (e.key === 'Tab' && !e.shiftKey) {
+        e.preventDefault();
+        const { selectionStart } = textarea;
+        const before = slideCards[index].substring(0, selectionStart);
+        const after = slideCards[index].substring(selectionStart);
+
+        const newCards = [...slideCards];
+        newCards[index] = before.trimEnd();
+        newCards.splice(index + 1, 0, after.trimStart());
+        updateLyricsFromCards(newCards);
+
+        requestAnimationFrame(() => {
+          const newCard = cardRefs.current[index + 1];
+          newCard?.focus();
+          newCard?.setSelectionRange(0, 0);
+        });
+      }
+
+      // Shift+Tab to merge with previous card
+      if (e.key === 'Tab' && e.shiftKey && index > 0) {
+        e.preventDefault();
+        const prevContent = slideCards[index - 1];
+        const cursorPos = prevContent.length;
+
+        const newCards = [...slideCards];
+        newCards[index - 1] =
+          prevContent + (slideCards[index] ? `\n${slideCards[index]}` : '');
+        newCards.splice(index, 1);
+        updateLyricsFromCards(newCards);
+
+        requestAnimationFrame(() => {
+          const prev = cardRefs.current[index - 1];
+          prev?.focus();
+          prev?.setSelectionRange(cursorPos, cursorPos);
+        });
+      }
+
+      // Backspace at beginning of card to merge with previous
+      if (
+        e.key === 'Backspace' &&
+        textarea.selectionStart === 0 &&
+        textarea.selectionEnd === 0 &&
+        index > 0
+      ) {
+        e.preventDefault();
+        const prevContent = slideCards[index - 1];
+        const cursorPos = prevContent.length;
+
+        const newCards = [...slideCards];
+        newCards[index - 1] =
+          prevContent + (slideCards[index] ? `\n${slideCards[index]}` : '');
+        newCards.splice(index, 1);
+        updateLyricsFromCards(newCards);
+
+        requestAnimationFrame(() => {
+          const prev = cardRefs.current[index - 1];
+          prev?.focus();
+          prev?.setSelectionRange(cursorPos, cursorPos);
+        });
+      }
+    },
+    [slideCards, updateLyricsFromCards],
+  );
+
+  const handleCardPaste = useCallback(
+    (index: number, e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      // Check for image paste first
+      const items = e.clipboardData?.items;
+      if (items) {
+        for (const item of items) {
+          if (item.type.startsWith('image/')) return;
+        }
+      }
+
+      const text = e.clipboardData.getData('text');
+      if (!text.includes('\n\n')) return;
+
+      e.preventDefault();
+      const textarea = e.currentTarget;
+      const { selectionStart, selectionEnd } = textarea;
+
+      const pastedCards = text
+        .split(/\n\n+/)
+        .map((c) => c.trim())
+        .filter(Boolean);
+      if (pastedCards.length <= 1) {
+        document.execCommand('insertText', false, text);
+        return;
+      }
+
+      const before = slideCards[index].substring(0, selectionStart);
+      const after = slideCards[index].substring(selectionEnd);
+
+      pastedCards[0] = (before + pastedCards[0]).trim();
+      pastedCards[pastedCards.length - 1] = (
+        pastedCards[pastedCards.length - 1] + after
+      ).trim();
+
+      const newCards = [...slideCards];
+      newCards.splice(index, 1, ...pastedCards);
+      updateLyricsFromCards(newCards);
+
+      const lastIndex = index + pastedCards.length - 1;
+      requestAnimationFrame(() => {
+        cardRefs.current[lastIndex]?.focus();
+      });
+    },
+    [slideCards, updateLyricsFromCards],
+  );
+
+  const handleRemoveCard = useCallback(
+    (index: number) => {
+      if (slideCards.length <= 1) return;
+      const newCards = slideCards.filter((_, i) => i !== index);
+      updateLyricsFromCards(newCards);
+      const focusIndex = Math.min(index, newCards.length - 1);
+      requestAnimationFrame(() => {
+        cardRefs.current[focusIndex]?.focus();
+      });
+    },
+    [slideCards, updateLyricsFromCards],
+  );
+
+  const filledCardCount = useMemo(
+    () => slideCards.filter((c) => c.trim()).length,
+    [slideCards],
+  );
 
   // Process image/PDF files with OCR
   const processFiles = useCallback(
@@ -389,7 +542,12 @@ export default function SongEditor({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[85vh] bg-background border-border p-0 flex flex-col">
+      <DialogContent
+        className={cn(
+          'h-[85vh] bg-background border-border p-0 flex flex-col',
+          isEditMode ? 'max-w-2xl' : 'max-w-5xl',
+        )}
+      >
         <DialogHeader className="px-6 py-4 border-b border-border/50 pr-12">
           <DialogTitle className="text-foreground flex items-center gap-2">
             <FileText className="w-4 h-4 text-foreground" />
@@ -430,95 +588,89 @@ export default function SongEditor({
         {/* Main Content */}
         <div className="flex-1 flex overflow-hidden" onPaste={handlePaste}>
           {isEditMode ? (
-            /* ============== EDIT MODE (existing song) ============== */
-            <>
-              {/* Left: Input */}
-              <div className="flex-1 flex flex-col border-r border-border/50">
-                <div className="px-4 py-3 space-y-3">
-                  <div className="space-y-1.5">
-                    <Label
-                      htmlFor="title"
-                      className="text-xs text-muted-foreground"
-                    >
-                      {t('songTitle')}
-                    </Label>
-                    <Input
-                      id="title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder={t('songTitlePlaceholder')}
-                      className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex-1 px-4 pb-4 flex flex-col min-h-0">
+            /* ============== EDIT MODE (existing song) — card-based editor ============== */
+            <div className="flex-1 flex flex-col min-w-0">
+              {/* Editor */}
+              <div className="flex-1 flex flex-col p-4 min-h-0">
+                <div className="space-y-1.5 mb-4">
                   <Label
-                    htmlFor="lyrics"
-                    className="text-xs text-muted-foreground mb-1.5"
+                    htmlFor="edit-title"
+                    className="text-xs text-muted-foreground"
                   >
-                    {t('lyrics')}
+                    {t('songTitle')}
                   </Label>
-                  <Textarea
-                    id="lyrics"
-                    value={lyrics}
-                    onChange={(e) => setLyrics(e.target.value)}
-                    placeholder={t('lyricsPlaceholder')}
-                    className="flex-1 resize-none bg-muted/50 border-border text-foreground placeholder:text-muted-foreground font-mono text-sm leading-relaxed"
+                  <Input
+                    id="edit-title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder={t('songTitlePlaceholder')}
+                    className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
                   />
-                  <p className="text-[10px] text-muted-foreground mt-2">
-                    {t('lyricsHint')}
-                  </p>
                 </div>
-              </div>
 
-              {/* Right: Preview */}
-              <div className="w-80 flex flex-col bg-card/50">
-                <div className="px-4 py-3 border-b border-border/50">
-                  <h3 className="text-xs font-medium text-muted-foreground">
-                    {t('slidePreview')} ({previewSlides.length} {t('slides')})
-                  </h3>
-                </div>
-                <ScrollArea className="flex-1">
-                  <div className="p-3 space-y-2 w-full">
-                    {previewSlides.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-xs text-muted-foreground">
-                          {t('noSlides')}
-                        </p>
-                      </div>
-                    ) : (
-                      previewSlides.map((slide, index) => (
-                        <div
-                          key={slide.id}
-                          className="p-3 rounded-lg bg-muted/30 border border-border/30"
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                              {index + 1}
-                            </span>
-                          </div>
-                          <div className="space-y-0.5">
-                            {slide.lines.map((line, lineIndex) => (
-                              <p
-                                key={lineIndex} // eslint-disable-line react/no-array-index-key -- lines have no stable ID
-                                className="text-xs text-foreground leading-relaxed"
-                              >
-                                {line || (
-                                  <span className="text-muted-foreground">
-                                    —
-                                  </span>
-                                )}
-                              </p>
-                            ))}
-                          </div>
-                        </div>
-                      ))
-                    )}
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <Label className="text-xs text-muted-foreground">
+                      {t('lyrics')}{' '}
+                      {filledCardCount > 0 && (
+                        <span className="text-muted-foreground/60">
+                          ({filledCardCount} {t('slides')})
+                        </span>
+                      )}
+                    </Label>
+                    <p className="text-[10px] text-muted-foreground">
+                      {t('slideCardHint')}
+                    </p>
                   </div>
-                </ScrollArea>
+                  <ScrollArea className="flex-1">
+                    <div className="space-y-1.5 p-1 pr-2 pb-2">
+                      {slideCards.map((card, index) => (
+                        <div
+                          key={index} // eslint-disable-line react/no-array-index-key -- positional cards
+                          className="group relative flex items-start gap-1.5"
+                        >
+                          <span className="text-[10px] font-mono font-medium text-muted-foreground/50 w-5 text-right pt-2 shrink-0 select-none">
+                            {index + 1}
+                          </span>
+                          <div className="flex-1 relative">
+                            <textarea
+                              ref={(el) => {
+                                cardRefs.current[index] = el;
+                              }}
+                              value={card}
+                              onChange={(e) =>
+                                handleCardChange(index, e.target.value)
+                              }
+                              onKeyDown={(e) => handleCardKeyDown(index, e)}
+                              onPaste={(e) => handleCardPaste(index, e)}
+                              rows={Math.max(1, card.split('\n').length || 1)}
+                              className={cn(
+                                'w-full resize-none rounded-md border bg-muted/20 px-3 py-1.5 text-sm font-mono leading-relaxed text-foreground placeholder:text-muted-foreground/40',
+                                'focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring focus:bg-muted/40',
+                                'border-border/30 hover:border-border/60 transition-colors',
+                              )}
+                              placeholder={
+                                index === 0 ? t('lyricsPlaceholder') : ''
+                              }
+                            />
+                          </div>
+                          {slideCards.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCard(index)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity pt-1.5 px-0.5 shrink-0"
+                              tabIndex={-1}
+                            >
+                              <X className="w-3 h-3 text-muted-foreground/40 hover:text-muted-foreground" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
-            </>
+            </div>
           ) : (
             /* ============== BULK IMPORT MODE ============== */
             <>

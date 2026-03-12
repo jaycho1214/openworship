@@ -168,6 +168,45 @@ export const registerProjectionHandlers = (): void => {
     });
   });
 
+  // Get the target projection dimensions (actual window size or predicted display size)
+  ipcMain.handle('displays:getProjectionTarget', () => {
+    try {
+      const projectionWindow = getProjectionWindow();
+
+      // If projection window is open, use its actual content size
+      if (projectionWindow && !projectionWindow.isDestroyed()) {
+        const [width, height] = projectionWindow.getContentSize();
+        // Guard against race condition during window creation (size may be 0)
+        if (width > 0 && height > 0) {
+          return successResponse({ width, height });
+        }
+      }
+
+      // Projection not open — compute what createProjectionWindow would use
+      const settings = settingsService.getProjectionSettings();
+      const isWindowed = settings.displayMode === 'windowed';
+
+      if (isWindowed) {
+        return successResponse({ width: 1280, height: 720 });
+      }
+
+      // Fullscreen: use target display bounds
+      const displays = screen.getAllDisplays();
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const externalDisplay = displays.find((d) => d.id !== primaryDisplay.id);
+      const targetDisplay = externalDisplay || primaryDisplay;
+
+      return successResponse({
+        width: targetDisplay.bounds.width,
+        height: targetDisplay.bounds.height,
+      });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      log.error('[Projection] Error getting projection target:', message);
+      return errorResponse(message);
+    }
+  });
+
   // Get available displays info
   ipcMain.handle('displays:getAll', () => {
     try {

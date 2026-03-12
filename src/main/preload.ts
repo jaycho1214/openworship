@@ -62,7 +62,8 @@ export type Channels =
   | 'projection:contentTypeText'
   | 'projection:overlayNote'
   | 'file:open'
-  | 'bible:importProgress';
+  | 'bible:importProgress'
+  | 'displays:targetChanged';
 
 export type InvokeChannels =
   | 'projection:open'
@@ -73,6 +74,7 @@ export type InvokeChannels =
   | 'dialog:saveFile'
   | 'dialog:openFile'
   | 'displays:getAll'
+  | 'displays:getProjectionTarget'
   | 'ocr:parseImage'
   | 'ocr:parseImages'
   | 'videos:getEmbedded'
@@ -391,6 +393,22 @@ const electronHandler = {
   // Display info
   displays: {
     getAll: () => ipcRenderer.invoke('displays:getAll'),
+    getProjectionTarget: (): Promise<{
+      success: boolean;
+      data?: { width: number; height: number };
+      error?: string;
+    }> => ipcRenderer.invoke('displays:getProjectionTarget'),
+    onTargetChanged: (
+      callback: (dims: { width: number; height: number }) => void,
+    ) => {
+      const subscription = (
+        _event: IpcRendererEvent,
+        dims: { width: number; height: number },
+      ) => callback(dims);
+      ipcRenderer.on('displays:targetChanged', subscription);
+      return () =>
+        ipcRenderer.removeListener('displays:targetChanged', subscription);
+    },
   },
 
   // OCR service

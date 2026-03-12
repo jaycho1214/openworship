@@ -24,7 +24,7 @@ function InfoCard({ icon, title, subtitle, href, accent }: CardProps) {
   const content = (
     <div
       className={cn(
-        'group relative aspect-square p-4 rounded-xl',
+        'group relative h-full p-4 rounded-xl',
         'bg-zinc-50 dark:bg-zinc-900',
         'border border-zinc-200 dark:border-zinc-800',
         'hover:border-zinc-300 dark:hover:border-zinc-700',
@@ -70,7 +70,12 @@ function InfoCard({ icon, title, subtitle, href, accent }: CardProps) {
 
   if (href) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer">
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="h-full"
+      >
         {content}
       </a>
     );
@@ -110,7 +115,7 @@ export function AboutTab() {
       </div>
 
       {/* Cards Grid */}
-      <div className="grid grid-cols-3 gap-2.5 pb-2">
+      <div className="grid grid-cols-3 auto-rows-fr gap-2.5 pb-2">
         <InfoCard
           icon={<Github className="w-4 h-4" />}
           title={t('sourceCode')}

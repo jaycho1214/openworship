@@ -11,9 +11,7 @@ import {
 import { defaultProjectionSettings } from '../../shared/types/song';
 import ProjectionRenderer from '../../projection/components/ProjectionRenderer';
 import { useFontLoader } from '../../shared/hooks/useFontLoader';
-
-const PROJECTION_WIDTH = 1920;
-const PROJECTION_HEIGHT = 1080;
+import { useProjectionDimensions } from '../hooks/useProjectionDimensions';
 
 export default function LivePreview() {
   const { t } = useTranslation();
@@ -78,6 +76,11 @@ export default function LivePreview() {
     [projectionSettings],
   );
 
+  // Use actual projection target dimensions instead of hardcoded 1920x1080
+  // This ensures line breaks and text layout match the projection exactly
+  const { width: projectionWidth, height: projectionHeight } =
+    useProjectionDimensions();
+
   useFontLoader(detectedFonts);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(0.15);
@@ -90,8 +93,8 @@ export default function LivePreview() {
       const wrapperHeight = wrapperRef.current.clientHeight;
 
       // Calculate scale to fit within available space while maintaining aspect ratio
-      const scaleX = wrapperWidth / PROJECTION_WIDTH;
-      const scaleY = wrapperHeight / PROJECTION_HEIGHT;
+      const scaleX = wrapperWidth / projectionWidth;
+      const scaleY = wrapperHeight / projectionHeight;
       const scale = Math.min(scaleX, scaleY);
 
       setPreviewScale(scale);
@@ -106,7 +109,7 @@ export default function LivePreview() {
     }
 
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [projectionWidth, projectionHeight]);
 
   // Get current lines for projection
   const currentLines = currentSlide?.lines ?? [];
@@ -124,10 +127,10 @@ export default function LivePreview() {
   // Calculate the actual scaled dimensions for proper centering
   const scaledDimensions = useMemo(
     () => ({
-      width: PROJECTION_WIDTH * previewScale,
-      height: PROJECTION_HEIGHT * previewScale,
+      width: projectionWidth * previewScale,
+      height: projectionHeight * previewScale,
     }),
-    [previewScale],
+    [previewScale, projectionWidth, projectionHeight],
   );
 
   // Memoize style object to prevent unnecessary re-renders
@@ -135,10 +138,10 @@ export default function LivePreview() {
     () => ({
       transform: `scale(${previewScale})`,
       transformOrigin: 'top left' as const,
-      width: PROJECTION_WIDTH,
-      height: PROJECTION_HEIGHT,
+      width: projectionWidth,
+      height: projectionHeight,
     }),
-    [previewScale],
+    [previewScale, projectionWidth, projectionHeight],
   );
 
   return (

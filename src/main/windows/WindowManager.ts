@@ -165,6 +165,22 @@ export const createProjectionWindow = (
     if (controlWindow && !controlWindow.isDestroyed()) {
       controlWindow.webContents.send('projection:closed');
     }
+    // Update live preview dimensions (revert to display-based)
+    sendProjectionTargetToControl();
+  });
+
+  // Send initial dimensions once window is ready
+  projectionWindow.once('ready-to-show', () => {
+    sendProjectionTargetToControl();
+  });
+
+  // Track resize in windowed mode (debounced)
+  let resizeTimer: NodeJS.Timeout | null = null;
+  projectionWindow.on('resize', () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      sendProjectionTargetToControl();
+    }, 100);
   });
 
   // Set reference for dev tools menu
@@ -237,6 +253,48 @@ const switchProjectionToWindowed = (): void => {
 };
 
 /**
+ * Send the current projection target dimensions to the control window.
+ * Uses actual projection window size if open, otherwise computes from display info.
+ */
+export const sendProjectionTargetToControl = (): void => {
+  if (!controlWindow || controlWindow.isDestroyed()) return;
+
+  try {
+    if (projectionWindow && !projectionWindow.isDestroyed()) {
+      const [width, height] = projectionWindow.getContentSize();
+      if (width > 0 && height > 0) {
+        controlWindow.webContents.send('displays:targetChanged', {
+          width,
+          height,
+        });
+        return;
+      }
+    }
+
+    // Compute from display info
+    const settings = settingsService.getProjectionSettings();
+    if (settings.displayMode === 'windowed') {
+      controlWindow.webContents.send('displays:targetChanged', {
+        width: 1280,
+        height: 720,
+      });
+      return;
+    }
+
+    const displays = screen.getAllDisplays();
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const externalDisplay = displays.find((d) => d.id !== primaryDisplay.id);
+    const target = externalDisplay || primaryDisplay;
+    controlWindow.webContents.send('displays:targetChanged', {
+      width: target.bounds.width,
+      height: target.bounds.height,
+    });
+  } catch (err) {
+    log.warn('[Windows] Failed to send projection target dimensions:', err);
+  }
+};
+
+/**
  * Recreate the control window (for macOS dock click)
  */
 export const recreateControlWindow = async (): Promise<void> => {
@@ -277,6 +335,7 @@ export const registerDisplayEventListeners = (): void => {
       log.info('[Windows] Display metrics changed, updating projection bounds');
       projectionWindow.setBounds(display.bounds);
       projectionWindow.setFullScreen(true);
+      sendProjectionTargetToControl();
     }
   });
 
@@ -300,6 +359,7 @@ export const registerDisplayEventListeners = (): void => {
           '[Windows] Projection display removed, only 1 display remains — switching to windowed',
         );
         switchProjectionToWindowed();
+        sendProjectionTargetToControl();
       } else {
         // Multiple displays remain — recreate on another one
         log.info(
@@ -338,5 +398,15 @@ export const registerDisplayEventListeners = (): void => {
       projectionWindow.close();
       createProjectionWindow();
     }
+  });
+
+  // Also notify control window when displays change even if projection is not open,
+  // so the live preview uses the correct target dimensions
+  screen.on('display-added', () => {
+    sendProjectionTargetToControl();
+  });
+  screen.on('display-removed', () => {
+    // Delay slightly to let the display list update
+    setTimeout(() => sendProjectionTargetToControl(), 200);
   });
 };

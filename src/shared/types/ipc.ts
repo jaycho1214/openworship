@@ -18,7 +18,8 @@ export type SendChannels =
   | 'projection:advertisement'
   | 'projection:frame'
   | 'bible:importProgress'
-  | 'file:open';
+  | 'file:open'
+  | 'displays:targetChanged';
 
 // Request-response channels (invoke)
 export type InvokeChannels =
@@ -33,6 +34,7 @@ export type InvokeChannels =
   | 'dialog:openFile'
   // Displays
   | 'displays:getAll'
+  | 'displays:getProjectionTarget'
   // OCR
   | 'ocr:parseImage'
   | 'ocr:parseImages'
