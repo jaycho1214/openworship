@@ -236,11 +236,15 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
     // Try to load unified items first, fall back to legacy songs
     const loadSession = async () => {
       try {
-        // First try to get unified items - if sessionItem API exists, use it exclusively
+        // First try to get unified items, fall back to legacy session_songs if empty
         if (electron.sessionItem) {
           const itemsResult =
             await electron.sessionItem.getAll(currentSessionId);
-          if (itemsResult.success && itemsResult.data) {
+          if (
+            itemsResult.success &&
+            itemsResult.data &&
+            itemsResult.data.length > 0
+          ) {
             // The handler already returns fully populated SetlistItem[] with _song and _slides
             const items: SetlistItem[] = itemsResult.data;
 
@@ -270,14 +274,59 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
           }
         }
 
-        // Fall back to legacy song loading
+        // Fall back to legacy song loading (session_songs table)
         const result = await electron.session.getById(currentSessionId);
         if (result.success && result.data) {
           const songs = result.data.songs
             ? loadSessionSongs(result.data.songs)
             : [];
 
-          // Convert legacy songs to unified items
+          // Migrate legacy songs to session_items for future loads
+          if (songs.length > 0 && electron.sessionItem) {
+            const migratedItems: SetlistItem[] = [];
+            for (const song of songs) {
+              try {
+                const addResult = await electron.sessionItem.add(
+                  currentSessionId,
+                  { type: 'song', songId: song.id },
+                );
+                if (addResult.success && addResult.data) {
+                  migratedItems.push(addResult.data);
+                }
+              } catch {
+                // Non-fatal: migration of individual song failed
+              }
+            }
+
+            // Use migrated items (they have proper DB-assigned IDs)
+            if (migratedItems.length > 0) {
+              // Populate _song on migrated items
+              const items: SetlistItem[] = migratedItems.map((item) => {
+                if (item.type === 'song') {
+                  const matchedSong = songs.find((s) => s.id === item.songId);
+                  return {
+                    ...item,
+                    _song: matchedSong,
+                    _slides: matchedSong?.slides,
+                  } as SetlistItem;
+                }
+                return item;
+              });
+
+              const sessionName = result.data.name;
+              setCurrentSetlist({
+                id: currentSessionId,
+                name: sessionName,
+                items,
+                songs,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              });
+              return;
+            }
+          }
+
+          // Convert legacy songs to unified items (no migration available)
           const items: SetlistItem[] = songs.map((song, index) => ({
             id: generateId(),
             type: 'song' as const,

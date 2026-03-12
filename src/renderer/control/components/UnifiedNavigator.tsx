@@ -681,7 +681,13 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
     try {
       const data = JSON.parse(e.dataTransfer.getData('application/json'));
       if (data.type === 'library-song' && data.song) {
-        addSong(data.song.title, data.song.lyrics);
+        // Use addItem directly with song ID for reliable adding
+        if (data.song.id) {
+          addItem({ type: 'song', songId: data.song.id });
+        } else {
+          // Fallback for legacy drag data without ID
+          addSong(data.song.title, data.song.lyrics);
+        }
       }
     } catch (error) {
       console.error('Failed to parse drop data:', error);

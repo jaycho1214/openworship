@@ -622,6 +622,12 @@
     @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
+  /* Ensure text cursor is always visible (fixes Windows caret blending) */
+  input,
+  textarea {
+    caret-color: var(--foreground);
+  }
+
   /* Smoother transitions globally */
   button,
   a,
