@@ -68,7 +68,7 @@ export default function LibraryDrawer({
 }: LibraryDrawerProps) {
   const { t } = useTranslation();
   const { currentSessionId } = useSession();
-  const { currentSetlist, addSong } = useSetlist();
+  const { currentSetlist, addItem } = useSetlist();
 
   const [songs, setSongs] = useState<LibrarySong[]>([]);
   const [filteredSongs, setFilteredSongs] = useState<LibrarySong[]>([]);
@@ -155,7 +155,7 @@ export default function LibraryDrawer({
   // Import single song to session
   const handleImportToSession = (song: LibrarySong) => {
     if (!currentSessionId) return;
-    addSong(song.title, song.lyrics);
+    addItem({ type: 'song', songId: song.id });
   };
 
   // Import multiple songs to session
@@ -164,7 +164,7 @@ export default function LibraryDrawer({
 
     const songsToImport = songs.filter((s) => selectedIds.has(s.id));
     songsToImport.forEach((song) => {
-      addSong(song.title, song.lyrics);
+      addItem({ type: 'song', songId: song.id });
     });
 
     // Clear selection after import

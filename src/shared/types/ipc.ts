@@ -84,9 +84,6 @@ export type InvokeChannels =
   | 'session:create'
   | 'session:update'
   | 'session:delete'
-  | 'session:addSong'
-  | 'session:removeSong'
-  | 'session:reorderSongs'
   | 'session:getCount'
   // Export/Import
   | 'export:song'

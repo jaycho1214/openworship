@@ -70,7 +70,7 @@ export default function LibrarySidebar({
 }: LibrarySidebarProps) {
   const { t } = useTranslation();
   const { currentSessionId } = useSession();
-  const { currentSetlist, addSong, addItem } = useSetlist();
+  const { currentSetlist, addItem } = useSetlist();
 
   const [songs, setSongs] = useState<LibrarySong[]>([]);
   const [filteredSongs, setFilteredSongs] = useState<LibrarySong[]>([]);
@@ -144,10 +144,10 @@ export default function LibrarySidebar({
     setSongToDelete(null);
   };
 
-  // Import single song to session
+  // Import single song to session (use addItem directly since song is already in library)
   const handleImportToSession = (song: LibrarySong) => {
     if (!currentSessionId) return;
-    addSong(song.title, song.lyrics);
+    addItem({ type: 'song', songId: song.id });
   };
 
   // Open edit dialog

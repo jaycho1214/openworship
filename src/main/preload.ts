@@ -12,7 +12,6 @@ import type {
   LibrarySong,
   LibrarySongInput,
   DbSession,
-  DbSessionWithSongs,
   ProjectionSettings,
   Setlist,
   ImportPreview,
@@ -120,9 +119,6 @@ export type InvokeChannels =
   | 'session:create'
   | 'session:update'
   | 'session:delete'
-  | 'session:addSong'
-  | 'session:removeSong'
-  | 'session:reorderSongs'
   | 'session:getCount'
   | 'export:song'
   | 'export:session'
@@ -756,7 +752,7 @@ const electronHandler = {
       id: string,
     ): Promise<{
       success: boolean;
-      data?: DbSessionWithSongs;
+      data?: DbSession;
       error?: string;
     }> => ipcRenderer.invoke('session:getById', id),
     create: (
@@ -770,21 +766,6 @@ const electronHandler = {
       ipcRenderer.invoke('session:update', id, updates),
     delete: (id: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('session:delete', id),
-    addSong: (
-      sessionId: string,
-      songId: string,
-    ): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke('session:addSong', sessionId, songId),
-    removeSong: (
-      sessionId: string,
-      songId: string,
-    ): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke('session:removeSong', sessionId, songId),
-    reorderSongs: (
-      sessionId: string,
-      songIds: string[],
-    ): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke('session:reorderSongs', sessionId, songIds),
     getCount: (): Promise<{
       success: boolean;
       data?: number;

@@ -54,7 +54,16 @@ export function exportSession(sessionId: string): OpenWorshipFile | null {
       return null;
     }
 
-    const songs: ExportedSong[] = (session.songs || []).map(songToExported);
+    // Get songs via session_items
+    const items = databaseService.getSessionItems(sessionId);
+    const songIds = items
+      .filter((item) => item.itemType === 'song' && item.songId)
+      .map((item) => item.songId!);
+
+    const songs: ExportedSong[] = songIds
+      .map((id) => databaseService.getSongById(id))
+      .filter((s): s is NonNullable<typeof s> => s !== null)
+      .map(songToExported);
 
     return {
       version: '1.0',
@@ -266,11 +275,15 @@ export function importSelected(
 
       const newSession = databaseService.createSession({ name: sessionName });
 
-      // Add songs to session (using mapped IDs)
+      // Add songs to session via session_items (using mapped IDs)
       for (const oldSongId of sessionPreview.session.songIds) {
         const newSongId = songIdMap.get(oldSongId);
         if (newSongId) {
-          databaseService.addSongToSession(newSession.id, newSongId);
+          databaseService.addSessionItem({
+            sessionId: newSession.id,
+            itemType: 'song',
+            songId: newSongId,
+          });
         }
       }
 

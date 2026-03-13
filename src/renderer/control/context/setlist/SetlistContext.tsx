@@ -30,16 +30,6 @@ import { useSession } from '../session/SessionContext';
 
 import { getElectron } from '../../../shared/hooks/useElectron';
 
-interface DbLibrarySong {
-  id: string;
-  title: string;
-  lyrics: string;
-  categories: string[];
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
 interface DbSessionItem {
   id: string;
   sessionId: string;
@@ -86,7 +76,7 @@ interface SetlistContextType {
   deleteItem: (itemId: string) => void;
   reorderItems: (fromIndex: number, toIndex: number) => void;
   getItemSlides: (itemId: string) => Slide[];
-  // Legacy song methods for backward compatibility
+  // Song convenience methods
   addSong: (title: string, rawLyrics: string) => void;
   updateSong: (songId: string, title: string, rawLyrics: string) => void;
   deleteSong: (songId: string) => void;
@@ -106,7 +96,6 @@ interface SetlistContextType {
     overrides?: SlideOverrides,
     lineRoles?: ('body' | 'reference')[],
   ) => void;
-  loadSessionSongs: (dbSongs: DbLibrarySong[]) => Song[];
   refreshSongFromLibrary: (songId: string) => void;
 }
 
@@ -211,18 +200,6 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
     null,
   );
 
-  const loadSessionSongs = useCallback((dbSongs: DbLibrarySong[]) => {
-    const songs: Song[] = dbSongs.map((dbSong) => ({
-      id: dbSong.id,
-      title: dbSong.title,
-      rawLyrics: dbSong.lyrics,
-      slides: resolveSectionReferences(parseLyricsToSlides(dbSong.lyrics)),
-      createdAt: dbSong.createdAt,
-      updatedAt: dbSong.updatedAt,
-    }));
-    return songs;
-  }, []);
-
   // Load setlist when session changes
   useEffect(() => {
     const electron = getElectron();
@@ -233,30 +210,41 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
       return;
     }
 
-    // Try to load unified items first, fall back to legacy songs
     const loadSession = async () => {
       try {
-        // First try to get unified items - if sessionItem API exists, use it exclusively
+        // Get session metadata (name)
+        const sessionResult = await electron.session.getById(currentSessionId);
+        const sessionName =
+          sessionResult.success && sessionResult.data
+            ? sessionResult.data.name
+            : '';
+
+        // Load unified session_items
         if (electron.sessionItem) {
           const itemsResult =
             await electron.sessionItem.getAll(currentSessionId);
           if (itemsResult.success && itemsResult.data) {
-            // The handler already returns fully populated SetlistItem[] with _song and _slides
-            const items: SetlistItem[] = itemsResult.data;
+            // Re-parse song slides with renderer's parser for consistency
+            const items: SetlistItem[] = itemsResult.data.map((item) => {
+              if (isSongItem(item) && item._song) {
+                return {
+                  ...item,
+                  _song: {
+                    ...item._song,
+                    slides: resolveSectionReferences(
+                      parseLyricsToSlides(item._song.rawLyrics),
+                    ),
+                  },
+                };
+              }
+              return item;
+            });
 
-            // Build songs array from song items for backward compatibility
+            // Build songs array from song items
             const songs: Song[] = items
               .filter(isSongItem)
               .map((item) => item._song)
               .filter((song): song is Song => song !== undefined);
-
-            // Get session name
-            const sessionResult =
-              await electron.session.getById(currentSessionId);
-            const sessionName =
-              sessionResult.success && sessionResult.data
-                ? sessionResult.data.name
-                : '';
 
             setCurrentSetlist({
               id: currentSessionId,
@@ -270,46 +258,17 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
           }
         }
 
-        // Fall back to legacy song loading
-        const result = await electron.session.getById(currentSessionId);
-        if (result.success && result.data) {
-          const songs = result.data.songs
-            ? loadSessionSongs(result.data.songs)
-            : [];
-
-          // Convert legacy songs to unified items
-          const items: SetlistItem[] = songs.map((song, index) => ({
-            id: generateId(),
-            type: 'song' as const,
-            songId: song.id,
-            position: index,
-            _song: song,
-            createdAt: song.createdAt,
-            updatedAt: song.updatedAt,
-          }));
-
-          setCurrentSetlist({
-            id: currentSessionId,
-            name: result.data.name,
-            items,
-            songs,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-        } else {
-          // Session not found - initialize empty setlist
-          setCurrentSetlist({
-            id: currentSessionId,
-            name: '',
-            items: [],
-            songs: [],
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-        }
+        // Initialize empty setlist if loading failed
+        setCurrentSetlist({
+          id: currentSessionId,
+          name: sessionName,
+          items: [],
+          songs: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
       } catch (err) {
         console.error('Failed to load session:', err);
-        // Initialize empty setlist on error
         setCurrentSetlist({
           id: currentSessionId,
           name: '',
@@ -322,147 +281,58 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
     };
 
     loadSession();
-  }, [currentSessionId, loadSessionSongs]);
+  }, [currentSessionId]);
 
-  // Add unified item - optimized with parallel fetching
+  // Add unified item - uses backend's fully populated response
   const addItem = useCallback(
     async (input: SetlistItemInput): Promise<void> => {
       const electron = getElectron();
       if (!electron || !currentSessionId) return;
 
       try {
-        // Add to database
-        if (electron.sessionItem) {
-          // Start fetching additional data in PARALLEL with database add for better performance
-          let songPromise: Promise<{
-            success: boolean;
-            data?: DbLibrarySong;
-            error?: string;
-          }> | null = null;
-          let bibleSlidesPromise: Promise<{
-            success: boolean;
-            data?: Slide[];
-            error?: string;
-          }> | null = null;
+        if (!electron.sessionItem) return;
 
-          if (input.type === 'song') {
-            songPromise = electron.library.getById(input.songId);
-          } else if (input.type === 'bible' && electron.bible) {
-            bibleSlidesPromise = electron.bible.versesToSlides(
-              input.bookId,
-              input.bookName,
-              input.chapter,
-              input.startVerse,
-              input.endVerse,
-              input.displayMode,
-            );
-          }
-
-          // Wait for database add (always required)
-          const result = await electron.sessionItem.add(
-            currentSessionId,
-            input,
-          );
-          if (!result.success || !result.data) {
-            console.error('Failed to add item to session:', result.error);
-            return;
-          }
-
-          const dbItem = result.data;
-
-          // Build the SetlistItem
-          let item: SetlistItem;
-
-          if (input.type === 'song') {
-            // Await the song data (already started in parallel)
-            const songResult = await songPromise;
-            if (songResult?.success && songResult.data) {
-              const song: Song = {
-                id: songResult.data.id,
-                title: songResult.data.title,
-                rawLyrics: songResult.data.lyrics,
-                slides: resolveSectionReferences(
-                  parseLyricsToSlides(songResult.data.lyrics),
-                ),
-                createdAt: songResult.data.createdAt,
-                updatedAt: songResult.data.updatedAt,
-              };
-
-              item = {
-                id: dbItem.id,
-                type: 'song',
-                songId: input.songId,
-                position: dbItem.position,
-                _song: song,
-                createdAt: dbItem.createdAt,
-                updatedAt: dbItem.updatedAt,
-              };
-            } else {
-              console.error(
-                'Failed to fetch song from library for addItem, songId:',
-                input.songId,
-              );
-              return;
-            }
-          } else if (input.type === 'bible') {
-            // Await Bible slides (already started in parallel)
-            let slides: Slide[] = [];
-            if (bibleSlidesPromise) {
-              const slidesResult = await bibleSlidesPromise;
-              if (slidesResult?.success && slidesResult.data) {
-                slides = slidesResult.data;
-              }
-            }
-
-            item = {
-              id: dbItem.id,
-              type: 'bible',
-              translationId: input.translationId,
-              translationName: input.translationName,
-              bookId: input.bookId,
-              bookName: input.bookName,
-              chapter: input.chapter,
-              startVerse: input.startVerse,
-              endVerse: input.endVerse,
-              displayMode: input.displayMode,
-              position: dbItem.position,
-              _slides: slides,
-              createdAt: dbItem.createdAt,
-              updatedAt: dbItem.updatedAt,
-            };
-          } else if (input.type === 'announcement') {
-            item = {
-              id: dbItem.id,
-              type: 'announcement',
-              title: input.title,
-              content: input.content || '',
-              position: dbItem.position,
-              _slides: announcementToSlides(input.title, input.content || ''),
-              createdAt: dbItem.createdAt,
-              updatedAt: dbItem.updatedAt,
-            };
-          } else {
-            return; // Unknown type
-          }
-
-          // Update local state
-          setCurrentSetlist((prev) => {
-            if (!prev) return prev;
-
-            const newItems = [...prev.items, item];
-            const newSongs =
-              item.type === 'song' && item._song
-                ? [...prev.songs, item._song]
-                : prev.songs;
-
-            return {
-              ...prev,
-              items: newItems,
-              songs: newSongs,
-              updatedAt: new Date(),
-            };
-          });
+        // The backend handler adds to DB, populates _song/_slides, and returns
+        // a fully populated SetlistItem — no redundant re-fetching needed.
+        const result = await electron.sessionItem.add(currentSessionId, input);
+        if (!result.success || !result.data) {
+          console.error('Failed to add item to session:', result.error);
+          return;
         }
+
+        // Use the fully populated item from the backend directly
+        let item: SetlistItem = result.data;
+
+        // For songs, re-parse slides with the renderer's parser for consistency
+        if (isSongItem(item) && item._song) {
+          item = {
+            ...item,
+            _song: {
+              ...item._song,
+              slides: resolveSectionReferences(
+                parseLyricsToSlides(item._song.rawLyrics),
+              ),
+            },
+          };
+        }
+
+        // Update local state
+        setCurrentSetlist((prev) => {
+          if (!prev) return prev;
+
+          const newItems = [...prev.items, item];
+          const newSongs =
+            isSongItem(item) && item._song
+              ? [...prev.songs, item._song]
+              : prev.songs;
+
+          return {
+            ...prev,
+            items: newItems,
+            songs: newSongs,
+            updatedAt: new Date(),
+          };
+        });
       } catch (error) {
         console.error('Failed to add item:', error);
         toast.error('Failed to add item');
@@ -1014,7 +884,7 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
       deleteItem,
       reorderItems,
       getItemSlides,
-      // Legacy methods
+      // Song convenience methods
       addSong,
       updateSong,
       deleteSong,
@@ -1023,7 +893,6 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
       duplicateSlide,
       deleteSlide,
       updateSlide,
-      loadSessionSongs,
       refreshSongFromLibrary,
     }),
     [
@@ -1042,7 +911,6 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
       duplicateSlide,
       deleteSlide,
       updateSlide,
-      loadSessionSongs,
       refreshSongFromLibrary,
     ],
   );

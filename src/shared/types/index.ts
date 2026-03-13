@@ -41,12 +41,7 @@ export {
 } from './settings';
 
 // Library types
-export type {
-  LibrarySong,
-  LibrarySongInput,
-  DbSession,
-  DbSessionWithSongs,
-} from './library';
+export type { LibrarySong, LibrarySongInput, DbSession } from './library';
 
 // IPC types
 export type {

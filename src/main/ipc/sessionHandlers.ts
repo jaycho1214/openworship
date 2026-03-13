@@ -76,57 +76,6 @@ export const registerSessionHandlers = (): void => {
     }
   });
 
-  // Add song to session
-  ipcMain.handle(
-    'session:addSong',
-    (_event, sessionId: string, songId: string) => {
-      try {
-        const added = databaseService.addSongToSession(sessionId, songId);
-        return successResponse(added);
-      } catch (error) {
-        const message = getErrorMessage(error);
-        log.error('[Session] Error adding song to session:', message);
-        return errorResponse(message);
-      }
-    },
-  );
-
-  // Remove song from session
-  ipcMain.handle(
-    'session:removeSong',
-    (_event, sessionId: string, songId: string) => {
-      try {
-        const removed = databaseService.removeSongFromSession(
-          sessionId,
-          songId,
-        );
-        return successResponse(removed);
-      } catch (error) {
-        const message = getErrorMessage(error);
-        log.error('[Session] Error removing song from session:', message);
-        return errorResponse(message);
-      }
-    },
-  );
-
-  // Reorder songs in session
-  ipcMain.handle(
-    'session:reorderSongs',
-    (_event, sessionId: string, songIds: string[]) => {
-      try {
-        const reordered = databaseService.reorderSessionSongs(
-          sessionId,
-          songIds,
-        );
-        return successResponse(reordered);
-      } catch (error) {
-        const message = getErrorMessage(error);
-        log.error('[Session] Error reordering songs in session:', message);
-        return errorResponse(message);
-      }
-    },
-  );
-
   // Get sessions count
   ipcMain.handle('session:getCount', () => {
     try {

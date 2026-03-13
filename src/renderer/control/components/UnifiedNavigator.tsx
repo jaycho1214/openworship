@@ -585,7 +585,6 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
   const { currentSessionId } = useSession();
   const {
     currentSetlist,
-    addSong,
     reorderItems,
     deleteItem,
     addItem,
@@ -680,8 +679,9 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
 
     try {
       const data = JSON.parse(e.dataTransfer.getData('application/json'));
-      if (data.type === 'library-song' && data.song) {
-        addSong(data.song.title, data.song.lyrics);
+      if (data.type === 'library-song' && data.song?.id) {
+        // Use addItem directly since the song is already in the library
+        addItem({ type: 'song', songId: data.song.id });
       }
     } catch (error) {
       console.error('Failed to parse drop data:', error);

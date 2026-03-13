@@ -885,7 +885,7 @@ export default function AddSongDialog({
                     }
                     placeholder={t('songTitlePlaceholder')}
                     className={cn(
-                      'bg-muted/50 border-border text-foreground placeholder:text-muted-foreground',
+                      'bg-muted/50 border-border text-foreground caret-current placeholder:text-muted-foreground',
                       duplicates[currentEntry?.id] &&
                         'border-amber-500/50 pr-8',
                     )}
@@ -989,7 +989,7 @@ export default function AddSongDialog({
                             onPaste={(e) => handleCardPaste(index, e)}
                             rows={Math.max(1, card.split('\n').length || 1)}
                             className={cn(
-                              'w-full resize-none rounded-md border bg-muted/20 px-3 py-1.5 text-sm font-mono leading-relaxed text-foreground placeholder:text-muted-foreground/40',
+                              'w-full resize-none rounded-md border bg-muted/20 px-3 py-1.5 text-sm font-mono leading-relaxed text-foreground caret-current placeholder:text-muted-foreground/40',
                               'focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring focus:bg-muted/40',
                               'border-border/30 hover:border-border/60 transition-colors',
                             )}
@@ -1065,7 +1065,7 @@ export default function AddSongDialog({
                 value={newSessionName}
                 onChange={(e) => setNewSessionName(e.target.value)}
                 placeholder={t('newSessionName')}
-                className="h-8 text-xs flex-1 min-w-0"
+                className="h-8 text-xs flex-1 min-w-0 text-foreground caret-current"
               />
             )}
           </div>

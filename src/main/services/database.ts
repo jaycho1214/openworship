@@ -37,10 +37,6 @@ export interface DbSession {
   updatedAt: string;
 }
 
-export interface DbSessionWithSongs extends DbSession {
-  songs: LibrarySong[];
-}
-
 export interface DbSessionInput {
   name: string;
 }
@@ -682,36 +678,16 @@ export const getAllSessions = (): DbSession[] => {
 };
 
 // Get session by ID with songs
-export const getSessionById = (id: string): DbSessionWithSongs | null => {
+export const getSessionById = (id: string): DbSession | null => {
   if (!db) throw new Error('Database not initialized');
 
-  const sessionStmt = db.prepare(`
+  const stmt = db.prepare(`
     SELECT id, name, created_at as createdAt, updated_at as updatedAt
     FROM sessions
     WHERE id = ?
   `);
 
-  const session = sessionStmt.get(id) as DbSession | undefined;
-  if (!session) return null;
-
-  // Get songs for this session in order
-  const songsStmt = db.prepare(`
-    SELECT s.id, s.title, s.lyrics, s.categories, s.tags,
-           s.created_at as createdAt, s.updated_at as updatedAt
-    FROM songs s
-    INNER JOIN session_songs ss ON s.id = ss.song_id
-    WHERE ss.session_id = ?
-    ORDER BY ss.position ASC
-  `);
-
-  const rows = songsStmt.all(id) as any[];
-  const songs = rows.map((row) => ({
-    ...row,
-    categories: safeJsonParse(row.categories),
-    tags: safeJsonParse(row.tags),
-  }));
-
-  return { ...session, songs };
+  return (stmt.get(id) as DbSession | undefined) ?? null;
 };
 
 // Create session
@@ -745,7 +721,6 @@ export const updateSession = (
 ): DbSession | null => {
   if (!db) throw new Error('Database not initialized');
 
-  // Simple SELECT instead of getSessionById (which does a heavy JOIN)
   const existingStmt = db.prepare(`
     SELECT id, name, created_at as createdAt, updated_at as updatedAt
     FROM sessions
@@ -779,7 +754,6 @@ export const updateSession = (
 export const deleteSession = (id: string): boolean => {
   if (!db) throw new Error('Database not initialized');
 
-  // Delete session (cascade will remove session_songs entries)
   const stmt = db.prepare('DELETE FROM sessions WHERE id = ?');
   const result = stmt.run(id);
 
@@ -788,131 +762,6 @@ export const deleteSession = (id: string): boolean => {
     return true;
   }
   return false;
-};
-
-// Add song to session
-export const addSongToSession = (
-  sessionId: string,
-  songId: string,
-): boolean => {
-  if (!db) throw new Error('Database not initialized');
-
-  const posStmt = db.prepare(`
-    SELECT COALESCE(MAX(position), -1) + 1 as nextPos
-    FROM session_songs
-    WHERE session_id = ?
-  `);
-  const insertStmt = db.prepare(`
-    INSERT OR IGNORE INTO session_songs (session_id, song_id, position)
-    VALUES (?, ?, ?)
-  `);
-  const updateStmt = db.prepare(
-    'UPDATE sessions SET updated_at = ? WHERE id = ?',
-  );
-
-  const addSongTx = db.transaction((sessId: string, sngId: string) => {
-    const { nextPos } = posStmt.get(sessId) as { nextPos: number };
-    const result = insertStmt.run(sessId, sngId, nextPos);
-    if (result.changes > 0) {
-      updateStmt.run(new Date().toISOString(), sessId);
-      return true;
-    }
-    return false;
-  });
-
-  const added = addSongTx(sessionId, songId);
-  if (added) {
-    log.info('[Database] Added song to session:', songId, '->', sessionId);
-  }
-  return added;
-};
-
-// Remove song from session
-export const removeSongFromSession = (
-  sessionId: string,
-  songId: string,
-): boolean => {
-  if (!db) throw new Error('Database not initialized');
-
-  const deleteStmt = db.prepare(`
-    DELETE FROM session_songs
-    WHERE session_id = ? AND song_id = ?
-  `);
-  const updateStmt = db.prepare(
-    'UPDATE sessions SET updated_at = ? WHERE id = ?',
-  );
-
-  const removeSongTx = db.transaction((sessId: string, sngId: string) => {
-    const result = deleteStmt.run(sessId, sngId);
-    if (result.changes > 0) {
-      reorderSessionSongsAfterDelete(sessId);
-      updateStmt.run(new Date().toISOString(), sessId);
-      return true;
-    }
-    return false;
-  });
-
-  const removed = removeSongTx(sessionId, songId);
-  if (removed) {
-    log.info('[Database] Removed song from session:', songId, '<-', sessionId);
-  }
-  return removed;
-};
-
-// Helper to reorder songs after deletion
-const reorderSessionSongsAfterDelete = (sessionId: string): void => {
-  if (!db) return;
-
-  const songs = db
-    .prepare(
-      `
-    SELECT song_id FROM session_songs
-    WHERE session_id = ?
-    ORDER BY position ASC
-  `,
-    )
-    .all(sessionId) as { song_id: string }[];
-
-  const updateStmt = db.prepare(`
-    UPDATE session_songs SET position = ?
-    WHERE session_id = ? AND song_id = ?
-  `);
-
-  songs.forEach((song, index) => {
-    updateStmt.run(index, sessionId, song.song_id);
-  });
-};
-
-// Reorder songs in session (all updates in single transaction)
-export const reorderSessionSongs = (
-  sessionId: string,
-  songIds: string[],
-): boolean => {
-  if (!db) throw new Error('Database not initialized');
-
-  const updateStmt = db.prepare(`
-    UPDATE session_songs SET position = ?
-    WHERE session_id = ? AND song_id = ?
-  `);
-  const updateTimeStmt = db.prepare(
-    'UPDATE sessions SET updated_at = ? WHERE id = ?',
-  );
-
-  const transaction = db.transaction(() => {
-    songIds.forEach((songId, index) => {
-      updateStmt.run(index, sessionId, songId);
-    });
-    updateTimeStmt.run(new Date().toISOString(), sessionId);
-  });
-
-  try {
-    transaction();
-    log.info('[Database] Reordered songs in session:', sessionId);
-    return true;
-  } catch (error) {
-    log.error('[Database] Failed to reorder songs:', error);
-    return false;
-  }
 };
 
 // Get sessions count
@@ -1780,9 +1629,6 @@ export const databaseService = {
   createSession,
   updateSession,
   deleteSession,
-  addSongToSession,
-  removeSongFromSession,
-  reorderSessionSongs,
   getSessionsCount,
 
   // Bible operations

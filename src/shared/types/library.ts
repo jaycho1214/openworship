@@ -26,7 +26,3 @@ export interface DbSession {
   createdAt: string;
   updatedAt: string;
 }
-
-export interface DbSessionWithSongs extends DbSession {
-  songs: LibrarySong[];
-}
