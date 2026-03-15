@@ -1,3 +1,5 @@
+import { toFileUrl } from '@/shared/utils/fileUrl';
+
 interface NoteOverlayProps {
   isVisible: boolean;
   content?: string;
@@ -44,7 +46,7 @@ export default function NoteOverlay({
       >
         {contentType === 'image' && imagePath ? (
           <img
-            src={`file://${imagePath}`}
+            src={toFileUrl(imagePath)}
             alt="Note overlay"
             style={{
               maxHeight: '120px',
@@ -55,7 +57,7 @@ export default function NoteOverlay({
         ) : (
           <div className="text-center">
             {content
-              ?.split('\n')
+              ?.split(/\r?\n/)
               .filter((l) => l.trim())
               .map((line, i) => (
                 <p

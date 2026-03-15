@@ -10,11 +10,10 @@ import {
   ArrowDown,
   X,
 } from 'lucide-react';
+import { getElectron } from '@/shared/hooks/useElectron';
 import { Textarea } from '../../components/ui/textarea';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/utils';
-
-const getElectron = () => (window as any).electron;
 
 export interface NoteFormState {
   content: string;

@@ -6,6 +6,7 @@ export function useKeyboardShortcuts() {
   const {
     currentSong,
     currentItemIndex,
+    currentItemSlides,
     presentationState,
     nextSlide,
     prevSlide,
@@ -23,9 +24,12 @@ export function useKeyboardShortcuts() {
     useProjection();
   const { canUndo, canRedo, undo, redo, pushState } = useUndo();
 
-  // Use ref to avoid recreating handler when currentSong changes
+  // Use refs to avoid recreating handler when currentSong/slides change
   const currentSongRef = useRef<Song | null>(currentSong);
   currentSongRef.current = currentSong;
+
+  const currentItemSlidesRef = useRef(currentItemSlides);
+  currentItemSlidesRef.current = currentItemSlides;
 
   // Push current state to undo stack when navigation happens
   const pushCurrentState = useCallback(() => {
@@ -93,6 +97,13 @@ export function useKeyboardShortcuts() {
         return;
       }
 
+      // Ctrl+Y redo (Windows convention)
+      if (event.ctrlKey && !event.metaKey && event.key === 'y') {
+        event.preventDefault();
+        handleRedo();
+        return;
+      }
+
       // Number keys 1-9 to jump to sections (or slides if no sections)
       if (event.key >= '1' && event.key <= '9') {
         const sectionIndex = parseInt(event.key, 10) - 1;
@@ -150,10 +161,10 @@ export function useKeyboardShortcuts() {
         case 'End': {
           event.preventDefault();
           pushCurrentState();
-          // Use ref to access currentSong without adding to deps
-          const song = currentSongRef.current;
-          if (song && song.slides.length > 0) {
-            goToSlide(song.slides.length - 1);
+          // Use ref to access slides for any item type (song, bible, announcement)
+          const slides = currentItemSlidesRef.current;
+          if (slides && slides.length > 0) {
+            goToSlide(slides.length - 1);
           }
           break;
         }

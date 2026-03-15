@@ -17,6 +17,8 @@ export type SendChannels =
   | 'projection:settings'
   | 'projection:advertisement'
   | 'projection:frame'
+  | 'projection:contentTypeText'
+  | 'projection:overlayNote'
   | 'bible:importProgress'
   | 'file:open'
   | 'displays:targetChanged';
@@ -65,6 +67,9 @@ export type InvokeChannels =
   | 'settings:setTheme'
   | 'settings:getProjection'
   | 'settings:setProjection'
+  | 'settings:getContentTypeText'
+  | 'settings:setContentTypeText'
+  | 'settings:setBibleReferenceStyle'
   | 'settings:factoryReset'
   // Library
   | 'library:getAll'

@@ -8,7 +8,7 @@ import {
   useAdvertisement,
   useFrame,
 } from '../context';
-import { defaultProjectionSettings } from '../../shared/types/song';
+import { mergeProjectionSettings } from '../../../shared/types';
 import ProjectionRenderer from '../../projection/components/ProjectionRenderer';
 import { useFontLoader } from '../../shared/hooks/useFontLoader';
 import { useProjectionDimensions } from '../hooks/useProjectionDimensions';
@@ -43,36 +43,7 @@ export default function LivePreview() {
 
   // Merge projection settings with defaults to ensure all properties exist
   const settings = useMemo(
-    () => ({
-      ...defaultProjectionSettings,
-      ...projectionSettings,
-      textShadow: {
-        ...defaultProjectionSettings.textShadow,
-        ...projectionSettings.textShadow,
-      },
-      textOutline: {
-        ...defaultProjectionSettings.textOutline,
-        ...projectionSettings.textOutline,
-      },
-      textAlign: {
-        ...defaultProjectionSettings.textAlign,
-        ...projectionSettings.textAlign,
-      },
-      padding: {
-        top:
-          projectionSettings.padding?.top ??
-          defaultProjectionSettings.padding!.top,
-        bottom:
-          projectionSettings.padding?.bottom ??
-          defaultProjectionSettings.padding!.bottom,
-        left:
-          projectionSettings.padding?.left ??
-          defaultProjectionSettings.padding!.left,
-        right:
-          projectionSettings.padding?.right ??
-          defaultProjectionSettings.padding!.right,
-      },
-    }),
+    () => mergeProjectionSettings(projectionSettings),
     [projectionSettings],
   );
 

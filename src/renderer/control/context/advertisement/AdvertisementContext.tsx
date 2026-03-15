@@ -22,7 +22,6 @@ import { getElectron } from '../../../shared/hooks/useElectron';
 interface AdvertisementContextType {
   // Advertisement list
   advertisements: Advertisement[];
-  loadAdvertisements: () => Promise<void>;
   addAdvertisement: (
     input: AdvertisementCreateInput,
   ) => Promise<Advertisement | null>;
@@ -369,7 +368,6 @@ export function AdvertisementProvider({
   const contextValue = useMemo(
     () => ({
       advertisements,
-      loadAdvertisements,
       addAdvertisement,
       updateAdvertisement,
       deleteAdvertisement,
@@ -389,7 +387,6 @@ export function AdvertisementProvider({
     }),
     [
       advertisements,
-      loadAdvertisements,
       addAdvertisement,
       updateAdvertisement,
       deleteAdvertisement,

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { basename } from '../../shared/utils/fileHelpers';
+import { modKey, shiftKey } from '../../shared/utils/platform';
 import { Button } from '../../components/ui/button';
 import {
   DropdownMenu,
@@ -215,13 +216,15 @@ export default function ControlPanel() {
                 onClick={handleUndo}
                 disabled={!canUndo}
                 className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40"
-                aria-label={`${t('undo')} (⌘Z)`}
+                aria-label={`${t('undo')} (${modKey}Z)`}
               >
                 <Undo2 className="w-4 h-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top">
-              <p>{t('undo')} (⌘Z)</p>
+              <p>
+                {t('undo')} ({modKey}Z)
+              </p>
             </TooltipContent>
           </Tooltip>
 
@@ -233,13 +236,16 @@ export default function ControlPanel() {
                 onClick={handleRedo}
                 disabled={!canRedo}
                 className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40"
-                aria-label={`${t('redo')} (⌘⇧Z)`}
+                aria-label={`${t('redo')} (${modKey}${shiftKey}Z)`}
               >
                 <Redo2 className="w-4 h-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top">
-              <p>{t('redo')} (⌘⇧Z)</p>
+              <p>
+                {t('redo')} ({modKey}
+                {shiftKey}Z)
+              </p>
             </TooltipContent>
           </Tooltip>
         </div>
@@ -609,7 +615,7 @@ export default function ControlPanel() {
           <span className="font-bold">← →</span> {t('slide')} ·{' '}
           <span className="font-bold">↑ ↓</span> {t('song')} ·{' '}
           <span className="font-bold">B</span> {t('blank')} ·{' '}
-          <span className="font-bold">⌘Z</span> {t('undo')}
+          <span className="font-bold">{modKey}Z</span> {t('undo')}
         </div>
       </div>
     </TooltipProvider>

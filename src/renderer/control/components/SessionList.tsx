@@ -13,6 +13,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getElectron } from '@/shared/hooks/useElectron';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -34,9 +35,6 @@ import {
   AlertDialogTitle,
 } from '../../components/ui/alert-dialog';
 import { cn } from '../../lib/utils';
-
-// Helper to safely access electron API
-const getElectron = () => (window as any).electron;
 
 // Types matching database
 interface DbSession {
@@ -76,7 +74,8 @@ export default function SessionList({
   const loadSessions = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { electron } = window as any;
+      const electron = getElectron();
+      if (!electron) return;
       const result = await electron.session.getAll();
       if (result.success && result.data) {
         setSessions(result.data);

@@ -9,6 +9,7 @@ import {
   Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getElectron } from '@/shared/hooks/useElectron';
 import {
   Dialog,
   DialogContent,
@@ -20,9 +21,6 @@ import { Label } from '../../../../components/ui/label';
 import { Separator } from '../../../../components/ui/separator';
 import { SettingsRow } from '../components/SettingsRow';
 import ImportDialog from '../../ImportDialog';
-
-// Helper to safely access electron API
-const getElectron = () => (window as any).electron;
 
 export function DataSettingsTab() {
   const { t, i18n } = useTranslation();

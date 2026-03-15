@@ -15,9 +15,6 @@ import { Song, Slide, SlideOverrides } from '../../../shared/types/song';
 import {
   SetlistItem,
   SetlistItemInput,
-  SongSetlistItem,
-  BibleSetlistItem,
-  AnnouncementSetlistItem,
   isSongItem,
 } from '../../../../shared/types/setlistItem';
 import {
@@ -29,32 +26,6 @@ import { getItemSlides as getItemSlidesFromItem } from '../../../shared/utils/se
 import { useSession } from '../session/SessionContext';
 
 import { getElectron } from '../../../shared/hooks/useElectron';
-
-interface DbSessionItem {
-  id: string;
-  sessionId: string;
-  type: 'song' | 'bible' | 'announcement';
-  position: number;
-  // Song fields
-  songId?: string;
-  // Bible fields
-  translationId?: string;
-  translationName?: string;
-  bookId?: string;
-  bookName?: string;
-  chapter?: number;
-  startVerse?: number;
-  endVerse?: number;
-  displayMode?: 'one-per-slide' | 'range-on-slide';
-  // Announcement fields
-  title?: string;
-  content?: string;
-  // Song data if joined
-  songTitle?: string;
-  songLyrics?: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 // Extended setlist interface that uses unified items
 interface UnifiedSetlist {
@@ -69,7 +40,6 @@ interface UnifiedSetlist {
 
 interface SetlistContextType {
   currentSetlist: UnifiedSetlist | null;
-  setCurrentSetlist: (setlist: UnifiedSetlist | null) => void;
   // Unified item methods
   addItem: (input: SetlistItemInput) => Promise<void>;
   updateItem: (itemId: string, updates: Partial<SetlistItem>) => void;
@@ -80,23 +50,21 @@ interface SetlistContextType {
   addSong: (title: string, rawLyrics: string) => void;
   updateSong: (songId: string, title: string, rawLyrics: string) => void;
   deleteSong: (songId: string) => void;
-  reorderSongs: (fromIndex: number, toIndex: number) => void;
   reorderSlides: (
-    songIndex: number,
+    itemIndex: number,
     fromIndex: number,
     toIndex: number,
   ) => void;
-  duplicateSlide: (songIndex: number, slideIndex: number) => void;
-  deleteSlide: (songIndex: number, slideIndex: number) => void;
+  duplicateSlide: (itemIndex: number, slideIndex: number) => void;
+  deleteSlide: (itemIndex: number, slideIndex: number) => void;
   updateSlide: (
-    songIndex: number,
+    itemIndex: number,
     slideIndex: number,
     lines: string[],
     section?: string,
     overrides?: SlideOverrides,
     lineRoles?: ('body' | 'reference')[],
   ) => void;
-  refreshSongFromLibrary: (songId: string) => void;
 }
 
 const SetlistContext = createContext<SetlistContextType | null>(null);
@@ -113,85 +81,39 @@ interface SetlistProviderProps {
   children: ReactNode;
 }
 
-// Helper to convert announcement content to slides
-function announcementToSlides(_title: string, content: string): Slide[] {
-  const text = content.trim();
-  if (!text) {
-    return [{ id: generateId(), lines: [''], section: 'Announcement' }];
-  }
+/**
+ * Helper to modify slides for a song item identified by its position in the items array.
+ * Returns null if the item is not a song or the transform declines (returns null).
+ */
+function withSongSlides(
+  prev: UnifiedSetlist | null,
+  itemIndex: number,
+  transform: (song: Song, slides: Slide[]) => Slide[] | null,
+): UnifiedSetlist | null {
+  if (!prev) return prev;
+  const item = prev.items[itemIndex];
+  if (!item || !isSongItem(item) || !item._song) return prev;
+  const song = prev.songs.find((s) => s.id === item.songId);
+  if (!song) return prev;
 
-  // Split by blank lines into slides
-  const paragraphs = text.split(/\n\s*\n/).filter((p) => p.trim());
-  return paragraphs.map((paragraph, index) => ({
-    id: generateId(),
-    lines: paragraph.split('\n').filter((line) => line.trim()),
-    section: index === 0 ? 'Announcement' : undefined,
-  }));
-}
+  const newSlides = transform(song, song.slides);
+  if (!newSlides) return prev;
 
-// Helper to convert DbSessionItem to SetlistItem
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function dbItemToSetlistItem(
-  dbItem: DbSessionItem,
-  bibleSlides?: Slide[],
-): SetlistItem {
-  const base = {
-    id: dbItem.id,
-    position: dbItem.position,
-    createdAt: dbItem.createdAt,
-  };
-
-  if (dbItem.type === 'song' && dbItem.songId) {
-    const slides = dbItem.songLyrics
-      ? resolveSectionReferences(parseLyricsToSlides(dbItem.songLyrics))
-      : [];
-    return {
-      ...base,
-      type: 'song',
-      songId: dbItem.songId,
-      _song: dbItem.songTitle
-        ? {
-            id: dbItem.songId,
-            title: dbItem.songTitle,
-            rawLyrics: dbItem.songLyrics || '',
-            slides,
-            createdAt: dbItem.createdAt,
-            updatedAt: dbItem.updatedAt,
-          }
-        : undefined,
-    } as SongSetlistItem;
-  }
-
-  if (dbItem.type === 'bible') {
-    return {
-      ...base,
-      type: 'bible',
-      translationId: dbItem.translationId || '',
-      translationName: dbItem.translationName || '',
-      bookId: dbItem.bookId || '',
-      bookName: dbItem.bookName || '',
-      chapter: dbItem.chapter || 1,
-      startVerse: dbItem.startVerse || 1,
-      endVerse: dbItem.endVerse || 1,
-      displayMode: dbItem.displayMode || 'one-per-slide',
-      _slides: bibleSlides || [],
-    } as BibleSetlistItem;
-  }
-
-  if (dbItem.type === 'announcement') {
-    const title = dbItem.title || '';
-    const content = dbItem.content || '';
-    return {
-      ...base,
-      type: 'announcement',
-      title,
-      content,
-      _slides: announcementToSlides(title, content),
-    } as AnnouncementSetlistItem;
-  }
-
-  // Fallback - should not happen
-  throw new Error(`Unknown item type: ${dbItem.type}`);
+  const ts = new Date().toISOString();
+  const newSongs = prev.songs.map((s) =>
+    s.id === song.id ? { ...s, slides: newSlides, updatedAt: ts } : s,
+  );
+  const newItems = prev.items.map((itm) => {
+    if (isSongItem(itm) && itm.songId === song.id && itm._song) {
+      return {
+        ...itm,
+        _song: { ...itm._song, slides: newSlides, updatedAt: ts },
+        updatedAt: ts,
+      };
+    }
+    return itm;
+  });
+  return { ...prev, items: newItems, songs: newSongs, updatedAt: new Date() };
 }
 
 export function SetlistProvider({ children }: SetlistProviderProps) {
@@ -572,312 +494,90 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
 
   const deleteSong = useCallback(
     (songId: string) => {
-      // Find the item with this songId and delete it
-      setCurrentSetlist((prev) => {
-        if (!prev) return prev;
+      if (!currentSetlist) return;
 
-        const itemToDelete = prev.items.find(
-          (i) => isSongItem(i) && i.songId === songId,
-        );
+      const itemToDelete = currentSetlist.items.find(
+        (i) => isSongItem(i) && i.songId === songId,
+      );
 
-        if (itemToDelete) {
-          deleteItem(itemToDelete.id);
-        }
-
-        return prev;
-      });
+      if (itemToDelete) {
+        deleteItem(itemToDelete.id);
+      }
     },
-    [deleteItem],
-  );
-
-  const reorderSongs = useCallback(
-    (fromIndex: number, toIndex: number) => {
-      // For backward compatibility, map song indices to item indices
-      setCurrentSetlist((prev) => {
-        if (!prev) return prev;
-
-        // Find the actual item indices for the song indices
-        const songItems = prev.items
-          .map((item, index) => ({ item, index }))
-          .filter(({ item }) => isSongItem(item));
-
-        if (fromIndex >= songItems.length || toIndex >= songItems.length) {
-          return prev;
-        }
-
-        const fromItemIndex = songItems[fromIndex].index;
-        const toItemIndex = songItems[toIndex].index;
-
-        reorderItems(fromItemIndex, toItemIndex);
-
-        return prev;
-      });
-    },
-    [reorderItems],
+    [currentSetlist, deleteItem],
   );
 
   const reorderSlides = useCallback(
-    (songIndex: number, fromIndex: number, toIndex: number) => {
-      setCurrentSetlist((prev) => {
-        if (!prev) return prev;
-        const song = prev.songs[songIndex];
-        if (!song) return prev;
-
-        const newSlides = [...song.slides];
-        const [removed] = newSlides.splice(fromIndex, 1);
-        newSlides.splice(toIndex, 0, removed);
-
-        // Update songs array
-        const newSongs = [...prev.songs];
-        newSongs[songIndex] = {
-          ...song,
-          slides: newSlides,
-          updatedAt: new Date().toISOString(),
-        };
-
-        // Update items array
-        const newItems = prev.items.map((item) => {
-          if (isSongItem(item) && item.songId === song.id && item._song) {
-            return {
-              ...item,
-              _song: {
-                ...item._song,
-                slides: newSlides,
-                updatedAt: new Date().toISOString(),
-              },
-              updatedAt: new Date().toISOString(),
-            };
-          }
-          return item;
-        });
-
-        return {
-          ...prev,
-          items: newItems,
-          songs: newSongs,
-          updatedAt: new Date(),
-        };
-      });
+    (itemIndex: number, fromIndex: number, toIndex: number) => {
+      setCurrentSetlist((prev) =>
+        withSongSlides(prev, itemIndex, (_song, slides) => {
+          const newSlides = [...slides];
+          const [removed] = newSlides.splice(fromIndex, 1);
+          newSlides.splice(toIndex, 0, removed);
+          return newSlides;
+        }),
+      );
     },
     [],
   );
 
   const duplicateSlide = useCallback(
-    (songIndex: number, slideIndex: number) => {
-      setCurrentSetlist((prev) => {
-        if (!prev) return prev;
-        const song = prev.songs[songIndex];
-        if (!song || !song.slides[slideIndex]) return prev;
-
-        const slideToDuplicate = song.slides[slideIndex];
-        const newSlide: Slide = {
-          id: generateId(),
-          lines: [...slideToDuplicate.lines],
-        };
-
-        const newSlides = [...song.slides];
-        newSlides.splice(slideIndex + 1, 0, newSlide);
-
-        // Update songs array
-        const newSongs = [...prev.songs];
-        newSongs[songIndex] = {
-          ...song,
-          slides: newSlides,
-          updatedAt: new Date().toISOString(),
-        };
-
-        // Update items array
-        const newItems = prev.items.map((item) => {
-          if (isSongItem(item) && item.songId === song.id && item._song) {
-            return {
-              ...item,
-              _song: {
-                ...item._song,
-                slides: newSlides,
-                updatedAt: new Date().toISOString(),
-              },
-              updatedAt: new Date().toISOString(),
-            };
-          }
-          return item;
-        });
-
-        return {
-          ...prev,
-          items: newItems,
-          songs: newSongs,
-          updatedAt: new Date(),
-        };
-      });
+    (itemIndex: number, slideIndex: number) => {
+      setCurrentSetlist((prev) =>
+        withSongSlides(prev, itemIndex, (_song, slides) => {
+          if (!slides[slideIndex]) return null;
+          const newSlide: Slide = {
+            id: generateId(),
+            lines: [...slides[slideIndex].lines],
+          };
+          const newSlides = [...slides];
+          newSlides.splice(slideIndex + 1, 0, newSlide);
+          return newSlides;
+        }),
+      );
     },
     [],
   );
 
-  const deleteSlide = useCallback((songIndex: number, slideIndex: number) => {
-    setCurrentSetlist((prev) => {
-      if (!prev) return prev;
-      const song = prev.songs[songIndex];
-      if (!song || song.slides.length <= 1) return prev;
-
-      const newSlides = song.slides.filter((_, i) => i !== slideIndex);
-
-      // Update songs array
-      const newSongs = [...prev.songs];
-      newSongs[songIndex] = {
-        ...song,
-        slides: newSlides,
-        updatedAt: new Date().toISOString(),
-      };
-
-      // Update items array
-      const newItems = prev.items.map((item) => {
-        if (isSongItem(item) && item.songId === song.id && item._song) {
-          return {
-            ...item,
-            _song: {
-              ...item._song,
-              slides: newSlides,
-              updatedAt: new Date().toISOString(),
-            },
-            updatedAt: new Date().toISOString(),
-          };
-        }
-        return item;
-      });
-
-      return {
-        ...prev,
-        items: newItems,
-        songs: newSongs,
-        updatedAt: new Date(),
-      };
-    });
+  const deleteSlide = useCallback((itemIndex: number, slideIndex: number) => {
+    setCurrentSetlist((prev) =>
+      withSongSlides(prev, itemIndex, (_song, slides) =>
+        slides.length <= 1 ? null : slides.filter((_, i) => i !== slideIndex),
+      ),
+    );
   }, []);
 
   const updateSlide = useCallback(
     (
-      songIndex: number,
+      itemIndex: number,
       slideIndex: number,
       lines: string[],
       section?: string,
       overrides?: SlideOverrides,
       lineRoles?: ('body' | 'reference')[],
     ) => {
-      setCurrentSetlist((prev) => {
-        if (!prev) return prev;
-        const song = prev.songs[songIndex];
-        if (!song || !song.slides[slideIndex]) return prev;
-
-        const newSlides = [...song.slides];
-        newSlides[slideIndex] = {
-          ...newSlides[slideIndex],
-          lines,
-          section,
-          // Keep fontSize from overrides for backwards compatibility
-          fontSize: overrides?.fontSize,
-          overrides,
-          ...(lineRoles ? { lineRoles } : {}),
-        };
-
-        // Update songs array
-        const newSongs = [...prev.songs];
-        newSongs[songIndex] = {
-          ...song,
-          slides: newSlides,
-          updatedAt: new Date().toISOString(),
-        };
-
-        // Update items array
-        const newItems = prev.items.map((item) => {
-          if (isSongItem(item) && item.songId === song.id && item._song) {
-            return {
-              ...item,
-              _song: {
-                ...item._song,
-                slides: newSlides,
-                updatedAt: new Date().toISOString(),
-              },
-              updatedAt: new Date().toISOString(),
-            };
-          }
-          return item;
-        });
-
-        return {
-          ...prev,
-          items: newItems,
-          songs: newSongs,
-          updatedAt: new Date(),
-        };
-      });
+      setCurrentSetlist((prev) =>
+        withSongSlides(prev, itemIndex, (_song, slides) => {
+          if (!slides[slideIndex]) return null;
+          const newSlides = [...slides];
+          newSlides[slideIndex] = {
+            ...newSlides[slideIndex],
+            lines,
+            section,
+            fontSize: overrides?.fontSize,
+            overrides,
+            ...(lineRoles ? { lineRoles } : {}),
+          };
+          return newSlides;
+        }),
+      );
     },
     [],
   );
 
-  // Refresh a song from library when it's been edited externally
-  const refreshSongFromLibrary = useCallback(async (songId: string) => {
-    const electron = getElectron();
-    if (!electron) return;
-
-    try {
-      const result = await electron.library.getById(songId);
-      if (result.success && result.data) {
-        const dbSong = result.data;
-        const slides = resolveSectionReferences(
-          parseLyricsToSlides(dbSong.lyrics),
-        );
-
-        setCurrentSetlist((prev) => {
-          if (!prev) return prev;
-
-          // Update songs array
-          const songIndex = prev.songs.findIndex((s) => s.id === songId);
-          if (songIndex === -1) return prev;
-
-          const newSongs = [...prev.songs];
-          newSongs[songIndex] = {
-            ...newSongs[songIndex],
-            title: dbSong.title,
-            rawLyrics: dbSong.lyrics,
-            slides,
-            updatedAt: dbSong.updatedAt,
-          };
-
-          // Update items array
-          const newItems = prev.items.map((item) => {
-            if (isSongItem(item) && item.songId === songId && item._song) {
-              return {
-                ...item,
-                _song: {
-                  ...item._song,
-                  title: dbSong.title,
-                  rawLyrics: dbSong.lyrics,
-                  slides,
-                  updatedAt: dbSong.updatedAt,
-                },
-                updatedAt: new Date().toISOString(),
-              };
-            }
-            return item;
-          });
-
-          return {
-            ...prev,
-            items: newItems,
-            songs: newSongs,
-            updatedAt: new Date(),
-          };
-        });
-      }
-    } catch (error) {
-      console.error('Failed to refresh song from library:', error);
-    }
-  }, []);
-
   const value = useMemo<SetlistContextType>(
     () => ({
       currentSetlist,
-      setCurrentSetlist,
       // Unified item methods
       addItem,
       updateItem,
@@ -888,16 +588,13 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
       addSong,
       updateSong,
       deleteSong,
-      reorderSongs,
       reorderSlides,
       duplicateSlide,
       deleteSlide,
       updateSlide,
-      refreshSongFromLibrary,
     }),
     [
       currentSetlist,
-      setCurrentSetlist,
       addItem,
       updateItem,
       deleteItem,
@@ -906,12 +603,10 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
       addSong,
       updateSong,
       deleteSong,
-      reorderSongs,
       reorderSlides,
       duplicateSlide,
       deleteSlide,
       updateSlide,
-      refreshSongFromLibrary,
     ],
   );
 

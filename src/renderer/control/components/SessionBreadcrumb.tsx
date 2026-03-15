@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, ChevronDown } from 'lucide-react';
+import { getElectron } from '@/shared/hooks/useElectron';
 import { Button } from '../../components/ui/button';
 import {
   DropdownMenu,
@@ -16,9 +17,6 @@ interface Session {
   id: string;
   name: string;
 }
-
-// Helper to safely access electron API
-const getElectron = () => (window as any).electron;
 
 interface SessionBreadcrumbProps {
   sessionName: string;

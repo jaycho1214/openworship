@@ -10,14 +10,12 @@ import {
   X,
   Command,
 } from 'lucide-react';
+import { getElectron } from '@/shared/hooks/useElectron';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { useSession, useSetlist } from '../context';
 import { cn } from '../../lib/utils';
 import type { LibrarySong, DbSession } from '../../../shared/types';
-
-// Helper to safely access electron API
-const getElectron = () => (window as unknown as { electron: any }).electron;
 
 interface SearchResult {
   type: 'song' | 'session';
@@ -67,6 +65,7 @@ export default function GlobalSearch({
 
     setIsLoading(true);
     const electron = getElectron();
+    if (!electron) return;
 
     try {
       const searchResults: SearchResult[] = [];
@@ -78,7 +77,7 @@ export default function GlobalSearch({
           type: 'song' as const,
           id: song.id,
           title: song.title,
-          subtitle: song.categories || undefined,
+          subtitle: song.categories?.join(', ') || undefined,
         }));
         searchResults.push(...songs);
       }

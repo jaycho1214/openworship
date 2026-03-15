@@ -182,7 +182,7 @@ export const importBibleFromFile = async (
 
   // Read and parse the file
   onProgress?.(5, 'Reading file...');
-  const fileContent = fs.readFileSync(filePath, 'utf-8');
+  const fileContent = await fs.promises.readFile(filePath, 'utf-8');
 
   onProgress?.(10, 'Parsing JSON...');
   const data = JSON.parse(fileContent) as BibleImportData;

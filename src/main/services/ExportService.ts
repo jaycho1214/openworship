@@ -10,6 +10,7 @@ import type {
   OpenWorshipFile,
   ExportedSong,
   ExportedSession,
+  ExportedSessionItem,
   ImportPreview,
   ImportOptions,
   ImportResult,
@@ -54,8 +55,10 @@ export function exportSession(sessionId: string): OpenWorshipFile | null {
       return null;
     }
 
-    // Get songs via session_items
+    // Get all session items
     const items = databaseService.getSessionItems(sessionId);
+
+    // Collect song IDs for backward compat
     const songIds = items
       .filter((item) => item.itemType === 'song' && item.songId)
       .map((item) => item.songId!);
@@ -65,8 +68,11 @@ export function exportSession(sessionId: string): OpenWorshipFile | null {
       .filter((s): s is NonNullable<typeof s> => s !== null)
       .map(songToExported);
 
+    // Build full items list with all item types
+    const exportedItems = itemsToExported(items);
+
     return {
-      version: '1.0',
+      version: '1.1',
       type: 'session',
       exportedAt: new Date().toISOString(),
       appVersion: APP_VERSION,
@@ -77,6 +83,7 @@ export function exportSession(sessionId: string): OpenWorshipFile | null {
             id: session.id,
             name: session.name,
             songIds: songs.map((s) => s.id),
+            items: exportedItems,
             createdAt: session.createdAt,
             updatedAt: session.updatedAt,
           },
@@ -99,24 +106,46 @@ export function exportLibrary(): OpenWorshipFile | null {
 
     const songs: ExportedSong[] = allSongs.map(songToExported);
 
-    // Build sessions with song IDs using session_items in a single pass
-    // instead of calling getSessionById (N+1 query) for each session
+    // Build sessions with all item types using session_items
     const sessions: ExportedSession[] = allSessions.map((session) => {
       const items = databaseService.getSessionItems(session.id);
       const songIds = items
         .filter((item) => item.itemType === 'song' && item.songId)
         .map((item) => item.songId!);
+
+      // Build full items list with all item types
+      const exportedItems: ExportedSessionItem[] = items.map((item) => ({
+        type: item.itemType,
+        position: item.position,
+        songId: item.songId,
+        translationId: item.translationId,
+        translationName: item.translationName,
+        bookId: item.bookId,
+        bookName: item.bookName,
+        chapter: item.chapter,
+        startVerse: item.startVerse,
+        endVerse: item.endVerse,
+        displayMode: item.displayMode,
+        title: item.title,
+        content: item.content,
+        noteDisplayMode: item.noteDisplayMode,
+        noteContentType: item.noteContentType,
+        imagePath: item.imagePath,
+        overlayPosition: item.overlayPosition,
+      }));
+
       return {
         id: session.id,
         name: session.name,
         songIds,
+        items: exportedItems,
         createdAt: session.createdAt,
         updatedAt: session.updatedAt,
       };
     });
 
     return {
-      version: '1.0',
+      version: '1.1',
       type: 'library',
       exportedAt: new Date().toISOString(),
       appVersion: APP_VERSION,
@@ -275,17 +304,70 @@ export function importSelected(
 
       const newSession = databaseService.createSession({ name: sessionName });
 
-      // Add songs to session via session_items (using mapped IDs)
-      for (const oldSongId of sessionPreview.session.songIds) {
-        const newSongId = songIdMap.get(oldSongId);
-        if (newSongId) {
-          databaseService.addSessionItem({
-            sessionId: newSession.id,
-            itemType: 'song',
-            songId: newSongId,
-          });
+      // Wrap all item inserts in a single transaction for performance
+      const db = databaseService.getDb();
+      if (!db) throw new Error('Database not initialized');
+
+      const importItems = db.transaction(() => {
+        // Check for v1.1 format with full items list
+        if (
+          sessionPreview.session.items &&
+          sessionPreview.session.items.length > 0
+        ) {
+          // v1.1 format: import all item types
+          for (const item of sessionPreview.session.items) {
+            if (item.type === 'song') {
+              const newSongId = item.songId
+                ? songIdMap.get(item.songId)
+                : undefined;
+              if (newSongId) {
+                databaseService.addSessionItem({
+                  sessionId: newSession.id,
+                  itemType: 'song',
+                  songId: newSongId,
+                });
+              }
+            } else if (item.type === 'bible') {
+              databaseService.addSessionItem({
+                sessionId: newSession.id,
+                itemType: 'bible',
+                translationId: item.translationId,
+                translationName: item.translationName,
+                bookId: item.bookId,
+                bookName: item.bookName,
+                chapter: item.chapter,
+                startVerse: item.startVerse,
+                endVerse: item.endVerse,
+                displayMode: item.displayMode,
+              });
+            } else if (item.type === 'announcement') {
+              databaseService.addSessionItem({
+                sessionId: newSession.id,
+                itemType: 'announcement',
+                title: item.title,
+                content: item.content,
+                noteDisplayMode: item.noteDisplayMode,
+                noteContentType: item.noteContentType,
+                imagePath: item.imagePath,
+                overlayPosition: item.overlayPosition,
+              });
+            }
+          }
+        } else {
+          // v1.0 backward compat: only song IDs
+          for (const oldSongId of sessionPreview.session.songIds) {
+            const newSongId = songIdMap.get(oldSongId);
+            if (newSongId) {
+              databaseService.addSessionItem({
+                sessionId: newSession.id,
+                itemType: 'song',
+                songId: newSongId,
+              });
+            }
+          }
         }
-      }
+      });
+      importItems();
 
       result.importedSessions++;
     } catch (error) {
@@ -297,6 +379,29 @@ export function importSelected(
 
   result.success = result.errors.length === 0;
   return result;
+}
+
+// Helper to convert database session items to exported format
+function itemsToExported(items: any[]): ExportedSessionItem[] {
+  return items.map((item) => ({
+    type: item.itemType,
+    position: item.position,
+    songId: item.songId,
+    translationId: item.translationId,
+    translationName: item.translationName,
+    bookId: item.bookId,
+    bookName: item.bookName,
+    chapter: item.chapter,
+    startVerse: item.startVerse,
+    endVerse: item.endVerse,
+    displayMode: item.displayMode,
+    title: item.title,
+    content: item.content,
+    noteDisplayMode: item.noteDisplayMode,
+    noteContentType: item.noteContentType,
+    imagePath: item.imagePath,
+    overlayPosition: item.overlayPosition,
+  }));
 }
 
 // Helper to convert database song to exported format

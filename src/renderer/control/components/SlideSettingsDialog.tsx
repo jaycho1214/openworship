@@ -7,11 +7,8 @@ import { Label } from '../../components/ui/label';
 import { Slider } from '../../components/ui/slider';
 import { Textarea } from '../../components/ui/textarea';
 import { cn } from '../../lib/utils';
-import {
-  Slide,
-  SlideOverrides,
-  defaultProjectionSettings,
-} from '../../shared/types/song';
+import { Slide, SlideOverrides } from '../../shared/types/song';
+import { mergeProjectionSettings } from '../../../shared/types';
 import ProjectionRenderer from '../../projection/components/ProjectionRenderer';
 import {
   useProjection,
@@ -20,9 +17,7 @@ import {
   useFrame,
   usePresentation,
 } from '../context';
-
-const PROJECTION_WIDTH = 1920;
-const PROJECTION_HEIGHT = 1080;
+import { useProjectionDimensions } from '../hooks/useProjectionDimensions';
 
 interface SlideSettingsDialogProps {
   open: boolean;
@@ -70,6 +65,8 @@ export default function SlideSettingsDialog({
   );
 
   // Context for live preview
+  const { width: PROJECTION_WIDTH, height: PROJECTION_HEIGHT } =
+    useProjectionDimensions();
   const { projectionSettings, contentTypeTextSettings } = useProjection();
   const {
     fontFamily,
@@ -105,7 +102,7 @@ export default function SlideSettingsDialog({
       clearTimeout(timer);
       observer.disconnect();
     };
-  }, [open]);
+  }, [open, PROJECTION_WIDTH, PROJECTION_HEIGHT]);
 
   useEffect(() => {
     if (open && slide) {
@@ -141,36 +138,7 @@ export default function SlideSettingsDialog({
 
   // Merge projection settings
   const settings = useMemo(
-    () => ({
-      ...defaultProjectionSettings,
-      ...projectionSettings,
-      textShadow: {
-        ...defaultProjectionSettings.textShadow,
-        ...projectionSettings.textShadow,
-      },
-      textOutline: {
-        ...defaultProjectionSettings.textOutline,
-        ...projectionSettings.textOutline,
-      },
-      textAlign: {
-        ...defaultProjectionSettings.textAlign,
-        ...projectionSettings.textAlign,
-      },
-      padding: {
-        top:
-          projectionSettings.padding?.top ??
-          defaultProjectionSettings.padding!.top,
-        bottom:
-          projectionSettings.padding?.bottom ??
-          defaultProjectionSettings.padding!.bottom,
-        left:
-          projectionSettings.padding?.left ??
-          defaultProjectionSettings.padding!.left,
-        right:
-          projectionSettings.padding?.right ??
-          defaultProjectionSettings.padding!.right,
-      },
-    }),
+    () => mergeProjectionSettings(projectionSettings),
     [projectionSettings],
   );
 

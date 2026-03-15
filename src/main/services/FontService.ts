@@ -33,10 +33,10 @@ const ensureFontsDir = (): void => {
 /**
  * Load fonts from a directory
  */
-const loadFontsFromDirectory = (
+const loadFontsFromDirectory = async (
   fontsPath: string,
   isUserFont: boolean,
-): DetectedFont[] => {
+): Promise<DetectedFont[]> => {
   const fonts: DetectedFont[] = [];
 
   try {
@@ -45,36 +45,37 @@ const loadFontsFromDirectory = (
       return [];
     }
 
-    const files = fs.readdirSync(fontsPath);
+    const files = await fs.promises.readdir(fontsPath);
+    const fontFiles = files.filter((file) => getFontFormat(file));
 
-    for (const file of files) {
-      const format = getFontFormat(file);
-
-      if (format) {
+    const results = await Promise.all(
+      fontFiles.map(async (file) => {
+        const format = getFontFormat(file)!;
         const filePath = path.join(fontsPath, file);
         try {
-          const fontData = fs.readFileSync(filePath);
+          const fontData = await fs.promises.readFile(filePath);
           const base64 = fontData.toString('base64');
           const name = cleanFontName(file);
           const mimeType = getFontMimeType(format);
-
-          fonts.push({
+          log.info(
+            `[FontService] Loaded font: ${name} (${file}) - ${isUserFont ? 'user' : 'bundled'}`,
+          );
+          return {
             name,
             fileName: file,
             filePath,
             format,
             dataUrl: `data:${mimeType};base64,${base64}`,
             isUserFont,
-          });
-
-          log.info(
-            `[FontService] Loaded font: ${name} (${file}) - ${isUserFont ? 'user' : 'bundled'}`,
-          );
+          };
         } catch (error) {
           log.error(`[FontService] Failed to read font file ${file}:`, error);
+          return null;
         }
-      }
-    }
+      }),
+    );
+
+    fonts.push(...(results.filter((f) => f !== null) as DetectedFont[]));
   } catch (error) {
     log.error(`[FontService] Error scanning fonts folder ${fontsPath}:`, error);
   }
@@ -85,11 +86,11 @@ const loadFontsFromDirectory = (
 /**
  * Get all user fonts
  */
-export const getAllFonts = (): DetectedFont[] => {
+export const getAllFonts = async (): Promise<DetectedFont[]> => {
   const userFontsPath = getUserFontsPath();
   log.info('[FontService] Scanning user fonts:', userFontsPath);
 
-  const userFonts = loadFontsFromDirectory(userFontsPath, true);
+  const userFonts = await loadFontsFromDirectory(userFontsPath, true);
   log.info(`[FontService] Total fonts loaded: ${userFonts.length}`);
 
   return userFonts;

@@ -26,8 +26,6 @@ interface FrameContextType {
   isLoading: boolean;
 
   // Frame operations
-  loadFrames: () => Promise<void>;
-  getFrame: (id: string) => Promise<Frame | null>;
   addFrame: (input: FrameInput) => Promise<Frame | null>;
   updateFrame: (id: string, updates: FrameUpdateInput) => Promise<Frame | null>;
   deleteFrame: (id: string) => Promise<boolean>;
@@ -88,19 +86,6 @@ export function FrameProvider({ children }: FrameProviderProps) {
       console.error('Failed to load frames:', error);
     } finally {
       setIsLoading(false);
-    }
-  }, []);
-
-  const getFrame = useCallback(async (id: string): Promise<Frame | null> => {
-    const electron = getElectron();
-    if (!electron?.frame) return null;
-
-    try {
-      const result = await electron.frame.getById(id);
-      return result.success && result.data ? result.data : null;
-    } catch (error) {
-      console.error('Failed to get frame:', error);
-      return null;
     }
   }, []);
 
@@ -290,8 +275,6 @@ export function FrameProvider({ children }: FrameProviderProps) {
       isLoading,
 
       // Frame operations
-      loadFrames,
-      getFrame,
       addFrame,
       updateFrame,
       deleteFrame,
@@ -309,8 +292,6 @@ export function FrameProvider({ children }: FrameProviderProps) {
       frames,
       settings,
       isLoading,
-      loadFrames,
-      getFrame,
       addFrame,
       updateFrame,
       deleteFrame,

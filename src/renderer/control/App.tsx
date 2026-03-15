@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getElectron } from '@/shared/hooks/useElectron';
 import { AppProviders, useSession, useUndo, useMedia } from './context';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Header from './components/Header';
@@ -16,9 +17,6 @@ import GlobalSearch from './components/GlobalSearch';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { cn } from '../lib/utils';
 import type { ImportPreview } from '../../shared/types';
-
-// Helper to safely access electron API
-const getElectron = () => (window as any).electron;
 
 // Page-based navigation type
 type NavigationPage = 'sessions' | 'songs';
@@ -69,8 +67,10 @@ function AppContent() {
   // Load settings from electron-store on mount
   useEffect(() => {
     const loadSettings = async () => {
+      const electron = getElectron();
+      if (!electron) return;
       try {
-        const settings = await window.electron.settings.getAll();
+        const settings = await electron.settings.getAll();
         setTheme(settings.theme);
         setLanguage(settings.language);
         if (settings.language !== i18n.language) {

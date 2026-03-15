@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, CSSProperties } from 'react';
+import { useEffect, useState, useRef, type CSSProperties } from 'react';
 import { cn } from '../../lib/utils';
 import type {
   AdvertisementPosition,
@@ -14,6 +14,9 @@ import {
 import { getFrameStyle } from '../../shared/utils/frameStyles';
 import type { SlideOverrides } from '../../shared/types/song';
 import type { SetlistItemType } from '../../../shared/types/setlistItem';
+
+const linesEqual = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((line, i) => line === b[i]);
 
 interface LyricsOverlayProps {
   lines: string[];
@@ -164,7 +167,7 @@ export default function LyricsOverlay({
     }
 
     // If content is the same, update styles immediately (no animation needed)
-    if (JSON.stringify(lines) === JSON.stringify(currentLinesRef.current)) {
+    if (linesEqual(lines, currentLinesRef.current)) {
       setDisplayed((prev) => ({
         ...prev,
         contentType,

@@ -56,9 +56,17 @@ export const registerSetlistHandlers = (): void => {
 
       const filePath = result.filePaths[0];
       const content = fs.readFileSync(filePath, 'utf-8');
-      const setlist = JSON.parse(content) as Setlist;
+      const parsed = JSON.parse(content);
+      if (
+        !parsed ||
+        typeof parsed !== 'object' ||
+        !Array.isArray(parsed.songs)
+      ) {
+        return errorResponse('Invalid setlist file format');
+      }
+      const setlist = parsed as Setlist;
       log.info('[Setlist] Loaded from:', filePath);
-      return successResponse(setlist);
+      return successResponse({ setlist, filePath });
     } catch (error) {
       const message = getErrorMessage(error);
       log.error('[Setlist] Error loading:', message);

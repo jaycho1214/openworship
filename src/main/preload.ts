@@ -42,131 +42,13 @@ import type {
   SetlistItemInput,
   SetlistItem,
 } from '../shared/types/setlistItem';
-import type { RecentItem } from './services/settings';
-
-// Define all IPC channels
-export type Channels =
-  | 'projection:update'
-  | 'projection:blank'
-  | 'projection:verseHidden'
-  | 'projection:video'
-  | 'projection:image'
-  | 'projection:backgroundColor'
-  | 'projection:font'
-  | 'projection:closed'
-  | 'projection:ready'
-  | 'projection:settings'
-  | 'projection:advertisement'
-  | 'projection:frame'
-  | 'projection:contentTypeText'
-  | 'projection:overlayNote'
-  | 'file:open'
-  | 'bible:importProgress'
-  | 'displays:targetChanged';
-
-export type InvokeChannels =
-  | 'projection:open'
-  | 'projection:close'
-  | 'projection:isOpen'
-  | 'projection:setDisplayMode'
-  | 'dialog:selectFolder'
-  | 'dialog:saveFile'
-  | 'dialog:openFile'
-  | 'displays:getAll'
-  | 'displays:getProjectionTarget'
-  | 'ocr:parseImage'
-  | 'ocr:parseImages'
-  | 'videos:getEmbedded'
-  | 'images:getAll'
-  | 'images:add'
-  | 'images:delete'
-  | 'fonts:getLyricsFont'
-  | 'fonts:getAll'
-  | 'fonts:add'
-  | 'fonts:delete'
-  | 'setlist:save'
-  | 'setlist:load'
-  | 'settings:getAll'
-  | 'settings:hasApiKey'
-  | 'settings:setApiKey'
-  | 'settings:testApiKey'
-  | 'settings:getLanguage'
-  | 'settings:setLanguage'
-  | 'settings:getTheme'
-  | 'settings:setTheme'
-  | 'settings:getProjection'
-  | 'settings:setProjection'
-  | 'settings:getRecentItems'
-  | 'settings:addRecentItem'
-  | 'settings:clearRecentItems'
-  | 'settings:getContentTypeText'
-  | 'settings:setContentTypeText'
-  | 'settings:setBibleReferenceStyle'
-  | 'settings:factoryReset'
-  | 'library:getAll'
-  | 'library:getById'
-  | 'library:search'
-  | 'library:findByTitle'
-  | 'library:add'
-  | 'library:update'
-  | 'library:delete'
-  | 'library:deleteMany'
-  | 'library:getCategories'
-  | 'library:getTags'
-  | 'library:getCount'
-  | 'session:getAll'
-  | 'session:getById'
-  | 'session:create'
-  | 'session:update'
-  | 'session:delete'
-  | 'session:getCount'
-  | 'export:song'
-  | 'export:session'
-  | 'export:library'
-  | 'import:preview'
-  | 'import:previewPath'
-  | 'import:execute'
-  | 'ad:getAll'
-  | 'ad:getById'
-  | 'ad:add'
-  | 'ad:update'
-  | 'ad:delete'
-  | 'ad:reorder'
-  | 'ad:getDisplaySettings'
-  | 'ad:setDisplaySettings'
-  // Bible channels
-  | 'bible:getTranslations'
-  | 'bible:getTranslation'
-  | 'bible:getBooks'
-  | 'bible:getVerses'
-  | 'bible:getVersesRange'
-  | 'bible:getVerseCount'
-  | 'bible:searchVerses'
-  | 'bible:versesToSlides'
-  | 'bible:importFromFile'
-  | 'bible:downloadAndImport'
-  | 'bible:deleteTranslation'
-  | 'bible:getAvailableBibles'
-  // Frame channels
-  | 'frame:getAll'
-  | 'frame:getById'
-  | 'frame:add'
-  | 'frame:update'
-  | 'frame:delete'
-  | 'frame:importImage'
-  | 'frame:getSettings'
-  | 'frame:setSettings'
-  // Session item channels (unified setlist)
-  | 'sessionItem:getAll'
-  | 'sessionItem:add'
-  | 'sessionItem:update'
-  | 'sessionItem:delete'
-  | 'sessionItem:reorder';
+import type { RecentItem, RecentItemInput } from '../shared/types/settings';
+import type { SendChannels, InvokeChannels } from '../shared/types/ipc';
 
 const electronHandler = {
   ipcRenderer: {
     // Send messages (fire and forget)
-    send(channel: Channels, ...args: unknown[]) {
+    send(channel: SendChannels, ...args: unknown[]) {
       ipcRenderer.send(channel, ...args);
     },
 
@@ -179,7 +61,7 @@ const electronHandler = {
     },
 
     // Subscribe to messages
-    on(channel: Channels, func: (...args: unknown[]) => void) {
+    on(channel: SendChannels, func: (...args: unknown[]) => void) {
       const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>
         func(...args);
       ipcRenderer.on(channel, subscription);
@@ -190,12 +72,12 @@ const electronHandler = {
     },
 
     // One-time subscription
-    once(channel: Channels, func: (...args: unknown[]) => void) {
+    once(channel: SendChannels, func: (...args: unknown[]) => void) {
       ipcRenderer.once(channel, (_event, ...args) => func(...args));
     },
 
     // Remove all listeners for a channel
-    removeAllListeners(channel: Channels) {
+    removeAllListeners(channel: SendChannels) {
       ipcRenderer.removeAllListeners(channel);
     },
   },
@@ -447,7 +329,7 @@ const electronHandler = {
       base64: string;
     }): Promise<{
       success: boolean;
-      path?: string;
+      data?: string;
       error?: string;
     }> => ipcRenderer.invoke('videos:add', videoData),
     delete: (
@@ -496,7 +378,7 @@ const electronHandler = {
       base64: string;
     }): Promise<{
       success: boolean;
-      font?: {
+      data?: {
         name: string;
         fileName: string;
         filePath: string;
@@ -523,8 +405,7 @@ const electronHandler = {
     }> => ipcRenderer.invoke('setlist:save', setlist, filePath),
     load: (): Promise<{
       success: boolean;
-      data?: Setlist;
-      filePath?: string;
+      data?: { setlist: Setlist; filePath: string };
       error?: string;
       canceled?: boolean;
     }> => ipcRenderer.invoke('setlist:load'),
@@ -556,6 +437,9 @@ const electronHandler = {
         };
       };
       assetsMigrated: boolean;
+      frameSettings?: FrameSettings;
+      recentItems?: RecentItem[];
+      contentTypeText?: ContentTypeTextSettings;
     }> => ipcRenderer.invoke('settings:getAll'),
     hasApiKey: (): Promise<boolean> => ipcRenderer.invoke('settings:hasApiKey'),
     setApiKey: (
@@ -594,6 +478,8 @@ const electronHandler = {
         horizontal: 'left' | 'center' | 'right';
         vertical: 'top' | 'middle' | 'bottom';
       };
+      textJustify?: 'left' | 'center' | 'right';
+      lineGap?: number;
       padding: { top: number; bottom: number; left: number; right: number };
       backgroundType?: 'video' | 'image' | 'color';
       backgroundColor?: string;
@@ -677,7 +563,7 @@ const electronHandler = {
       error?: string;
     }> => ipcRenderer.invoke('settings:getRecentItems'),
     addRecentItem: (
-      item: Omit<RecentItem, 'addedAt'>,
+      item: RecentItemInput,
     ): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('settings:addRecentItem', item),
     clearRecentItems: (): Promise<{ success: boolean; error?: string }> =>

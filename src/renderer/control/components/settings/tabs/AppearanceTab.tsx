@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Sun, Moon, Monitor } from 'lucide-react';
+import { getElectron } from '@/shared/hooks/useElectron';
 import { Button } from '../../../../components/ui/button';
 import { Separator } from '../../../../components/ui/separator';
 import {
@@ -10,9 +11,6 @@ import {
   SelectValue,
 } from '../../../../components/ui/select';
 import { SettingsRow } from '../components/SettingsRow';
-
-// Helper to safely access electron API
-const getElectron = () => (window as any).electron;
 
 type Theme = 'light' | 'dark' | 'system';
 type Language = 'en' | 'ko';

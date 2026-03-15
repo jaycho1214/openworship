@@ -198,6 +198,19 @@ export const createProjectionWindow = (
 };
 
 /**
+ * Safely send a message to the projection window.
+ * Returns true if the message was sent, false if the window was unavailable.
+ */
+export function sendToProjection(channel: string, ...args: unknown[]): boolean {
+  const win = getProjectionWindow();
+  if (win && !win.isDestroyed() && !win.webContents.isDestroyed()) {
+    win.webContents.send(channel, ...args);
+    return true;
+  }
+  return false;
+}
+
+/**
  * Check if projection window is currently open
  */
 export const isProjectionOpen = (): boolean => {

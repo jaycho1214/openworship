@@ -1,3 +1,4 @@
+import { toFileUrl } from '@/shared/utils/fileUrl';
 import {
   Advertisement,
   AdvertisementDisplaySettings,
@@ -116,7 +117,7 @@ export default function AdvertisementOverlay({
           </div>
         ) : advertisement?.type === 'image' ? (
           <img
-            src={`file://${advertisement?.content?.replace(/\\/g, '/')}`}
+            src={toFileUrl(advertisement?.content ?? '')}
             alt="Advertisement"
             className="max-w-full max-h-full object-contain"
             style={{
@@ -153,7 +154,7 @@ export default function AdvertisementOverlay({
         ) : advertisement?.type === 'image' ? (
           <div style={{ padding, textAlign: 'center' }}>
             <img
-              src={`file://${advertisement?.content?.replace(/\\/g, '/')}`}
+              src={toFileUrl(advertisement?.content ?? '')}
               alt="Advertisement"
               className="max-h-[200px] object-contain"
               style={{

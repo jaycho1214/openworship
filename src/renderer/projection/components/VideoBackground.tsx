@@ -1,24 +1,7 @@
 /* eslint-disable no-console */
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { toAppMediaUrl } from '@/shared/utils/fileUrl';
 import type { BackgroundType } from '../../../shared/types';
-
-/**
- * Convert a local file path to an app://media/ URL for Electron's custom protocol.
- * On Windows, paths like C:\Users\... don't start with / so we must prepend one
- * to keep the drive letter in the URL pathname (not the hostname).
- */
-function toAppMediaUrl(filePath: string): string {
-  if (filePath.startsWith('app://') || filePath.startsWith('file://')) {
-    return filePath;
-  }
-  const encodedPath = filePath
-    .split(/[/\\]/)
-    .map((part) => encodeURIComponent(part))
-    .join('/');
-  // Windows paths don't start with / (e.g., C:\...) so we must prepend /
-  // to keep the drive letter in the URL pathname, not the hostname
-  return `app://media${encodedPath.startsWith('/') ? '' : '/'}${encodedPath}`;
-}
 
 interface VideoBackgroundProps {
   videoPath: string | null;

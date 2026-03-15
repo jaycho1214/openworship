@@ -32,7 +32,6 @@ interface MediaContextType {
   availableImages: string[];
   currentImagePath: string | null;
   selectImage: (path: string) => void;
-  loadImages: () => Promise<void>;
 
   // Background color
   backgroundColor: string;
@@ -40,7 +39,6 @@ interface MediaContextType {
 
   // Fonts
   fontFamily: string;
-  availableFonts: string[];
   detectedFonts: DetectedFont[];
   fontsLoading: boolean;
   setFontFamily: (font: string) => void;
@@ -84,7 +82,7 @@ export function MediaProvider({ children }: MediaProviderProps) {
 
   // Font state
   const [fontFamily, setFontFamilyState] = useState<string>('inherit');
-  const [availableFonts, setAvailableFonts] = useState<string[]>([]);
+  // availableFonts removed — detectedFonts is used instead
   const [detectedFonts, setDetectedFonts] = useState<DetectedFont[]>([]);
   const [fontsLoading, setFontsLoading] = useState<boolean>(true);
 
@@ -272,7 +270,6 @@ export function MediaProvider({ children }: MediaProviderProps) {
       const fonts = await electron.fonts.getAll();
       console.log('Loaded fonts:', fonts);
       setDetectedFonts(fonts);
-      setAvailableFonts(fonts.map((f: DetectedFont) => f.name));
 
       if (fontFamily === 'inherit' && fonts.length > 0) {
         setFontFamilyState(fonts[0].name);
@@ -311,11 +308,9 @@ export function MediaProvider({ children }: MediaProviderProps) {
       availableImages,
       currentImagePath,
       selectImage,
-      loadImages,
       backgroundColor,
       setBackgroundColor,
       fontFamily,
-      availableFonts,
       detectedFonts,
       fontsLoading,
       setFontFamily,
@@ -333,11 +328,9 @@ export function MediaProvider({ children }: MediaProviderProps) {
       availableImages,
       currentImagePath,
       selectImage,
-      loadImages,
       backgroundColor,
       setBackgroundColor,
       fontFamily,
-      availableFonts,
       detectedFonts,
       fontsLoading,
       setFontFamily,

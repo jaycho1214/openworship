@@ -371,7 +371,7 @@ export const ko = {
   position: '위치',
   padding: '여백',
   resetToDefault: '기본값으로 재설정',
-  searchLyrics: '가사 검색... (⌘F)',
+  searchLyrics: '가사 검색...',
   slidesFoundCount: '{{count}}개 슬라이드에서 발견',
   clearSearch: '검색 지우기',
 

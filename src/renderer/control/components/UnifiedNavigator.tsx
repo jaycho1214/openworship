@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { useState, useRef, useEffect, memo } from 'react';
+import { useState, useRef, useEffect, useMemo, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   DndContext,
@@ -34,6 +34,8 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
 } from 'lucide-react';
+import { getElectron } from '@/shared/hooks/useElectron';
+import { modKey } from '../../shared/utils/platform';
 import { Button } from '../../components/ui/button';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { Input } from '../../components/ui/input';
@@ -671,7 +673,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
 
@@ -681,7 +683,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
       const data = JSON.parse(e.dataTransfer.getData('application/json'));
       if (data.type === 'library-song' && data.song?.id) {
         // Use addItem directly since the song is already in the library
-        addItem({ type: 'song', songId: data.song.id });
+        await addItem({ type: 'song', songId: data.song.id });
       }
     } catch (error) {
       console.error('Failed to parse drop data:', error);
@@ -689,18 +691,22 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
   };
 
   // Filter items based on search
-  const filteredItems = items.filter((item) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const title = getItemTitle(item, t).toLowerCase();
-    if (title.includes(query)) return true;
+  const filteredItems = useMemo(
+    () =>
+      items.filter((item) => {
+        if (!searchQuery.trim()) return true;
+        const query = searchQuery.toLowerCase();
+        const title = getItemTitle(item, t).toLowerCase();
+        if (title.includes(query)) return true;
 
-    // Also search in slides content
-    const slides = getItemSlides(item);
-    return slides.some((slide) =>
-      slide.lines.some((line) => line.toLowerCase().includes(query)),
-    );
-  });
+        // Also search in slides content
+        const slides = getItemSlides(item);
+        return slides.some((slide) =>
+          slide.lines.some((line) => line.toLowerCase().includes(query)),
+        );
+      }),
+    [items, searchQuery, t],
+  );
 
   // Keyboard shortcuts for search and quick add
   useEffect(() => {
@@ -836,7 +842,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
               ref={searchInputRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={`${t('searchSongs')} (⌘F)`}
+              placeholder={`${t('searchSongs')} (${modKey}F)`}
               className="h-8 pl-8 pr-8 text-xs"
             />
             {searchQuery && (
@@ -952,7 +958,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
                         onEditNote={
                           isAnnouncementItem(item)
                             ? async (updates) => {
-                                const electron = (window as any).electron;
+                                const electron = getElectron();
                                 if (!electron?.sessionItem?.update) return;
                                 const result =
                                   await electron.sessionItem.update(item.id, {

@@ -10,6 +10,7 @@ import {
   Clock,
   X,
 } from 'lucide-react';
+import { getElectron } from '@/shared/hooks/useElectron';
 import { basename } from '../../shared/utils/fileHelpers';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
@@ -21,10 +22,12 @@ import {
   SetlistItemInput,
   BibleDisplayMode,
 } from '../../../shared/types/setlistItem';
+import type {
+  RecentItem,
+  RecentSongItem,
+  RecentBibleItem,
+} from '../../../shared/types/settings';
 import { cn } from '../../lib/utils';
-
-// Helper to safely access electron API
-const getElectron = () => (window as any).electron;
 
 interface LibrarySong {
   id: string;
@@ -32,33 +35,10 @@ interface LibrarySong {
   lyrics: string;
 }
 
-// Recent item types
-interface RecentSongItem {
-  type: 'song';
-  songId: string;
-  title: string;
-  addedAt: number;
-}
-
-interface RecentBibleItem {
-  type: 'bible';
-  reference: string;
-  translationId: string;
-  translationName: string;
-  bookId: string;
-  bookName: string;
-  chapter: number;
-  startVerse: number;
-  endVerse: number;
-  addedAt: number;
-}
-
-type RecentItem = RecentSongItem | RecentBibleItem;
-
 interface AddContentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddItem: (input: SetlistItemInput) => void;
+  onAddItem: (input: SetlistItemInput) => Promise<void> | void;
   defaultTab?: 'song' | 'bible' | 'announcement';
 }
 
@@ -177,7 +157,11 @@ export function AddContentDialog({
       if (!electron?.settings?.addRecentItem) return;
 
       try {
-        await electron.settings.addRecentItem({ type: 'song', songId, title });
+        await electron.settings.addRecentItem({
+          type: 'song',
+          songId,
+          title,
+        });
       } catch {
         // Ignore errors
       }
@@ -235,8 +219,8 @@ export function AddContentDialog({
 
   // Add song to setlist
   const handleAddSong = useCallback(
-    (song: LibrarySong) => {
-      onAddItem({ type: 'song', songId: song.id });
+    async (song: LibrarySong) => {
+      await onAddItem({ type: 'song', songId: song.id });
       saveRecentSongItem(song.id, song.title);
       onOpenChange(false);
     },
@@ -245,11 +229,11 @@ export function AddContentDialog({
 
   // Add from recent item
   const handleAddRecentItem = useCallback(
-    (item: RecentItem) => {
+    async (item: RecentItem) => {
       if (item.type === 'song') {
-        onAddItem({ type: 'song', songId: item.songId });
+        await onAddItem({ type: 'song', songId: item.songId });
       } else if (item.type === 'bible') {
-        onAddItem({
+        await onAddItem({
           type: 'bible',
           translationId: item.translationId,
           translationName: item.translationName,
@@ -268,7 +252,7 @@ export function AddContentDialog({
 
   // Add Bible verses to setlist
   const handleAddBible = useCallback(
-    (selection: {
+    async (selection: {
       translationId: string;
       translationName: string;
       bookId: string;
@@ -278,7 +262,7 @@ export function AddContentDialog({
       endVerse: number;
       displayMode: BibleDisplayMode;
     }) => {
-      onAddItem({
+      await onAddItem({
         type: 'bible',
         translationId: selection.translationId,
         translationName: selection.translationName,
@@ -312,7 +296,7 @@ export function AddContentDialog({
   );
 
   // Add note to setlist
-  const handleAddAnnouncement = useCallback(() => {
+  const handleAddAnnouncement = useCallback(async () => {
     if (!isNoteFormValid(noteFormState)) return;
 
     const title =
@@ -323,7 +307,7 @@ export function AddContentDialog({
         : noteFormState.content.trim().split('\n')[0]?.substring(0, 50) ||
           t('contentAnnouncement', 'Note');
 
-    onAddItem({
+    await onAddItem({
       type: 'announcement',
       title,
       content:

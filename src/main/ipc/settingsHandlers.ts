@@ -8,13 +8,13 @@ import log from 'electron-log';
 import {
   settingsService,
   ProjectionSettings,
-  RecentItem,
   TextStyleSettings,
   BibleReferenceStyle,
 } from '../services/settings';
+import type { RecentItemInput } from '../../shared/types/settings';
 import { databaseService } from '../services/database';
 import { advertisementService } from '../services/AdvertisementService';
-import { getProjectionWindow } from '../windows/WindowManager';
+import { sendToProjection } from '../windows/WindowManager';
 import {
   successResponse,
   errorResponse,
@@ -136,24 +136,17 @@ export const registerSettingsHandlers = (): void => {
   ipcMain.handle(
     'settings:setProjection',
     (_event, settings: Partial<ProjectionSettings>) => {
-      settingsService.setProjectionSettings(settings);
-      // Forward to projection window if open
-      const projectionWindow = getProjectionWindow();
       try {
-        if (
-          projectionWindow &&
-          !projectionWindow.isDestroyed() &&
-          !projectionWindow.webContents.isDestroyed()
-        ) {
-          projectionWindow.webContents.send(
-            'projection:settings',
-            settingsService.getProjectionSettings(),
-          );
-        }
-      } catch {
-        // Window may have been destroyed between check and send
+        settingsService.setProjectionSettings(settings);
+        // Forward to projection window if open
+        sendToProjection(
+          'projection:settings',
+          settingsService.getProjectionSettings(),
+        );
+        return successResponse(true);
+      } catch (error) {
+        return errorResponse(getErrorMessage(error));
       }
-      return successResponse(true);
     },
   );
 
@@ -169,19 +162,16 @@ export const registerSettingsHandlers = (): void => {
   });
 
   // Add recent item
-  ipcMain.handle(
-    'settings:addRecentItem',
-    (_event, item: Omit<RecentItem, 'addedAt'>) => {
-      try {
-        settingsService.addRecentItem(item);
-        return successResponse(true);
-      } catch (error) {
-        const message = getErrorMessage(error);
-        log.error('[Settings] Error adding recent item:', message);
-        return errorResponse(message);
-      }
-    },
-  );
+  ipcMain.handle('settings:addRecentItem', (_event, item: RecentItemInput) => {
+    try {
+      settingsService.addRecentItem(item);
+      return successResponse(true);
+    } catch (error) {
+      const message = getErrorMessage(error);
+      log.error('[Settings] Error adding recent item:', message);
+      return errorResponse(message);
+    }
+  });
 
   // Clear recent items
   ipcMain.handle('settings:clearRecentItems', () => {
@@ -223,21 +213,7 @@ export const registerSettingsHandlers = (): void => {
           updates,
         );
         // Forward to projection window if open
-        const projectionWindow = getProjectionWindow();
-        try {
-          if (
-            projectionWindow &&
-            !projectionWindow.isDestroyed() &&
-            !projectionWindow.webContents.isDestroyed()
-          ) {
-            projectionWindow.webContents.send(
-              'projection:contentTypeText',
-              updated,
-            );
-          }
-        } catch {
-          // Window may have been destroyed between check and send
-        }
+        sendToProjection('projection:contentTypeText', updated);
         // Also notify the control window so ProjectionContext updates
         event.sender.send('projection:contentTypeText', updated);
         return successResponse(updated);
@@ -259,21 +235,7 @@ export const registerSettingsHandlers = (): void => {
       try {
         const updated = settingsService.setBibleReferenceStyle(updates);
         // Forward to projection window if open
-        const projectionWindow = getProjectionWindow();
-        try {
-          if (
-            projectionWindow &&
-            !projectionWindow.isDestroyed() &&
-            !projectionWindow.webContents.isDestroyed()
-          ) {
-            projectionWindow.webContents.send(
-              'projection:contentTypeText',
-              updated,
-            );
-          }
-        } catch {
-          // Window may have been destroyed between check and send
-        }
+        sendToProjection('projection:contentTypeText', updated);
         // Also notify the control window so ProjectionContext updates
         event.sender.send('projection:contentTypeText', updated);
         return successResponse(updated);
@@ -317,6 +279,12 @@ export const registerSettingsHandlers = (): void => {
         fs.unlinkSync(dbPath);
         log.info('[FactoryReset] Deleted database:', dbPath);
       }
+
+      // Also clean up WAL/SHM journal files
+      const walPath = `${dbPath}-wal`;
+      const shmPath = `${dbPath}-shm`;
+      if (fs.existsSync(walPath)) fs.unlinkSync(walPath);
+      if (fs.existsSync(shmPath)) fs.unlinkSync(shmPath);
 
       // Delete user fonts directory
       const fontsDir = path.join(userDataPath, 'fonts');

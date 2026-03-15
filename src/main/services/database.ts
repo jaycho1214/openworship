@@ -10,6 +10,7 @@ import fs from 'fs';
 import log from 'electron-log';
 import { v4 as uuidv4 } from 'uuid';
 import { runMigrations as runFtsMigrations } from './migrations';
+import { normalizeLineEndings } from '../../shared/utils/lyricsParser';
 
 // Song type definition
 export interface LibrarySong {
@@ -89,18 +90,6 @@ const setupDatabase = (dbPath: string): void => {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions(updated_at DESC);
-
-    CREATE TABLE IF NOT EXISTS session_songs (
-      session_id TEXT NOT NULL,
-      song_id TEXT NOT NULL,
-      position INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (session_id, song_id),
-      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
-      FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
-    );
-    CREATE INDEX IF NOT EXISTS idx_session_songs_session ON session_songs(session_id);
-    CREATE INDEX IF NOT EXISTS idx_session_songs_position ON session_songs(session_id, position);
 
     -- Bible translations table
     CREATE TABLE IF NOT EXISTS bible_translations (
@@ -292,6 +281,14 @@ const migrations: Migration[] = [
     version: 3,
     name: 'migrate-session-songs-to-items',
     up: (database) => {
+      // Check if session_songs table exists (removed in later versions)
+      const tableExists = database
+        .prepare(
+          "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='session_songs'",
+        )
+        .get() as { count: number };
+      if (!tableExists.count) return;
+
       const songCount = database
         .prepare('SELECT COUNT(*) as count FROM session_songs')
         .get() as { count: number };
@@ -473,25 +470,49 @@ export const getSongById = (id: string): LibrarySong | null => {
 export const searchSongs = (query: string): LibrarySong[] => {
   if (!db) throw new Error('Database not initialized');
 
-  const searchTerm = `%${query}%`;
-  const stmt = db.prepare(`
-    SELECT id, title, lyrics, categories, tags, created_at as createdAt, updated_at as updatedAt
-    FROM songs
-    WHERE title LIKE ? OR lyrics LIKE ? OR categories LIKE ? OR tags LIKE ?
-    ORDER BY updated_at DESC
-  `);
+  // Escape special FTS5 characters and add prefix matching
+  const ftsQuery = query
+    .replace(/['"*()]/g, '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => `"${word}"*`)
+    .join(' ');
 
-  const rows = stmt.all(
-    searchTerm,
-    searchTerm,
-    searchTerm,
-    searchTerm,
-  ) as any[];
-  return rows.map((row) => ({
-    ...row,
-    categories: safeJsonParse(row.categories),
-    tags: safeJsonParse(row.tags),
-  }));
+  if (!ftsQuery) return [];
+
+  try {
+    const stmt = db.prepare(`
+      SELECT s.id, s.title, s.lyrics, s.categories, s.tags,
+             s.created_at as createdAt, s.updated_at as updatedAt
+      FROM songs s
+      INNER JOIN songs_fts fts ON s.rowid = fts.rowid
+      WHERE songs_fts MATCH ?
+      ORDER BY rank
+    `);
+
+    const rows = stmt.all(ftsQuery) as any[];
+    return rows.map((row) => ({
+      ...row,
+      categories: safeJsonParse(row.categories),
+      tags: safeJsonParse(row.tags),
+    }));
+  } catch (ftsError) {
+    log.warn('[Database] FTS5 search failed, falling back to LIKE:', ftsError);
+    const pattern = `%${query}%`;
+    const stmt = db.prepare(`
+      SELECT id, title, lyrics, categories, tags,
+             created_at as createdAt, updated_at as updatedAt
+      FROM songs
+      WHERE title LIKE ? OR lyrics LIKE ?
+    `);
+    const rows = stmt.all(pattern, pattern) as any[];
+    return rows.map((row) => ({
+      ...row,
+      categories: safeJsonParse(row.categories),
+      tags: safeJsonParse(row.tags),
+    }));
+  }
 };
 
 // Add song
@@ -500,6 +521,7 @@ export const addSong = (song: LibrarySongInput): LibrarySong => {
 
   const id = uuidv4();
   const now = new Date().toISOString();
+  const normalizedLyrics = normalizeLineEndings(song.lyrics);
 
   const stmt = db.prepare(`
     INSERT INTO songs (id, title, lyrics, categories, tags, created_at, updated_at)
@@ -509,7 +531,7 @@ export const addSong = (song: LibrarySongInput): LibrarySong => {
   stmt.run(
     id,
     song.title,
-    song.lyrics,
+    normalizedLyrics,
     JSON.stringify(song.categories || []),
     JSON.stringify(song.tags || []),
     now,
@@ -521,7 +543,7 @@ export const addSong = (song: LibrarySongInput): LibrarySong => {
   return {
     id,
     title: song.title,
-    lyrics: song.lyrics,
+    lyrics: normalizedLyrics,
     categories: song.categories || [],
     tags: song.tags || [],
     createdAt: now,
@@ -540,9 +562,12 @@ export const updateSong = (
   if (!existing) return null;
 
   const now = new Date().toISOString();
+  const normalizedLyrics = updates.lyrics
+    ? normalizeLineEndings(updates.lyrics)
+    : updates.lyrics;
   const updated = {
     title: updates.title ?? existing.title,
-    lyrics: updates.lyrics ?? existing.lyrics,
+    lyrics: normalizedLyrics ?? existing.lyrics,
     categories: updates.categories ?? existing.categories,
     tags: updates.tags ?? existing.tags,
   };
@@ -1176,26 +1201,30 @@ export const addSessionItem = (
       const now = new Date().toISOString();
       const { nextPos } = posStmt.get(itm.sessionId) as { nextPos: number };
 
+      const normalizedContent = itm.content
+        ? normalizeLineEndings(itm.content)
+        : itm.content;
+
       insertStmt.run(
         newId,
         itm.sessionId,
         itm.itemType,
         nextPos,
-        itm.songId || null,
-        itm.translationId || null,
-        itm.translationName || null,
-        itm.bookId || null,
-        itm.bookName || null,
+        itm.songId ?? null,
+        itm.translationId ?? null,
+        itm.translationName ?? null,
+        itm.bookId ?? null,
+        itm.bookName ?? null,
         itm.chapter ?? null,
         itm.startVerse ?? null,
         itm.endVerse ?? null,
-        itm.displayMode || null,
-        itm.title || null,
-        itm.content || null,
-        itm.noteDisplayMode || null,
-        itm.noteContentType || null,
-        itm.imagePath || null,
-        itm.overlayPosition || null,
+        itm.displayMode ?? null,
+        itm.title ?? null,
+        normalizedContent ?? null,
+        itm.noteDisplayMode ?? null,
+        itm.noteContentType ?? null,
+        itm.imagePath ?? null,
+        itm.overlayPosition ?? null,
         now,
         now,
       );
@@ -1295,6 +1324,9 @@ export const updateSessionItem = (
       const existing = getStmt.get(itemId) as DbSessionItem | undefined;
       if (!existing) return null;
 
+      // Prevent changing item type
+      delete upd.itemType;
+
       const now = new Date().toISOString();
       const updated: DbSessionItem = {
         ...existing,
@@ -1305,21 +1337,21 @@ export const updateSessionItem = (
       stmt.run(
         updated.itemType,
         updated.position,
-        updated.songId || null,
-        updated.translationId || null,
-        updated.translationName || null,
-        updated.bookId || null,
-        updated.bookName || null,
+        updated.songId ?? null,
+        updated.translationId ?? null,
+        updated.translationName ?? null,
+        updated.bookId ?? null,
+        updated.bookName ?? null,
         updated.chapter ?? null,
         updated.startVerse ?? null,
         updated.endVerse ?? null,
-        updated.displayMode || null,
-        updated.title || null,
-        updated.content || null,
-        updated.noteDisplayMode || null,
-        updated.noteContentType || null,
-        updated.imagePath || null,
-        updated.overlayPosition || null,
+        updated.displayMode ?? null,
+        updated.title ?? null,
+        updated.content ?? null,
+        updated.noteDisplayMode ?? null,
+        updated.noteContentType ?? null,
+        updated.imagePath ?? null,
+        updated.overlayPosition ?? null,
         now,
         itemId,
       );

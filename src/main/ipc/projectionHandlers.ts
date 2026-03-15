@@ -9,6 +9,7 @@ import {
   createProjectionWindow,
   isProjectionOpen,
   closeProjectionWindow,
+  sendToProjection,
 } from '../windows/WindowManager';
 import { settingsService } from '../services/settings';
 import {
@@ -117,19 +118,7 @@ export const registerProjectionHandlers = (): void => {
   // Each channel is forwarded with the same name to the projection window.
   const forwardToProjection = (channel: string) => {
     ipcMain.on(channel, (_event, data) => {
-      const projectionWindow = getProjectionWindow();
-      try {
-        if (
-          projectionWindow &&
-          !projectionWindow.isDestroyed() &&
-          !projectionWindow.webContents.isDestroyed()
-        ) {
-          projectionWindow.webContents.send(channel, data);
-        }
-      } catch (err) {
-        // Window may have been destroyed between check and send
-        log.warn(`[Projection] Failed to forward ${channel}:`, err);
-      }
+      sendToProjection(channel, data);
     });
   };
 

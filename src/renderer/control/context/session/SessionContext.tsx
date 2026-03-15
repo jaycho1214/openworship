@@ -9,17 +9,10 @@ import {
 } from 'react';
 
 import { getElectron } from '../../../shared/hooks/useElectron';
-
-interface DbSession {
-  id: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { DbSession } from '../../../../shared/types';
 
 interface SessionContextType {
   currentSessionId: string | null;
-  setCurrentSessionId: (id: string | null) => void;
   createSession: (name: string) => Promise<DbSession | null>;
   loadSession: (sessionId: string) => Promise<DbSession | null>;
   deleteSession: (sessionId: string) => Promise<boolean>;
@@ -125,7 +118,6 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const contextValue = useMemo(
     () => ({
       currentSessionId,
-      setCurrentSessionId,
       createSession,
       loadSession,
       deleteSession,
@@ -133,7 +125,6 @@ export function SessionProvider({ children }: SessionProviderProps) {
     }),
     [
       currentSessionId,
-      setCurrentSessionId,
       createSession,
       loadSession,
       deleteSession,

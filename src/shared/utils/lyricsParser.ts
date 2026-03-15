@@ -1,5 +1,12 @@
-import { distance } from 'fastest-levenshtein';
 import type { Slide } from '../types/song';
+
+/**
+ * Normalize line endings to LF.
+ * Converts CRLF (\r\n) and lone CR (\r) to LF (\n).
+ */
+export function normalizeLineEndings(text: string): string {
+  return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
 
 // Use crypto.randomUUID() which is available in modern browsers and Node.js
 export const generateId = (): string => {
@@ -43,7 +50,7 @@ export function parseLyricsToSlides(
       ? Infinity
       : (maxLinesPerSlide ?? DEFAULT_LINES_PER_SLIDE);
   const slides: Slide[] = [];
-  const rawLines = rawLyrics.split('\n').map((line) => line.trim());
+  const rawLines = rawLyrics.split(/\r?\n/).map((line) => line.trim());
 
   // Check if blank lines are used as separators
   const hasBlankLineSeparators = rawLines.some(
@@ -255,48 +262,4 @@ export function resolveSectionReferences(slides: Slide[]): Slide[] {
  */
 export function slidesToRawLyrics(slides: Slide[]): string {
   return slides.map((slide) => slide.lines.join('\n')).join('\n\n');
-}
-
-/**
- * Get the total number of slides that would be created from lyrics
- */
-export function countSlides(
-  rawLyrics: string,
-  maxLinesPerSlide: number | null | undefined = undefined,
-): number {
-  return parseLyricsToSlides(rawLyrics, maxLinesPerSlide).length;
-}
-
-/**
- * Normalize text for comparison (remove spaces, punctuation, lowercase)
- * Used for auto-advance matching
- */
-export function normalizeForMatching(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[\s.,!?'"~\-_]/g, '') // Remove whitespace and common punctuation
-    .replace(/[ㄱ-ㅎㅏ-ㅣ]/g, ''); // Remove standalone Korean consonants/vowels
-}
-
-/**
- * Calculate similarity between two strings (0-1)
- * Uses Levenshtein distance for accurate string comparison
- */
-export function calculateSimilarity(str1: string, str2: string): number {
-  const norm1 = normalizeForMatching(str1);
-  const norm2 = normalizeForMatching(str2);
-
-  if (norm1.length === 0 || norm2.length === 0) return 0;
-  if (norm1 === norm2) return 1;
-
-  // Early termination: if length difference is too large, similarity is low
-  const maxLen = Math.max(norm1.length, norm2.length);
-  const lenDiff = Math.abs(norm1.length - norm2.length);
-  if (lenDiff / maxLen > 0.7) {
-    return 0.1; // Very different lengths = low similarity
-  }
-
-  // Use Levenshtein distance for accurate similarity
-  const editDistance = distance(norm1, norm2);
-  return 1 - editDistance / maxLen;
 }

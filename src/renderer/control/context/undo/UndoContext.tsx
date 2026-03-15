@@ -24,7 +24,6 @@ interface UndoContextType {
   undo: () => ProjectionStateSnapshot | null;
   redo: () => ProjectionStateSnapshot | null;
   pushState: (state: Omit<ProjectionStateSnapshot, 'timestamp'>) => void;
-  clearHistory: () => void;
   lastAction: string | null;
 }
 
@@ -131,12 +130,6 @@ export function UndoProvider({
     return nextState;
   }, []);
 
-  const clearHistory = useCallback(() => {
-    setUndoStack([]);
-    setRedoStack([]);
-    setLastAction(null);
-  }, []);
-
   // Clear last action notification after a delay
   useEffect(() => {
     if (lastAction) {
@@ -152,10 +145,9 @@ export function UndoProvider({
       undo,
       redo,
       pushState,
-      clearHistory,
       lastAction,
     }),
-    [canUndo, canRedo, undo, redo, pushState, clearHistory, lastAction],
+    [canUndo, canRedo, undo, redo, pushState, lastAction],
   );
 
   return (

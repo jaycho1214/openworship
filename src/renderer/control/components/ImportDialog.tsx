@@ -11,6 +11,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { getElectron } from '@/shared/hooks/useElectron';
 import {
   Dialog,
   DialogContent,
@@ -35,9 +36,6 @@ import type {
   ImportOptions,
   ImportResult,
 } from '../../../shared/types';
-
-// Helper to safely access electron API
-const getElectron = () => (window as any).electron;
 
 interface ImportDialogProps {
   open: boolean;
@@ -201,7 +199,7 @@ export default function ImportDialog({
         return;
       }
 
-      setResult(response.data);
+      setResult(response.data ?? null);
       onImportComplete?.();
     } catch (err) {
       console.error('[ImportDialog] Error executing import:', err);

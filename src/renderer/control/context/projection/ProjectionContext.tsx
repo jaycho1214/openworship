@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import {
   createContext,
   useContext,
@@ -9,10 +8,12 @@ import {
   useRef,
   ReactNode,
 } from 'react';
-import {
+import type {
   ProjectionSettings,
-  defaultProjectionSettings,
-} from '../../../shared/types/song';
+  ContentTypeTextSettings,
+  BibleReferenceStyle,
+} from '../../../../shared/types/settings';
+import { defaultProjectionSettings } from '../../../../shared/types/settings';
 import { usePresentation } from '../presentation/PresentationContext';
 import { useMedia } from '../media/MediaContext';
 import { useFrame } from '../frame/FrameContext';
@@ -21,11 +22,6 @@ import type {
   SetlistItemType,
   AnnouncementSetlistItem,
 } from '../../../../shared/types/setlistItem';
-import type {
-  ContentTypeTextSettings,
-  TextStyleSettings,
-  BibleReferenceStyle,
-} from '../../../../shared/types/settings';
 
 import { getElectron } from '../../../shared/hooks/useElectron';
 
@@ -39,11 +35,6 @@ interface ProjectionContextType {
   closeProjection: () => Promise<void>;
   toggleBlank: () => void;
   toggleVerseHidden: () => void;
-  updateProjectionSettings: (settings: Partial<ProjectionSettings>) => void;
-  updateContentTypeTextSettings: (
-    type: 'song' | 'bible' | 'announcement',
-    updates: Partial<TextStyleSettings>,
-  ) => Promise<void>;
   updateBibleReferenceStyle: (
     updates: Partial<BibleReferenceStyle>,
   ) => Promise<void>;
@@ -235,7 +226,6 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
       lastItemTypeRef.current = itemType;
       const frame = getFrameForType(itemType);
       sendFrameToProjection(frame, itemType);
-      console.log('[Projection] Sent frame for item type:', itemType, frame);
     }
   }, [
     isProjectionOpen,
@@ -255,7 +245,6 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
 
     const frame = getFrameForType(itemType);
     sendFrameToProjection(frame, itemType);
-    console.log('[Projection] Frame settings changed, sending frame:', frame);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to frameSettings changes; other deps handled by the item-type effect above
   }, [frameSettings]);
 
@@ -266,44 +255,6 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
   const toggleVerseHidden = useCallback(() => {
     setIsVerseHidden((prev) => !prev);
   }, []);
-
-  const updateProjectionSettings = useCallback(
-    async (settings: Partial<ProjectionSettings>) => {
-      const electron = getElectron();
-      if (!electron) return;
-
-      try {
-        await electron.settings.setProjection(settings);
-        setProjectionSettings((prev) => ({ ...prev, ...settings }));
-      } catch (error) {
-        console.error('Failed to update projection settings:', error);
-      }
-    },
-    [],
-  );
-
-  const updateContentTypeTextSettings = useCallback(
-    async (
-      type: 'song' | 'bible' | 'announcement',
-      updates: Partial<TextStyleSettings>,
-    ) => {
-      const electron = getElectron();
-      if (!electron) return;
-
-      try {
-        const result = await electron.settings.setContentTypeText(
-          type,
-          updates,
-        );
-        if (result.success && result.data) {
-          setContentTypeTextSettings(result.data);
-        }
-      } catch (error) {
-        console.error('Failed to update content type text settings:', error);
-      }
-    },
-    [],
-  );
 
   const updateBibleReferenceStyle = useCallback(
     async (updates: Partial<BibleReferenceStyle>) => {
@@ -373,7 +324,6 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
 
       // Set up listener for projection ready signal BEFORE opening
       const unsubReady = electron.projection.onReady(() => {
-        console.log('Received ready signal from projection window');
         if (currentSlide) {
           electron.projection.update({
             lines: currentSlide.lines,
@@ -408,7 +358,6 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
           const frame = getFrameForType(initType);
           sendFrameToProjection(frame, initType);
           lastItemTypeRef.current = initType;
-          console.log('[Projection] Sent initial frame:', initType, frame);
         }
 
         unsubReady();
@@ -465,8 +414,6 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
       closeProjection,
       toggleBlank,
       toggleVerseHidden,
-      updateProjectionSettings,
-      updateContentTypeTextSettings,
       updateBibleReferenceStyle,
       overlayNote,
       isOverlayNoteVisible,
@@ -483,8 +430,6 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
       closeProjection,
       toggleBlank,
       toggleVerseHidden,
-      updateProjectionSettings,
-      updateContentTypeTextSettings,
       updateBibleReferenceStyle,
       overlayNote,
       isOverlayNoteVisible,

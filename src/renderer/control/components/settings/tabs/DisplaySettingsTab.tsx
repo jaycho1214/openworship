@@ -16,6 +16,7 @@ import {
   BookOpen,
   Megaphone,
 } from 'lucide-react';
+import { getElectron } from '@/shared/hooks/useElectron';
 import { basename } from '../../../../shared/utils/fileHelpers';
 import { Button } from '../../../../components/ui/button';
 import { Label } from '../../../../components/ui/label';
@@ -34,33 +35,20 @@ import {
   CollapsibleTrigger,
 } from '../../../../components/ui/collapsible';
 import { cn } from '../../../../lib/utils';
-import {
-  DetectedFont,
-  ProjectionSettings,
-  defaultProjectionSettings,
-} from '../../../../shared/types/song';
+import { DetectedFont } from '../../../../shared/types/song';
 import type {
+  ProjectionSettings,
   ContentTypeTextSettings,
   TextStyleSettings,
   BibleReferenceStyle,
 } from '../../../../../shared/types/settings';
-import { defaultContentTypeTextSettings } from '../../../../../shared/types/settings';
+import {
+  defaultProjectionSettings,
+  defaultContentTypeTextSettings,
+} from '../../../../../shared/types/settings';
 import { SettingsRow } from '../components/SettingsRow';
 
-// Helper to safely access electron API
-const getElectron = () => (window as any).electron;
-
-// Convert file path to app:// media URL for video preview
-function toAppMediaUrl(filePath: string): string {
-  if (filePath.startsWith('app://') || filePath.startsWith('file://')) {
-    return filePath;
-  }
-  const encodedPath = filePath
-    .split(/[/\\]/)
-    .map((part) => encodeURIComponent(part))
-    .join('/');
-  return `app://media${encodedPath.startsWith('/') ? '' : '/'}${encodedPath}`;
-}
+import { toAppMediaUrl } from '../../../../shared/utils/fileUrl';
 
 type ContentTypeTab = 'song' | 'bible' | 'announcement';
 

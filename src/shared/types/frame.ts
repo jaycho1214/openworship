@@ -138,7 +138,10 @@ export function getFrameIdForType(
       return settings.bibleFrameId;
     case 'announcement':
       return settings.announcementFrameId;
-    default:
+    default: {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-underscore-dangle
+      const _exhaustive: never = type;
       return null;
+    }
   }
 }

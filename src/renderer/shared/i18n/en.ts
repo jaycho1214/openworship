@@ -372,7 +372,7 @@ export const en = {
   position: 'Position',
   padding: 'Padding',
   resetToDefault: 'Reset to Default',
-  searchLyrics: 'Search lyrics... (⌘F)',
+  searchLyrics: 'Search lyrics...',
   slidesFoundCount: '{{count}} slides found',
   clearSearch: 'Clear search',
 

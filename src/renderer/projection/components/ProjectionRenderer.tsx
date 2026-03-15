@@ -3,11 +3,12 @@ import LyricsOverlay from './LyricsOverlay';
 import BlankScreen from './BlankScreen';
 import AdvertisementOverlay from './AdvertisementOverlay';
 import NoteOverlay from './NoteOverlay';
+import type { SlideOverrides } from '../../shared/types/song';
 import type {
+  BackgroundType,
+  Advertisement,
   ProjectionSettings,
-  SlideOverrides,
-} from '../../shared/types/song';
-import type { BackgroundType, Advertisement } from '../../../shared/types';
+} from '../../../shared/types';
 import type { AdvertisementDisplaySettings } from '../../../shared/types/advertisement';
 import type { Frame } from '../../../shared/types/frame';
 import type { ContentTypeTextSettings } from '../../../shared/types/settings';

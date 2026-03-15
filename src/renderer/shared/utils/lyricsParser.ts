@@ -1,10 +1,8 @@
 // Re-export from shared location
 export {
   generateId,
+  normalizeLineEndings,
   parseLyricsToSlides,
   resolveSectionReferences,
   slidesToRawLyrics,
-  countSlides,
-  normalizeForMatching,
-  calculateSimilarity,
 } from '../../../shared/utils/lyricsParser';

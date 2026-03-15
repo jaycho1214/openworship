@@ -14,7 +14,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { v4 as uuidv4 } from 'uuid';
+import { getElectron } from '@/shared/hooks/useElectron';
 import {
   Dialog,
   DialogContent,
@@ -40,10 +40,8 @@ import {
   getFileMimeType,
   MAX_OCR_FILE_SIZE,
 } from '../../shared/utils/fileHelpers';
+import { normalizeLineEndings } from '../../shared/utils/lyricsParser';
 import { cn } from '../../lib/utils';
-
-// Helper to safely access electron API
-const getElectron = () => (window as any).electron;
 
 // Type for manual entry item
 interface ManualSongEntry {
@@ -96,7 +94,7 @@ export default function AddSongDialog({
 
   // Manual entry state
   const [manualEntries, setManualEntries] = useState<ManualSongEntry[]>([
-    { id: uuidv4(), title: '', lyrics: '' },
+    { id: crypto.randomUUID(), title: '', lyrics: '' },
   ]);
   const [activeEntryIndex, setActiveEntryIndex] = useState(0);
 
@@ -185,7 +183,7 @@ export default function AddSongDialog({
   // Reset form when opening
   useEffect(() => {
     if (open) {
-      setManualEntries([{ id: uuidv4(), title: '', lyrics: '' }]);
+      setManualEntries([{ id: crypto.randomUUID(), title: '', lyrics: '' }]);
       setActiveEntryIndex(0);
       setError(null);
       setDuplicates({});
@@ -232,7 +230,7 @@ export default function AddSongDialog({
         if (result.success && result.data && result.data.length > 0) {
           setDuplicates((prev) => ({
             ...prev,
-            [entryId]: result.data.slice(0, 5), // Limit to 5 candidates
+            [entryId]: result.data!.slice(0, 5), // Limit to 5 candidates
           }));
         } else {
           setDuplicates((prev) => {
@@ -254,7 +252,7 @@ export default function AddSongDialog({
 
   // Add new manual entry
   const handleAddManualEntry = () => {
-    const newEntry = { id: uuidv4(), title: '', lyrics: '' };
+    const newEntry = { id: crypto.randomUUID(), title: '', lyrics: '' };
     setManualEntries([...manualEntries, newEntry]);
     setActiveEntryIndex(manualEntries.length);
   };
@@ -419,14 +417,16 @@ export default function AddSongDialog({
       }
 
       const text = e.clipboardData.getData('text');
-      if (!text.includes('\n\n')) return; // No blank lines, let default paste handle it
+      // Normalize CRLF to LF for consistent blank-line detection
+      const normalizedText = normalizeLineEndings(text);
+      if (!normalizedText.includes('\n\n')) return; // No blank lines, let default paste handle it
 
       e.preventDefault();
       const textarea = e.currentTarget;
       const { selectionStart, selectionEnd } = textarea;
 
       // Split pasted text by blank lines
-      const pastedCards = text
+      const pastedCards = normalizedText
         .split(/\n\n+/)
         .map((c) => c.trim())
         .filter(Boolean);
@@ -550,7 +550,7 @@ export default function AddSongDialog({
 
           if (item.success && item.data) {
             newEntries.push({
-              id: uuidv4(),
+              id: crypto.randomUUID(),
               title: item.data.title || t('untitledSong'),
               lyrics: item.data.lyrics || '',
             });

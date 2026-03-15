@@ -16,7 +16,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { v4 as uuidv4 } from 'uuid';
+import { getElectron } from '@/shared/hooks/useElectron';
 import {
   Dialog,
   DialogContent,
@@ -32,7 +32,10 @@ import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
 import { useSetlist } from '../context';
 import { Song } from '../../shared/types/song';
-import { slidesToRawLyrics } from '../../shared/utils/lyricsParser';
+import {
+  slidesToRawLyrics,
+  normalizeLineEndings,
+} from '../../shared/utils/lyricsParser';
 import {
   isOcrFile,
   isPdfFile,
@@ -41,9 +44,6 @@ import {
   MAX_OCR_FILE_SIZE,
 } from '../../shared/utils/fileHelpers';
 import { cn } from '../../lib/utils';
-
-// Helper to safely access electron API
-const getElectron = () => (window as any).electron;
 
 // Type for bulk import item
 interface ImportItem {
@@ -250,13 +250,15 @@ export default function SongEditor({
       }
 
       const text = e.clipboardData.getData('text');
-      if (!text.includes('\n\n')) return;
+      // Normalize CRLF to LF for consistent blank-line detection
+      const normalizedText = normalizeLineEndings(text);
+      if (!normalizedText.includes('\n\n')) return;
 
       e.preventDefault();
       const textarea = e.currentTarget;
       const { selectionStart, selectionEnd } = textarea;
 
-      const pastedCards = text
+      const pastedCards = normalizedText
         .split(/\n\n+/)
         .map((c) => c.trim())
         .filter(Boolean);
@@ -365,7 +367,7 @@ export default function SongEditor({
                 : item.data;
 
             allItems.push({
-              id: uuidv4(),
+              id: crypto.randomUUID(),
               index: allItems.length,
               title: songData.title || t('untitledSong'),
               lyrics: songData.lyrics || '',
@@ -376,7 +378,7 @@ export default function SongEditor({
             });
           } else {
             allItems.push({
-              id: uuidv4(),
+              id: crypto.randomUUID(),
               index: allItems.length,
               title: t('untitledSong'),
               lyrics: '',

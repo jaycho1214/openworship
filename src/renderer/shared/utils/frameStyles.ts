@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { Frame } from '../../../shared/types/frame';
+import { toFileUrl } from './fileUrl';
 
 /**
  * Get frame style for CSS rendering
@@ -9,7 +10,7 @@ export function getFrameStyle(frame: Frame | null): CSSProperties {
 
   if (frame.type === 'image' && frame.imagePath) {
     return {
-      borderImageSource: `url('file://${frame.imagePath.replace(/\\/g, '/')}')`,
+      borderImageSource: `url('${toFileUrl(frame.imagePath)}')`,
       borderImageSlice: `${frame.sliceSize || 30} fill`,
       borderImageWidth: `${frame.sliceSize || 30}px`,
       borderImageRepeat: 'stretch',

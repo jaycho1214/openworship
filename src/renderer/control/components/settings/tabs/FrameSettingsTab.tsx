@@ -13,6 +13,7 @@ import {
   BookOpen,
   Megaphone,
 } from 'lucide-react';
+import { getElectron } from '@/shared/hooks/useElectron';
 import { useFrame } from '../../../context';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
@@ -45,6 +46,7 @@ import {
 import { SetlistItemType } from '../../../../../shared/types/setlistItem';
 import { Frame as FrameType } from '../../../../../shared/types/frame';
 import { getFrameStyle } from '../../../../shared/utils/frameStyles';
+import { toFileUrl } from '../../../../shared/utils/fileUrl';
 import { Separator } from '../../../../components/ui/separator';
 import { SettingsRow } from '../components/SettingsRow';
 import { cn } from '../../../../lib/utils';
@@ -112,7 +114,7 @@ export function FrameSettingsTab() {
 
       // Use Electron's webUtils to get the file path
       try {
-        const electron = (window as any).electron;
+        const electron = getElectron();
         if (electron?.utils?.getPathForFile) {
           return electron.utils.getPathForFile(file);
         }
@@ -396,7 +398,7 @@ export function FrameSettingsTab() {
                     <div
                       className="absolute inset-0"
                       style={{
-                        backgroundImage: `url('file://${frame.imagePath.replace(/\\/g, '/')}')`,
+                        backgroundImage: `url('${toFileUrl(frame.imagePath)}')`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                       }}
@@ -525,7 +527,7 @@ export function FrameSettingsTab() {
                   onDrop={handleDrop}
                 >
                   <img
-                    src={`file://${newFrameImagePath.replace(/\\/g, '/')}`}
+                    src={toFileUrl(newFrameImagePath)}
                     alt={t('framePreview')}
                     className="w-full h-24 object-contain pointer-events-none"
                   />
@@ -749,7 +751,7 @@ export function FrameSettingsTab() {
                   <div
                     className="flex items-center justify-center text-white text-xl font-bold"
                     style={{
-                      borderImageSource: `url('file://${newFrameImagePath.replace(/\\/g, '/')}')`,
+                      borderImageSource: `url('${toFileUrl(newFrameImagePath)}')`,
                       borderImageSlice: `${newFrameSliceSize} fill`,
                       borderImageWidth: `${newFrameSliceSize}px`,
                       borderImageRepeat: 'stretch',
@@ -952,7 +954,7 @@ export function FrameSettingsTab() {
                   <div
                     className="flex items-center justify-center text-white text-xl font-bold"
                     style={{
-                      borderImageSource: `url('file://${editingFrame.imagePath.replace(/\\/g, '/')}')`,
+                      borderImageSource: `url('${toFileUrl(editingFrame.imagePath)}')`,
                       borderImageSlice: `${editFrameSliceSize} fill`,
                       borderImageWidth: `${editFrameSliceSize}px`,
                       borderImageRepeat: 'stretch',

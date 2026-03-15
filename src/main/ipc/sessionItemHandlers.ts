@@ -42,20 +42,20 @@ const dbToSetlistItem = (db: DbSessionItem): SetlistItem => {
       return {
         ...base,
         type: 'song',
-        songId: db.songId!,
+        songId: db.songId ?? '',
       } as SongSetlistItem;
 
     case 'bible':
       return {
         ...base,
         type: 'bible',
-        translationId: db.translationId!,
-        translationName: db.translationName!,
-        bookId: db.bookId!,
-        bookName: db.bookName!,
-        chapter: db.chapter!,
-        startVerse: db.startVerse!,
-        endVerse: db.endVerse!,
+        translationId: db.translationId ?? '',
+        translationName: db.translationName ?? '',
+        bookId: db.bookId ?? '',
+        bookName: db.bookName ?? '',
+        chapter: db.chapter ?? 0,
+        startVerse: db.startVerse ?? 0,
+        endVerse: db.endVerse ?? 0,
         displayMode:
           (db.displayMode as 'one-per-slide' | 'range-on-slide') ||
           'one-per-slide',
@@ -87,10 +87,10 @@ const announcementToSlides = (_title: string, content: string): Slide[] => {
     return [{ id: uuidv4(), lines: [''], section: 'Announcement' }];
   }
 
-  const paragraphs = text.split(/\n\n+/).filter((p) => p.trim());
+  const paragraphs = text.split(/(?:\r?\n){2,}/).filter((p) => p.trim());
   return paragraphs.map((paragraph, index) => ({
     id: uuidv4(),
-    lines: paragraph.split('\n').filter((line) => line.trim()),
+    lines: paragraph.split(/\r?\n/).filter((line) => line.trim()),
     section: index === 0 ? 'Announcement' : undefined,
   }));
 };
@@ -147,7 +147,7 @@ const populateItemSlides = (item: SetlistItem): SetlistItem => {
           id: uuidv4(),
           lines: announcementItem.content
             .trim()
-            .split('\n')
+            .split(/\r?\n/)
             .filter((l) => l.trim()),
           section: 'Note',
         },

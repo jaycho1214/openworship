@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { basename } from '../../shared/utils/fileHelpers';
+import { toFileUrl } from '../../shared/utils/fileUrl';
 import {
   Dialog,
   DialogContent,
@@ -38,7 +39,7 @@ export default function NoteSettingsDialog({
     displayMode: item.displayMode || 'slide',
     overlayPosition: item.overlayPosition || 'bottom',
     imagePath: item.imagePath,
-    imagePreview: item.imagePath ? `file://${item.imagePath}` : null,
+    imagePreview: item.imagePath ? toFileUrl(item.imagePath) : null,
   });
 
   // Reset state when item changes
@@ -50,7 +51,7 @@ export default function NoteSettingsDialog({
         displayMode: item.displayMode || 'slide',
         overlayPosition: item.overlayPosition || 'bottom',
         imagePath: item.imagePath,
-        imagePreview: item.imagePath ? `file://${item.imagePath}` : null,
+        imagePreview: item.imagePath ? toFileUrl(item.imagePath) : null,
       });
     }
   }, [open, item]);

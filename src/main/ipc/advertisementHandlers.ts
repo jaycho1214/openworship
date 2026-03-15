@@ -4,7 +4,7 @@
 
 import { ipcMain } from 'electron';
 import { advertisementService } from '../services/AdvertisementService';
-import { getProjectionWindow } from '../windows/WindowManager';
+import { sendToProjection } from '../windows/WindowManager';
 import { successResponse, errorResponse } from '../../shared/types/ipc';
 import {
   AdvertisementCreateInput,
@@ -120,10 +120,7 @@ export function registerAdvertisementHandlers(): void {
 export function sendAdvertisementToProjection(
   message: ProjectionAdvertisementMessage,
 ): void {
-  const projectionWindow = getProjectionWindow();
-  if (projectionWindow && !projectionWindow.isDestroyed()) {
-    projectionWindow.webContents.send('projection:advertisement', message);
-  }
+  sendToProjection('projection:advertisement', message);
 }
 
 /**
@@ -132,11 +129,8 @@ export function sendAdvertisementToProjection(
 export function sendDisplaySettingsToProjection(
   settings: AdvertisementDisplaySettings,
 ): void {
-  const projectionWindow = getProjectionWindow();
-  if (projectionWindow && !projectionWindow.isDestroyed()) {
-    projectionWindow.webContents.send('projection:advertisement', {
-      action: 'updateSettings',
-      displaySettings: settings,
-    } as ProjectionAdvertisementMessage);
-  }
+  sendToProjection('projection:advertisement', {
+    action: 'updateSettings',
+    displaySettings: settings,
+  } as ProjectionAdvertisementMessage);
 }

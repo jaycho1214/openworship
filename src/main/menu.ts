@@ -224,6 +224,20 @@ export default class MenuBuilder {
         ],
       },
       {
+        label: '&Edit',
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          { role: 'delete' },
+          { type: 'separator' },
+          { role: 'selectAll' },
+        ],
+      },
+      {
         label: '&View',
         submenu:
           process.env.NODE_ENV === 'development' ||
@@ -276,6 +290,10 @@ export default class MenuBuilder {
                   },
                 },
               ],
+      },
+      {
+        label: '&Window',
+        submenu: [{ role: 'minimize' }, { role: 'close' }],
       },
       {
         label: 'Help',

@@ -2,14 +2,12 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, AlertCircle, CheckCircle2, ExternalLink } from 'lucide-react';
+import { getElectron } from '@/shared/hooks/useElectron';
 import { Input } from '../../../../components/ui/input';
 import { Button } from '../../../../components/ui/button';
 import { Label } from '../../../../components/ui/label';
 import { Separator } from '../../../../components/ui/separator';
 import { cn } from '../../../../lib/utils';
-
-// Helper to safely access electron API
-const getElectron = () => (window as any).electron;
 
 type ApiKeyStatus = 'idle' | 'loading' | 'valid' | 'invalid' | 'not-set';
 

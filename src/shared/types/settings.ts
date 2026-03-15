@@ -133,6 +133,33 @@ export const defaultContentTypeTextSettings: ContentTypeTextSettings = {
   announcement: { ...defaultTextStyleSettings },
 };
 
+// Recent item types for quick-add
+export interface RecentSongItem {
+  type: 'song';
+  songId: string;
+  title: string;
+  addedAt: number;
+}
+
+export interface RecentBibleItem {
+  type: 'bible';
+  reference: string;
+  translationId: string;
+  translationName: string;
+  bookId: string;
+  bookName: string;
+  chapter: number;
+  startVerse: number;
+  endVerse: number;
+  addedAt: number;
+}
+
+export type RecentItem = RecentSongItem | RecentBibleItem;
+
+export type RecentItemInput =
+  | Omit<RecentSongItem, 'addedAt'>
+  | Omit<RecentBibleItem, 'addedAt'>;
+
 export interface AppSettings {
   hasApiKey: boolean;
   language: Language;
@@ -177,3 +204,34 @@ export const defaultProjectionSettings: ProjectionSettings = {
   backgroundColor: '#000000',
   backgroundImagePath: undefined,
 };
+
+/**
+ * Deep-merge partial projection settings with defaults,
+ * ensuring all nested objects (textShadow, textOutline, textAlign, padding) are complete.
+ */
+export function mergeProjectionSettings(
+  settings?: Partial<ProjectionSettings>,
+): ProjectionSettings {
+  if (!settings) return { ...defaultProjectionSettings };
+  return {
+    ...defaultProjectionSettings,
+    ...settings,
+    textShadow: {
+      ...defaultProjectionSettings.textShadow,
+      ...settings.textShadow,
+    },
+    textOutline: {
+      ...defaultProjectionSettings.textOutline,
+      ...settings.textOutline,
+    },
+    textAlign: {
+      ...defaultProjectionSettings.textAlign,
+      ...settings.textAlign,
+    },
+    padding: {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      ...defaultProjectionSettings.padding!,
+      ...settings.padding,
+    },
+  };
+}

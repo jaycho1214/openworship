@@ -3,7 +3,7 @@
  */
 
 export interface OpenWorshipFile {
-  version: '1.0';
+  version: '1.0' | '1.1';
   type: 'song' | 'session' | 'library';
   exportedAt: string;
   appVersion: string;
@@ -23,10 +23,39 @@ export interface ExportedSong {
   updatedAt: string;
 }
 
+/**
+ * Exported representation of a setlist item (any type).
+ * Used in v1.1+ export format.
+ */
+export interface ExportedSessionItem {
+  type: 'song' | 'bible' | 'announcement';
+  position: number;
+  // Song fields
+  songId?: string;
+  // Bible fields
+  translationId?: string;
+  translationName?: string;
+  bookId?: string;
+  bookName?: string;
+  chapter?: number;
+  startVerse?: number;
+  endVerse?: number;
+  displayMode?: string;
+  // Announcement fields
+  title?: string;
+  content?: string;
+  noteDisplayMode?: string;
+  noteContentType?: string;
+  imagePath?: string;
+  overlayPosition?: string;
+}
+
 export interface ExportedSession {
   id: string;
   name: string;
   songIds: string[];
+  /** Ordered list of all setlist items (v1.1+). Takes precedence over songIds. */
+  items?: ExportedSessionItem[];
   createdAt: string;
   updatedAt: string;
 }

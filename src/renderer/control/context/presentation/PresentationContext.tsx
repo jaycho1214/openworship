@@ -10,19 +10,8 @@ import {
 } from 'react';
 import { Song, Slide, PresentationState } from '../../../shared/types/song';
 import { SetlistItem, isSongItem } from '../../../../shared/types/setlistItem';
-import {
-  getItemSlides,
-  getItemTitle,
-} from '../../../shared/utils/setlistItemUtils';
+import { getItemSlides } from '../../../shared/utils/setlistItemUtils';
 import { useSetlist } from '../setlist/SetlistContext';
-
-// Type for next slide preview (On Deck)
-interface NextSlidePreview {
-  slide: Slide;
-  isNextItem: boolean; // True if from next item, false if same item
-  nextItemTitle?: string; // Title of next item if crossing item boundary
-  nextItemType?: SetlistItem['type']; // Type of next item
-}
 
 interface PresentationContextType {
   presentationState: PresentationState;
@@ -33,23 +22,17 @@ interface PresentationContextType {
   // Legacy song-based (for backward compatibility)
   currentSong: Song | null;
   currentSlide: Slide | null;
-  // Next slide preview (On Deck)
-  nextSlidePreview: NextSlidePreview | null;
   // Navigation
   nextSlide: () => void;
   prevSlide: () => void;
   nextSong: () => void;
   prevSong: () => void;
-  goToSong: (index: number) => void;
   goToSlide: (index: number) => void;
-  goToPosition: (songIndex: number, slideIndex: number) => void;
   goToItem: (itemIndex: number, slideIndex?: number) => void;
   goToSection: (sectionIndex: number) => void;
   goToNextSection: () => void;
   goToPreviousSection: () => void;
-  getCurrentSection: () => { name: string; index: number } | null;
   getSectionIndices: () => number[];
-  resetPosition: () => void;
 }
 
 const PresentationContext = createContext<PresentationContextType | null>(null);
@@ -163,44 +146,6 @@ export function PresentationProvider({ children }: PresentationProviderProps) {
     [currentItemSlides, presentationState.currentSlideIndex],
   );
 
-  // Compute next slide preview (On Deck)
-  const nextSlidePreview = useMemo((): NextSlidePreview | null => {
-    const { currentSlideIndex, currentSongIndex: currentIdx } =
-      presentationState;
-
-    // Check if there's a next slide in the current item
-    if (currentSlideIndex < currentItemSlides.length - 1) {
-      return {
-        slide: currentItemSlides[currentSlideIndex + 1],
-        isNextItem: false,
-      };
-    }
-
-    // Check if there's a next item
-    if (currentIdx < items.length - 1) {
-      const nextItem = items[currentIdx + 1];
-      const nextItemSlides = getItemSlides(nextItem);
-      if (nextItemSlides.length > 0) {
-        return {
-          slide: nextItemSlides[0],
-          isNextItem: true,
-          nextItemTitle: getItemTitle(nextItem),
-          nextItemType: nextItem.type,
-        };
-      }
-    }
-
-    return null;
-  }, [presentationState, currentItemSlides, items]);
-
-  const resetPosition = useCallback(() => {
-    setPresentationState((prev) => ({
-      ...prev,
-      currentSongIndex: 0,
-      currentSlideIndex: 0,
-    }));
-  }, []);
-
   const nextSlide = useCallback(() => {
     if (!currentSetlist || items.length === 0) return;
 
@@ -269,14 +214,6 @@ export function PresentationProvider({ children }: PresentationProviderProps) {
     });
   }, []);
 
-  const goToSong = useCallback((index: number) => {
-    setPresentationState((prev) => ({
-      ...prev,
-      currentSongIndex: index,
-      currentSlideIndex: 0,
-    }));
-  }, []);
-
   const goToSlide = useCallback((index: number) => {
     setPresentationState((prev) => ({
       ...prev,
@@ -284,15 +221,7 @@ export function PresentationProvider({ children }: PresentationProviderProps) {
     }));
   }, []);
 
-  const goToPosition = useCallback((songIndex: number, slideIndex: number) => {
-    setPresentationState((prev) => ({
-      ...prev,
-      currentSongIndex: songIndex,
-      currentSlideIndex: slideIndex,
-    }));
-  }, []);
-
-  // New: Go to a specific item by index
+  // Go to a specific item by index
   const goToItem = useCallback((itemIndex: number, slideIndex: number = 0) => {
     setPresentationState((prev) => ({
       ...prev,
@@ -360,29 +289,6 @@ export function PresentationProvider({ children }: PresentationProviderProps) {
     }
   }, [currentItemSlides, getSectionIndices, presentationState, goToSlide]);
 
-  const getCurrentSection = useCallback((): {
-    name: string;
-    index: number;
-  } | null => {
-    if (currentItemSlides.length === 0) return null;
-
-    const sectionIndices = getSectionIndices();
-    if (sectionIndices.length === 0) return null;
-
-    const { currentSlideIndex } = presentationState;
-
-    for (let i = sectionIndices.length - 1; i >= 0; i--) {
-      if (currentSlideIndex >= sectionIndices[i]) {
-        const slide = currentItemSlides[sectionIndices[i]];
-        if (slide?.section) {
-          return { name: slide.section, index: i };
-        }
-      }
-    }
-
-    return null;
-  }, [currentItemSlides, getSectionIndices, presentationState]);
-
   const contextValue = useMemo(
     () => ({
       presentationState,
@@ -393,23 +299,17 @@ export function PresentationProvider({ children }: PresentationProviderProps) {
       // Legacy
       currentSong,
       currentSlide,
-      // Next slide preview (On Deck)
-      nextSlidePreview,
       // Navigation
       nextSlide,
       prevSlide,
       nextSong,
       prevSong,
-      goToSong,
       goToSlide,
-      goToPosition,
       goToItem,
       goToSection,
       goToNextSection,
       goToPreviousSection,
-      getCurrentSection,
       getSectionIndices,
-      resetPosition,
     }),
     [
       presentationState,
@@ -418,21 +318,16 @@ export function PresentationProvider({ children }: PresentationProviderProps) {
       currentItemIndex,
       currentSong,
       currentSlide,
-      nextSlidePreview,
       nextSlide,
       prevSlide,
       nextSong,
       prevSong,
-      goToSong,
       goToSlide,
-      goToPosition,
       goToItem,
       goToSection,
       goToNextSection,
       goToPreviousSection,
-      getCurrentSection,
       getSectionIndices,
-      resetPosition,
     ],
   );
 

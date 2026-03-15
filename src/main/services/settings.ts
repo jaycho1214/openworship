@@ -16,31 +16,12 @@ import {
   defaultContentTypeTextSettings,
   defaultTextStyleSettings,
   defaultBibleReferenceStyle,
+  RecentItem,
+  RecentItemInput,
+  RecentSongItem,
+  RecentBibleItem,
 } from '../../shared/types/settings';
 import { FrameSettings, defaultFrameSettings } from '../../shared/types/frame';
-
-// Recent item types for quick-add
-interface RecentSongItem {
-  type: 'song';
-  songId: string;
-  title: string;
-  addedAt: number;
-}
-
-interface RecentBibleItem {
-  type: 'bible';
-  reference: string; // e.g., "John 3:16-18"
-  translationId: string;
-  translationName: string;
-  bookId: string;
-  bookName: string;
-  chapter: number;
-  startVerse: number;
-  endVerse: number;
-  addedAt: number;
-}
-
-type RecentItem = RecentSongItem | RecentBibleItem;
 
 interface AppSettings {
   apiKey: string; // Encrypted
@@ -331,7 +312,7 @@ export const settingsService = {
   /**
    * Add a recent item (maintains max 10 items, deduplicates)
    */
-  addRecentItem(item: Omit<RecentItem, 'addedAt'>): void {
+  addRecentItem(item: RecentItemInput): void {
     const MAX_RECENT_ITEMS = 10;
     const current = this.getRecentItems();
 
@@ -341,10 +322,10 @@ export const settingsService = {
     // Remove duplicates based on type and unique identifier
     const filtered = current.filter((existing) => {
       if (item.type === 'song' && existing.type === 'song') {
-        return existing.songId !== (item as RecentSongItem).songId;
+        return existing.songId !== item.songId;
       }
       if (item.type === 'bible' && existing.type === 'bible') {
-        return existing.reference !== (item as RecentBibleItem).reference;
+        return existing.reference !== item.reference;
       }
       return true;
     });

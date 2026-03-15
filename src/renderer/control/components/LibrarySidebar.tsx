@@ -15,6 +15,7 @@ import {
   GripVertical,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { getElectron } from '@/shared/hooks/useElectron';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -92,9 +93,11 @@ export default function LibrarySidebar({
 
   // Load songs
   const loadSongs = useCallback(async () => {
+    const electron = getElectron();
+    if (!electron) return;
     setIsLoading(true);
     try {
-      const result = await window.electron.library.getAll();
+      const result = await electron.library.getAll();
       if (result.success && result.data) {
         setSongs(result.data);
         setFilteredSongs(result.data);
@@ -133,8 +136,10 @@ export default function LibrarySidebar({
   // Delete song with confirmation
   const handleConfirmDelete = async () => {
     if (!songToDelete) return;
+    const electron = getElectron();
+    if (!electron) return;
     try {
-      const result = await window.electron.library.delete(songToDelete);
+      const result = await electron.library.delete(songToDelete);
       if (result.success) {
         loadSongs();
       }
@@ -172,8 +177,10 @@ export default function LibrarySidebar({
   }) => {
     if (!editingLibrarySong) return;
 
+    const electron = getElectron();
+    if (!electron) return;
     try {
-      await window.electron.library.update(editingLibrarySong.id, {
+      await electron.library.update(editingLibrarySong.id, {
         title: songData.title,
         lyrics: songData.lyrics,
       });
@@ -206,12 +213,14 @@ export default function LibrarySidebar({
     sessionTarget: 'library-only' | 'new-session' | string,
     newSessionName?: string,
   ) => {
+    const electron = getElectron();
+    if (!electron) return;
     try {
       const addedSongIds: string[] = [];
 
       // Add songs to library
       for (const song of songsToAdd) {
-        const result = await window.electron.library.add({
+        const result = await electron.library.add({
           title: song.title,
           lyrics: song.lyrics,
           categories: [],
@@ -236,8 +245,7 @@ export default function LibrarySidebar({
 
       if (sessionTarget === 'new-session' && newSessionName) {
         // Create a new session
-        const createResult =
-          await window.electron.session.create(newSessionName);
+        const createResult = await electron.session.create(newSessionName);
         if (createResult.success && createResult.data?.id) {
           targetSessionId = createResult.data.id;
         }
@@ -259,7 +267,7 @@ export default function LibrarySidebar({
         } else {
           // Add to a different session via IPC
           for (const songId of addedSongIds) {
-            await window.electron.sessionItem.add(targetSessionId, {
+            await electron.sessionItem.add(targetSessionId, {
               type: 'song',
               songId,
             });

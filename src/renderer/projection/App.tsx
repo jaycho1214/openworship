@@ -1,15 +1,17 @@
-/* eslint-disable no-console */
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import ProjectionRenderer from './components/ProjectionRenderer';
-import {
-  DetectedFont,
-  ProjectionSettings,
-  defaultProjectionSettings,
-  SlideOverrides,
-} from '../shared/types/song';
+import { DetectedFont, SlideOverrides } from '../shared/types/song';
 import { useFontLoader } from '../shared/hooks/useFontLoader';
-import type { BackgroundType, Advertisement } from '../../shared/types';
+import type {
+  BackgroundType,
+  Advertisement,
+  ProjectionSettings,
+} from '../../shared/types';
+import {
+  defaultProjectionSettings,
+  mergeProjectionSettings,
+} from '../../shared/types';
 import {
   AdvertisementDisplaySettings,
   DEFAULT_DISPLAY_SETTINGS,
@@ -94,7 +96,6 @@ export default function App() {
       try {
         const settings = await window.electron.settings.getProjection();
         setProjectionSettings(settings);
-        console.log('[Projection] Loaded settings:', settings);
         // FIX: Initialize background from settings
         if (settings.backgroundType) {
           setBackgroundType(settings.backgroundType);
@@ -111,10 +112,6 @@ export default function App() {
         const result = await window.electron.settings.getContentTypeText();
         if (result.success && result.data) {
           setContentTypeTextSettings(result.data);
-          console.log(
-            '[Projection] Loaded content type text settings:',
-            result.data,
-          );
         }
       } catch (error) {
         console.error(
@@ -128,7 +125,6 @@ export default function App() {
     // Listen for settings updates from control window
     const unsubSettings = window.electron.settings.onProjectionSettings(
       (settings: ProjectionSettings) => {
-        console.log('[Projection] Settings updated:', settings);
         setProjectionSettings(settings);
       },
     );
@@ -136,10 +132,6 @@ export default function App() {
     // Listen for content-type text settings updates
     const unsubContentTypeText = window.electron.settings.onContentTypeText(
       (settings: ContentTypeTextSettings) => {
-        console.log(
-          '[Projection] Content type text settings updated:',
-          settings,
-        );
         setContentTypeTextSettings(settings);
       },
     );
@@ -199,36 +191,20 @@ export default function App() {
         };
       };
 
-    console.log('[Projection] Setting up advertisement subscription');
     const unsubAdvertisement = electron.advertisement.onAdvertisement(
       (message) => {
-        console.log(
-          '[Projection] Received advertisement message:',
-          message.action,
-          message.advertisement,
-          message.displaySettings,
-        );
         if (message.action === 'show' && message.advertisement) {
-          console.log(
-            '[Projection] Setting ad visible:',
-            message.advertisement,
-          );
           setCurrentAd(message.advertisement);
           if (message.displaySettings) {
             setAdDisplaySettings(message.displaySettings);
           }
           setIsAdVisible(true);
         } else if (message.action === 'hide') {
-          console.log('[Projection] Hiding ad');
           setIsAdVisible(false);
         } else if (
           message.action === 'updateSettings' &&
           message.displaySettings
         ) {
-          console.log(
-            '[Projection] Updating display settings:',
-            message.displaySettings,
-          );
           setAdDisplaySettings(message.displaySettings);
         }
       },
@@ -255,9 +231,7 @@ export default function App() {
         };
       };
 
-    console.log('[Projection] Setting up frame subscription');
     const unsubFrame = electron.frame.onFrame((data) => {
-      console.log('[Projection] Received frame update:', data);
       setCurrentFrame(data.frame);
     });
 
@@ -270,7 +244,6 @@ export default function App() {
   useEffect(() => {
     const unsubOverlayNote = window.electron.projection.onOverlayNote(
       (data) => {
-        console.log('[Projection] Received overlay note:', data.action);
         if (data.action === 'show') {
           setOverlayNoteContent(data.content);
           setOverlayNoteContentType(data.contentType);
@@ -339,14 +312,12 @@ export default function App() {
 
     // Subscribe to video changes
     const unsubVideo = electron.projection.onVideo((videoPath) => {
-      console.log('Projection received video:', videoPath);
       setCurrentVideoPath(videoPath);
       setBackgroundType('video');
     });
 
     // Subscribe to image changes
     const unsubImage = electron.projection.onImage((imagePath) => {
-      console.log('Projection received image:', imagePath);
       setCurrentImagePath(imagePath);
       setBackgroundType('image');
     });
@@ -354,7 +325,6 @@ export default function App() {
     // Subscribe to background color changes
     const unsubBackgroundColor = electron.projection.onBackgroundColor(
       (color) => {
-        console.log('Projection received background color:', color);
         setBackgroundColor(color);
         setBackgroundType('color');
       },
@@ -362,11 +332,8 @@ export default function App() {
 
     // Subscribe to font changes - handles fonts that may not be loaded yet
     const unsubFont = electron.projection.onFont(async (font) => {
-      console.log('[Projection] Received font change:', font);
-
       // Use system font if 'system', 'inherit', or empty is received
       if (!font || font === 'system' || font === 'inherit') {
-        console.log('[Projection] Using system font');
         pendingFontRef.current = null;
         setFontFamily(SYSTEM_FONT);
         return;
@@ -374,17 +341,12 @@ export default function App() {
 
       // Check if font is already loaded
       if (loadedFontsRef.current.has(font)) {
-        console.log('[Projection] Font already loaded, setting:', font);
         pendingFontRef.current = null;
         setFontFamily(`"${font}"`);
         return;
       }
 
       // Font not loaded yet - store as pending and try to load it
-      console.log(
-        '[Projection] Font not loaded yet, storing as pending:',
-        font,
-      );
       pendingFontRef.current = font;
 
       // Try to find and load the font from our fonts data
@@ -398,7 +360,6 @@ export default function App() {
           await fontFace.load();
           document.fonts.add(fontFace);
           loadedFontsRef.current.add(fontData.name);
-          console.log(`[Projection] Dynamically loaded font: ${fontData.name}`);
           if (pendingFontRef.current === font) {
             setFontFamily(`"${font}"`);
             pendingFontRef.current = null;
@@ -407,16 +368,10 @@ export default function App() {
           console.error(`[Projection] Failed to load font ${font}:`, error);
           // Keep using system font until the font is loaded via the background load
         }
-      } else {
-        // Font data not available yet, it will be applied when fonts finish loading
-        console.log(
-          '[Projection] Font data not available yet, will apply when loaded',
-        );
       }
     });
 
     // Signal to control window that projection is ready to receive messages immediately
-    console.log('[Projection] Sending ready signal to control window');
     electron.projection.sendReady();
 
     // Cleanup subscriptions on unmount
@@ -432,38 +387,8 @@ export default function App() {
   }, [loadedFontsRef]);
 
   // Deep merge projection settings with defaults to ensure all nested properties exist
-  // Matches the same merge done in LivePreview for consistent rendering
   const mergedSettings = useMemo(
-    () => ({
-      ...defaultProjectionSettings,
-      ...projectionSettings,
-      textShadow: {
-        ...defaultProjectionSettings.textShadow,
-        ...projectionSettings.textShadow,
-      },
-      textOutline: {
-        ...defaultProjectionSettings.textOutline,
-        ...projectionSettings.textOutline,
-      },
-      textAlign: {
-        ...defaultProjectionSettings.textAlign,
-        ...projectionSettings.textAlign,
-      },
-      padding: {
-        top:
-          projectionSettings.padding?.top ??
-          defaultProjectionSettings.padding!.top,
-        bottom:
-          projectionSettings.padding?.bottom ??
-          defaultProjectionSettings.padding!.bottom,
-        left:
-          projectionSettings.padding?.left ??
-          defaultProjectionSettings.padding!.left,
-        right:
-          projectionSettings.padding?.right ??
-          defaultProjectionSettings.padding!.right,
-      },
-    }),
+    () => mergeProjectionSettings(projectionSettings),
     [projectionSettings],
   );
 

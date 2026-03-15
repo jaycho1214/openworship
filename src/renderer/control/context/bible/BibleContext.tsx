@@ -33,11 +33,8 @@ interface BibleContextType {
   importProgress: { progress: number; message: string } | null;
 
   // Actions
-  loadTranslations: () => Promise<void>;
   selectTranslation: (translation: BibleTranslation | null) => void;
-  loadBooks: (translationId: string) => Promise<void>;
   selectBook: (book: BibleBook | null) => void;
-  loadVerses: (bookId: string, chapter: number) => Promise<void>;
   selectChapter: (chapter: number | null) => void;
   getVersesRange: (
     bookId: string,
@@ -62,7 +59,6 @@ interface BibleContextType {
   importFromFile: () => Promise<BibleTranslation | null>;
   downloadAndImport: (bibleId: string) => Promise<BibleTranslation | null>;
   deleteTranslation: (id: string) => Promise<boolean>;
-  loadAvailableBibles: () => Promise<void>;
 }
 
 const BibleContext = createContext<BibleContextType | null>(null);
@@ -430,11 +426,8 @@ export function BibleProvider({ children }: BibleProviderProps) {
       importProgress,
 
       // Actions
-      loadTranslations,
       selectTranslation,
-      loadBooks,
       selectBook,
-      loadVerses,
       selectChapter,
       getVersesRange,
       getVerseCount: getVerseCountFn,
@@ -443,7 +436,6 @@ export function BibleProvider({ children }: BibleProviderProps) {
       importFromFile,
       downloadAndImport,
       deleteTranslation,
-      loadAvailableBibles,
     }),
     [
       translations,
@@ -456,11 +448,8 @@ export function BibleProvider({ children }: BibleProviderProps) {
       availableBibles,
       isLoading,
       importProgress,
-      loadTranslations,
       selectTranslation,
-      loadBooks,
       selectBook,
-      loadVerses,
       selectChapter,
       getVersesRange,
       getVerseCountFn,
@@ -469,7 +458,6 @@ export function BibleProvider({ children }: BibleProviderProps) {
       importFromFile,
       downloadAndImport,
       deleteTranslation,
-      loadAvailableBibles,
     ],
   );
 

@@ -31,9 +31,14 @@ export type {
   BibleReferenceStyle,
   BibleTextStyleSettings,
   ContentTypeTextSettings,
+  RecentItem,
+  RecentItemInput,
+  RecentSongItem,
+  RecentBibleItem,
 } from './settings';
 export {
   defaultProjectionSettings,
+  mergeProjectionSettings,
   COLOR_PRESETS,
   defaultTextStyleSettings,
   defaultBibleReferenceStyle,
@@ -60,13 +65,14 @@ export { successResponse, errorResponse } from './ipc';
 
 // Error types
 export type { AppError } from './errors';
-export { ErrorCode, createError, getErrorMessage, isAppError } from './errors';
+export { getErrorMessage } from './errors';
 
 // Export/Import types
 export type {
   OpenWorshipFile,
   ExportedSong,
   ExportedSession,
+  ExportedSessionItem,
   ImportPreview,
   ImportOptions,
   ImportResult,
