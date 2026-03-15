@@ -93,14 +93,16 @@ test.describe('Projection Window', () => {
   });
 
   test('live preview info shows song title', async ({ window }) => {
-    // Ensure a slide is active so currentSong is set
+    test.setTimeout(15_000);
+    // Bring control window to front and click a slide to ensure currentSong is set
+    await window.bringToFront();
+    await window.waitForTimeout(500);
     const slideBtn = window.getByTestId('slide-btn').first();
-    if (await slideBtn.isVisible().catch(() => false)) {
-      await slideBtn.click();
-      await window.waitForTimeout(300);
-    }
+    await expect(slideBtn).toBeVisible({ timeout: 5_000 });
+    await slideBtn.click();
+    await window.waitForTimeout(500);
     const livePreviewInfo = window.getByTestId('live-preview-info');
-    await expect(livePreviewInfo).toBeVisible({ timeout: 5_000 });
+    await expect(livePreviewInfo).toBeVisible({ timeout: 10_000 });
     const text = await livePreviewInfo.textContent();
     expect(text?.trim().length).toBeGreaterThan(0);
     await expect(window.getByTestId('live-preview')).toBeVisible({
