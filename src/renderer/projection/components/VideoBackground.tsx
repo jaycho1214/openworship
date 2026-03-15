@@ -225,10 +225,17 @@ export default function VideoBackground({
   }, [imagePath, crossfadeToImage]);
 
   return (
-    <div data-testid="projection-background" className="absolute inset-0 bg-black">
+    <div
+      data-testid="projection-background"
+      className="absolute inset-0 bg-black"
+    >
       {/* Solid Color Background */}
       {backgroundType === 'color' && (
-        <div data-testid="projection-bg-color" className="absolute inset-0" style={{ backgroundColor }} />
+        <div
+          data-testid="projection-bg-color"
+          className="absolute inset-0"
+          style={{ backgroundColor }}
+        />
       )}
 
       {/* Image Background with crossfade */}

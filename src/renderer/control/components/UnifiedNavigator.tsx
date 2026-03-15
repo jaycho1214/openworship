@@ -624,7 +624,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const items = currentSetlist?.items ?? [];
+  const items = useMemo(() => currentSetlist?.items ?? [], [currentSetlist]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

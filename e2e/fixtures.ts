@@ -34,6 +34,7 @@ type WorkerFixtures = {
 // ── Fixture ────────────────────────────────────────────────────────────
 export const test = base.extend<object, WorkerFixtures>({
   tempDir: [
+    // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'openworship-e2e-'));
       await use(dir);

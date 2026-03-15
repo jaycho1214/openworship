@@ -181,6 +181,7 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
         const settings = await electron.settings.getProjection();
         setProjectionSettings(settings);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Failed to load projection settings:', error);
       }
 
@@ -191,6 +192,7 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
           setContentTypeTextSettings(result.data);
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Failed to load content type text settings:', error);
       }
     };
@@ -271,6 +273,7 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
           setContentTypeTextSettings(result.data);
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Failed to update bible reference style:', error);
       }
     },
@@ -375,6 +378,7 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
       }
       setIsProjectionOpen(true);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to open projection:', error);
     }
   }, [
@@ -403,6 +407,7 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
       await electron.projection.close();
       setIsProjectionOpen(false);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to close projection:', error);
     }
   }, []);

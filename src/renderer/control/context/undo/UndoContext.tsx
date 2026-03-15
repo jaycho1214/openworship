@@ -84,6 +84,7 @@ export function UndoProvider({
     setLastAction('undo');
 
     // Execute the undo callback
+    // eslint-disable-next-line no-console
     Promise.resolve(action.undo()).catch(console.error);
   }, []);
 
@@ -97,6 +98,7 @@ export function UndoProvider({
     setLastAction('redo');
 
     // Execute the redo callback
+    // eslint-disable-next-line no-console
     Promise.resolve(action.redo()).catch(console.error);
   }, []);
 

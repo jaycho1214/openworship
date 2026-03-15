@@ -104,6 +104,7 @@ export default function App() {
           setBackgroundColor(settings.backgroundColor);
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('[Projection] Failed to load settings:', error);
       }
 
@@ -114,6 +115,7 @@ export default function App() {
           setContentTypeTextSettings(result.data);
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error(
           '[Projection] Failed to load content type text settings:',
           error,
@@ -159,6 +161,7 @@ export default function App() {
         fontsDataRef.current = fonts;
         setFetchedFonts(fonts); // Triggers useFontLoader
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('[Projection] Failed to fetch fonts:', error);
       }
     };
@@ -365,6 +368,7 @@ export default function App() {
             pendingFontRef.current = null;
           }
         } catch (error) {
+          // eslint-disable-next-line no-console
           console.error(`[Projection] Failed to load font ${font}:`, error);
           // Keep using system font until the font is loaded via the background load
         }

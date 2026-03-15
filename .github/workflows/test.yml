@@ -56,7 +56,10 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libarchive-tools xvfb
+          sudo apt-get install -y libarchive-tools xvfb \
+            libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 \
+            libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 \
+            libcairo2 libasound2t64 libcups2 libgtk-3-0 libxshmfence1
 
       - name: Rebuild native modules
         run: npm run rebuild

@@ -184,6 +184,7 @@ export function PresentationProvider({ children }: PresentationProviderProps) {
     }
 
     prevItemsRef.current = currentItems;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally excluding presentationState.currentSlideIndex to avoid infinite re-render loop, since this effect sets currentSlideIndex
   }, [currentSetlist, items, presentationState.currentSongIndex]);
 
   // Clamp slide index inline to prevent null after slide deletion
@@ -308,10 +309,8 @@ export function PresentationProvider({ children }: PresentationProviderProps) {
     const sectionIndices = getSectionIndices();
     if (sectionIndices.length === 0) return;
 
-    const { currentSlideIndex } = presentationState;
-    const nextSectionSlideIndex = sectionIndices.find(
-      (idx) => idx > currentSlideIndex,
-    );
+    const slideIdx = presentationState.currentSlideIndex;
+    const nextSectionSlideIndex = sectionIndices.find((idx) => idx > slideIdx);
 
     if (nextSectionSlideIndex !== undefined) {
       goToSlide(nextSectionSlideIndex);
@@ -324,11 +323,11 @@ export function PresentationProvider({ children }: PresentationProviderProps) {
     const sectionIndices = getSectionIndices();
     if (sectionIndices.length === 0) return;
 
-    const { currentSlideIndex } = presentationState;
+    const slideIdx = presentationState.currentSlideIndex;
 
     let currentSectionIdx = -1;
     for (let i = sectionIndices.length - 1; i >= 0; i--) {
-      if (currentSlideIndex >= sectionIndices[i]) {
+      if (slideIdx >= sectionIndices[i]) {
         currentSectionIdx = i;
         break;
       }
@@ -336,7 +335,7 @@ export function PresentationProvider({ children }: PresentationProviderProps) {
 
     if (
       currentSectionIdx > 0 &&
-      currentSlideIndex === sectionIndices[currentSectionIdx]
+      slideIdx === sectionIndices[currentSectionIdx]
     ) {
       goToSlide(sectionIndices[currentSectionIdx - 1]);
     } else if (currentSectionIdx >= 0) {
