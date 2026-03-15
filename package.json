@@ -83,10 +83,12 @@
     ],
     "moduleNameMapper": {
       "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$": "<rootDir>/.erb/mocks/fileMock.js",
-      "\\.(css|less|sass|scss)$": "identity-obj-proxy"
+      "\\.(css|less|sass|scss)$": "identity-obj-proxy",
+      "^@/(.*)$": "<rootDir>/src/renderer/$1",
+      "^src/renderer/(.*)$": "<rootDir>/src/renderer/$1"
     },
     "setupFiles": [
-      "./.erb/scripts/check-build-exists.ts"
+      "./src/__tests__/setup.ts"
     ],
     "testEnvironment": "jsdom",
     "testEnvironmentOptions": {
@@ -95,7 +97,8 @@
     "testPathIgnorePatterns": [
       "release/app/dist",
       ".erb/dll",
-      "e2e"
+      "e2e",
+      "src/__tests__/setup.ts"
     ],
     "transform": {
       "\\.(ts|tsx|js|jsx)$": "ts-jest"
