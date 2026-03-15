@@ -66,6 +66,7 @@ export function AppearanceTab({
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => handleThemeChange(option.id)}
+                data-testid={`theme-${option.id}`}
               >
                 <Icon className="w-4 h-4" />
               </Button>
@@ -82,7 +83,10 @@ export function AppearanceTab({
           value={language}
           onValueChange={(v) => handleLanguageChange(v as Language)}
         >
-          <SelectTrigger className="w-28 bg-muted/30 h-8 text-xs">
+          <SelectTrigger
+            className="w-28 bg-muted/30 h-8 text-xs"
+            data-testid="language-select"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

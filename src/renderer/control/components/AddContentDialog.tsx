@@ -330,6 +330,7 @@ export function AddContentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn('p-0 gap-0', mode === 'bible' ? 'max-w-3xl' : 'max-w-md')}
+        data-testid="add-content-dialog"
       >
         {/* Compact header with inline tabs */}
         <div className="flex items-center gap-3 pl-4 pr-10 pt-3.5 pb-2.5">
@@ -344,6 +345,7 @@ export function AddContentDialog({
                 <button
                   key={tab.mode}
                   onClick={() => setMode(tab.mode)}
+                  data-testid={`tab-${tab.mode === 'search' ? 'song' : tab.mode}`}
                   className={cn(
                     'flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all',
                     isActive
@@ -372,6 +374,7 @@ export function AddContentDialog({
                 onChange={(e) => handleSearch(e.target.value)}
                 className="pl-8 h-9 text-sm"
                 autoFocus
+                data-testid="add-content-search"
               />
               {searchQuery && (
                 <button
@@ -508,6 +511,7 @@ export function AddContentDialog({
                 size="sm"
                 onClick={handleAddAnnouncement}
                 disabled={!isNoteFormValid(noteFormState)}
+                data-testid="note-add-btn"
               >
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
                 {t('add', 'Add')}

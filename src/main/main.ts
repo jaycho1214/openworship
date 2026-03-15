@@ -102,7 +102,9 @@ app.on('open-file', (event, filePath) => {
  * Handle file association - Windows/Linux
  * When user opens .oworship file, a second instance is created with file path
  */
-const gotTheLock = app.requestSingleInstanceLock();
+// Skip single-instance lock in test mode (each test run has its own userData)
+const isTestMode = !!process.env.OPENWORSHIP_TEST_USER_DATA;
+const gotTheLock = isTestMode || app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
@@ -152,6 +154,15 @@ app
 
       return net.fetch(pathToFileURL(resolvedPath).toString());
     });
+
+    // Override userData path for E2E testing (isolated database per test run)
+    if (process.env.OPENWORSHIP_TEST_USER_DATA) {
+      app.setPath('userData', process.env.OPENWORSHIP_TEST_USER_DATA);
+      log.info(
+        '[App] Test mode: userData overridden to',
+        process.env.OPENWORSHIP_TEST_USER_DATA,
+      );
+    }
 
     // Initialize database
     databaseService.init();

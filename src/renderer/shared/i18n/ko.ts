@@ -224,6 +224,9 @@ export const ko = {
   alsoAddToSession: '현재 세션에도 추가',
   existingSongFound: '유사한 곡 발견',
   useExistingLyrics: '사용',
+  linkedToExistingSong: '기존 곡과 연결됨',
+  unlink: '연결 해제',
+  useThisSong: '이 곡 사용',
 
   // Library Drawer
   browseLibrary: '라이브러리 탐색',

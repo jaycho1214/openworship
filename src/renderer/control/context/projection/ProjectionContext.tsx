@@ -94,7 +94,7 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
   const currentItem = currentSetlist?.items[currentItemIndex];
   const currentContentType: SetlistItemType = currentItem?.type ?? 'song';
 
-  // Send update to projection window when slide changes
+  // Send update to projection window when slide changes OR projection opens
   useEffect(() => {
     const electron = getElectron();
     if (!electron) return;
@@ -110,7 +110,7 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
     } else {
       electron.projection.update({ lines: [] });
     }
-  }, [currentSlide, currentContentType]);
+  }, [currentSlide, currentContentType, isProjectionOpen]);
 
   // Track previous blank state for re-sync on un-blank
   const prevIsBlankRef = useRef(false);
@@ -154,16 +154,20 @@ export function ProjectionProvider({ children }: ProjectionProviderProps) {
     }
   }, [isVerseHidden]);
 
-  // Listen for projection window closed
+  // Listen for projection window opened (ready signal) and closed
   useEffect(() => {
     const electron = getElectron();
     if (!electron) return;
 
-    const unsubscribe = electron.projection.onClosed(() => {
+    const unsubReady = electron.projection.onReady(() => {
+      setIsProjectionOpen(true);
+    });
+    const unsubClosed = electron.projection.onClosed(() => {
       setIsProjectionOpen(false);
     });
     return () => {
-      unsubscribe();
+      unsubReady();
+      unsubClosed();
     };
   }, []);
 

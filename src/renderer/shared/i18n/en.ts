@@ -224,6 +224,9 @@ export const en = {
   alsoAddToSession: 'Also add to current session',
   existingSongFound: 'Similar songs found',
   useExistingLyrics: 'Use',
+  linkedToExistingSong: 'Linked to existing song',
+  unlink: 'Unlink',
+  useThisSong: 'Use this song',
 
   // Library Drawer
   browseLibrary: 'Browse Library',

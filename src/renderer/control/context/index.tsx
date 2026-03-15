@@ -29,9 +29,9 @@ interface AppProvidersProps {
  * 1. SessionProvider (no deps)
  * 2. BibleProvider (no deps)
  * 3. FrameProvider (no deps)
- * 4. SetlistProvider (depends on Session)
- * 5. PresentationProvider (depends on Setlist)
- * 6. UndoProvider (no deps, but used with Presentation)
+ * 4. UndoProvider (no deps — tracks CRUD actions)
+ * 5. SetlistProvider (depends on Session, Undo)
+ * 6. PresentationProvider (depends on Setlist)
  * 7. MediaProvider (depends on Presentation)
  * 8. ProjectionProvider (depends on Presentation, Media, Frame)
  * 9. AdvertisementProvider (no deps, but placed at end for consistency)
@@ -41,17 +41,17 @@ export function AppProviders({ children }: AppProvidersProps) {
     <SessionProvider>
       <BibleProvider>
         <FrameProvider>
-          <SetlistProvider>
-            <PresentationProvider>
-              <UndoProvider>
+          <UndoProvider>
+            <SetlistProvider>
+              <PresentationProvider>
                 <MediaProvider>
                   <ProjectionProvider>
                     <AdvertisementProvider>{children}</AdvertisementProvider>
                   </ProjectionProvider>
                 </MediaProvider>
-              </UndoProvider>
-            </PresentationProvider>
-          </SetlistProvider>
+              </PresentationProvider>
+            </SetlistProvider>
+          </UndoProvider>
         </FrameProvider>
       </BibleProvider>
     </SessionProvider>

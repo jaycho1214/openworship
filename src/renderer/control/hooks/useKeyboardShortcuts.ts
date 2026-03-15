@@ -1,13 +1,9 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { usePresentation, useProjection, useUndo } from '../context';
-import { Song } from '../../shared/types/song';
 
 export function useKeyboardShortcuts() {
   const {
-    currentSong,
-    currentItemIndex,
     currentItemSlides,
-    presentationState,
     nextSlide,
     prevSlide,
     nextSong,
@@ -17,53 +13,21 @@ export function useKeyboardShortcuts() {
     goToNextSection,
     goToPreviousSection,
     getSectionIndices,
-    goToItem,
   } = usePresentation();
 
-  const { toggleBlank, toggleVerseHidden, isBlank, isVerseHidden } =
-    useProjection();
-  const { canUndo, canRedo, undo, redo, pushState } = useUndo();
-
-  // Use refs to avoid recreating handler when currentSong/slides change
-  const currentSongRef = useRef<Song | null>(currentSong);
-  currentSongRef.current = currentSong;
+  const { toggleBlank, toggleVerseHidden } = useProjection();
+  const { canUndo, canRedo, undo, redo } = useUndo();
 
   const currentItemSlidesRef = useRef(currentItemSlides);
   currentItemSlidesRef.current = currentItemSlides;
 
-  // Push current state to undo stack when navigation happens
-  const pushCurrentState = useCallback(() => {
-    pushState({
-      itemIndex: currentItemIndex,
-      slideIndex: presentationState.currentSlideIndex,
-      isBlank,
-      isVerseHidden,
-    });
-  }, [
-    pushState,
-    currentItemIndex,
-    presentationState.currentSlideIndex,
-    isBlank,
-    isVerseHidden,
-  ]);
-
-  // Handle undo action
   const handleUndo = useCallback(() => {
-    if (!canUndo) return;
-    const state = undo();
-    if (state) {
-      goToItem(state.itemIndex, state.slideIndex);
-    }
-  }, [canUndo, undo, goToItem]);
+    if (canUndo) undo();
+  }, [canUndo, undo]);
 
-  // Handle redo action
   const handleRedo = useCallback(() => {
-    if (!canRedo) return;
-    const state = redo();
-    if (state) {
-      goToItem(state.itemIndex, state.slideIndex);
-    }
-  }, [canRedo, redo, goToItem]);
+    if (canRedo) redo();
+  }, [canRedo, redo]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -110,7 +74,6 @@ export function useKeyboardShortcuts() {
         const sectionIndices = getSectionIndices();
         if (sectionIndex < sectionIndices.length) {
           event.preventDefault();
-          pushCurrentState();
           goToSection(sectionIndex);
         }
         return;
@@ -120,31 +83,26 @@ export function useKeyboardShortcuts() {
         case ' ':
         case 'ArrowRight':
           event.preventDefault();
-          pushCurrentState();
           nextSlide();
           break;
 
         case 'ArrowLeft':
           event.preventDefault();
-          pushCurrentState();
           prevSlide();
           break;
 
         case 'ArrowDown':
           event.preventDefault();
-          pushCurrentState();
           nextSong();
           break;
 
         case 'ArrowUp':
           event.preventDefault();
-          pushCurrentState();
           prevSong();
           break;
 
         case 'Tab':
           event.preventDefault();
-          pushCurrentState();
           if (event.shiftKey) {
             goToPreviousSection();
           } else {
@@ -154,14 +112,11 @@ export function useKeyboardShortcuts() {
 
         case 'Home':
           event.preventDefault();
-          pushCurrentState();
           goToSlide(0);
           break;
 
         case 'End': {
           event.preventDefault();
-          pushCurrentState();
-          // Use ref to access slides for any item type (song, bible, announcement)
           const slides = currentItemSlidesRef.current;
           if (slides && slides.length > 0) {
             goToSlide(slides.length - 1);
@@ -172,23 +127,19 @@ export function useKeyboardShortcuts() {
         case '.':
         case 'Escape':
           event.preventDefault();
-          pushCurrentState();
           toggleBlank();
           break;
 
         case 'v':
         case 'V':
           event.preventDefault();
-          pushCurrentState();
           toggleVerseHidden();
           break;
 
         case 'b':
         case 'B':
-          // Allow 'B' to also toggle blank (common shortcut)
           if (!event.metaKey && !event.ctrlKey) {
             event.preventDefault();
-            pushCurrentState();
             toggleBlank();
           }
           break;
@@ -211,7 +162,6 @@ export function useKeyboardShortcuts() {
       getSectionIndices,
       handleUndo,
       handleRedo,
-      pushCurrentState,
     ],
   );
 

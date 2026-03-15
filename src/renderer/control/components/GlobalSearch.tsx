@@ -163,7 +163,10 @@ export default function GlobalSearch({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden">
+      <DialogContent
+        className="max-w-lg p-0 gap-0 overflow-hidden"
+        data-testid="global-search-dialog"
+      >
         <DialogTitle className="sr-only">{t('globalSearch')}</DialogTitle>
 
         {/* Search Input */}
@@ -176,6 +179,7 @@ export default function GlobalSearch({
             onKeyDown={handleKeyDown}
             placeholder={t('searchPlaceholder')}
             className="h-12 border-0 shadow-none focus-visible:ring-0 px-0 text-base"
+            data-testid="global-search-input"
           />
           {query && (
             <button

@@ -549,6 +549,7 @@ export default function SongEditor({
           'h-[85vh] bg-background border-border p-0 flex flex-col',
           isEditMode ? 'max-w-2xl' : 'max-w-5xl',
         )}
+        data-testid="song-editor-dialog"
       >
         <DialogHeader className="px-6 py-4 border-b border-border/50 pr-12">
           <DialogTitle className="text-foreground flex items-center gap-2">
@@ -603,6 +604,7 @@ export default function SongEditor({
                   </Label>
                   <Input
                     id="edit-title"
+                    data-testid="song-editor-title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder={t('songTitlePlaceholder')}
@@ -1018,6 +1020,7 @@ export default function SongEditor({
                 onClick={handleSaveEdit}
                 disabled={!title.trim() || isSaving}
                 className="bg-foreground text-background hover:bg-foreground/90 font-semibold"
+                data-testid="song-editor-save"
               >
                 {isSaving ? (
                   <Loader2 className="w-4 h-4 mr-1 animate-spin" />

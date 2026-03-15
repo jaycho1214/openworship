@@ -68,11 +68,14 @@ export function PresentationProvider({ children }: PresentationProviderProps) {
   const currentItemIdRef = useRef<string | null>(null);
   const prevItemsRef = useRef<SetlistItem[]>([]);
 
-  // Get current item index (alias for clarity)
-  const currentItemIndex = presentationState.currentSongIndex;
-
   // Get items array
   const items = useMemo(() => currentSetlist?.items ?? [], [currentSetlist]);
+
+  // Clamp item index inline to prevent null currentSlide on render after deletion
+  const currentItemIndex = useMemo(() => {
+    if (items.length === 0) return 0;
+    return Math.min(presentationState.currentSongIndex, items.length - 1);
+  }, [presentationState.currentSongIndex, items.length]);
 
   // Get current item from items array
   const currentItem = useMemo(
@@ -137,13 +140,65 @@ export function PresentationProvider({ children }: PresentationProviderProps) {
       }
     }
 
+    // Handle deletion of items: clamp song index
+    if (currentItems.length > 0) {
+      const songIdx = presentationState.currentSongIndex;
+
+      if (songIdx >= currentItems.length) {
+        // Index out of bounds — clamp to last item
+        setPresentationState((prev) => ({
+          ...prev,
+          currentSongIndex: currentItems.length - 1,
+          currentSlideIndex: 0,
+        }));
+        currentItemIdRef.current =
+          currentItems[currentItems.length - 1]?.id ?? null;
+      } else if (
+        currentItemIdRef.current &&
+        !currentItems.find((i) => i.id === currentItemIdRef.current)
+      ) {
+        // Active item was deleted — move to nearest valid item
+        const clampedIndex = Math.min(songIdx, currentItems.length - 1);
+        setPresentationState((prev) => ({
+          ...prev,
+          currentSongIndex: clampedIndex,
+          currentSlideIndex: 0,
+        }));
+        currentItemIdRef.current = currentItems[clampedIndex]?.id ?? null;
+      } else {
+        // Item still exists — clamp slide index if slides were deleted
+        const activeItem = currentItems[songIdx];
+        if (activeItem) {
+          const slides = getItemSlides(activeItem);
+          if (
+            slides.length > 0 &&
+            presentationState.currentSlideIndex >= slides.length
+          ) {
+            setPresentationState((prev) => ({
+              ...prev,
+              currentSlideIndex: slides.length - 1,
+            }));
+          }
+        }
+      }
+    }
+
     prevItemsRef.current = currentItems;
   }, [currentSetlist, items, presentationState.currentSongIndex]);
 
-  // Get current slide from current item's slides
+  // Clamp slide index inline to prevent null after slide deletion
+  const currentSlideIndex = useMemo(() => {
+    if (currentItemSlides.length === 0) return 0;
+    return Math.min(
+      presentationState.currentSlideIndex,
+      currentItemSlides.length - 1,
+    );
+  }, [presentationState.currentSlideIndex, currentItemSlides.length]);
+
+  // Get current slide — always valid thanks to clamped indices
   const currentSlide = useMemo(
-    () => currentItemSlides[presentationState.currentSlideIndex] ?? null,
-    [currentItemSlides, presentationState.currentSlideIndex],
+    () => currentItemSlides[currentSlideIndex] ?? null,
+    [currentItemSlides, currentSlideIndex],
   );
 
   const nextSlide = useCallback(() => {

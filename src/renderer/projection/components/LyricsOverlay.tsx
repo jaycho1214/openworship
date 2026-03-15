@@ -146,27 +146,33 @@ export default function LyricsOverlay({
   const currentLinesRef = useRef<string[]>(lines);
 
   const animate = s.animation !== 'none';
+  const hasContent = lines.length > 0;
+
+  const applyDisplayState = () => {
+    currentLinesRef.current = lines;
+    setDisplayed({
+      lines,
+      contentType,
+      lineRoles,
+      slideOverrides,
+      slideFontSize,
+    });
+  };
 
   useEffect(() => {
-    // Clear any pending timeout
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
 
+    // No animation — update immediately
     if (!animate) {
-      currentLinesRef.current = lines;
-      setDisplayed({
-        lines,
-        contentType,
-        lineRoles,
-        slideOverrides,
-        slideFontSize,
-      });
-      setOpacity(lines.length > 0 ? 1 : 0);
+      applyDisplayState();
+      setOpacity(hasContent ? 1 : 0);
       return;
     }
 
-    // If content is the same, update styles immediately (no animation needed)
+    // Same content — update styles only, ensure visible
     if (linesEqual(lines, currentLinesRef.current)) {
       setDisplayed((prev) => ({
         ...prev,
@@ -175,26 +181,17 @@ export default function LyricsOverlay({
         slideOverrides,
         slideFontSize,
       }));
+      setOpacity(hasContent ? 1 : 0);
       return;
     }
 
-    // Fade out
+    // Different content — crossfade: fade out → swap → fade in
     setOpacity(0);
-
-    // After fade out, swap content AND styles, then fade in
     timeoutRef.current = setTimeout(() => {
-      currentLinesRef.current = lines;
-      setDisplayed({
-        lines,
-        contentType,
-        lineRoles,
-        slideOverrides,
-        slideFontSize,
-      });
-      // Small delay before fading in to ensure content is rendered
+      applyDisplayState();
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          setOpacity(lines.length > 0 ? 1 : 0);
+          setOpacity(hasContent ? 1 : 0);
         });
       });
     }, 150);
@@ -202,9 +199,19 @@ export default function LyricsOverlay({
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
     };
-  }, [lines, animate, contentType, lineRoles, slideOverrides, slideFontSize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    lines,
+    animate,
+    hasContent,
+    contentType,
+    lineRoles,
+    slideOverrides,
+    slideFontSize,
+  ]);
 
   // Resolve render settings from displayed (deferred) state
   const render = resolveSettings(
@@ -272,6 +279,7 @@ export default function LyricsOverlay({
   return (
     // Outer wrapper for hide verse animation (same as BlankScreen pattern)
     <div
+      data-testid="projection-lyrics-wrapper"
       className="absolute inset-0 z-10 pointer-events-none"
       style={{
         opacity: isHidden ? 0 : 1,
@@ -279,6 +287,7 @@ export default function LyricsOverlay({
       }}
     >
       <div
+        data-testid="projection-lyrics"
         className={cn(
           'absolute left-0 right-0 flex overflow-hidden',
           alignItems,

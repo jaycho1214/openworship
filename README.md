@@ -40,14 +40,21 @@
 
 ## Features
 
-|                        |                                                                                                                          |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **Dual-Window System** | Control from your laptop while displaying on the projector. Real-time preview shows exactly what your congregation sees. |
-| **Smart Library**      | Build your permanent song collection. Search, organize, and drag songs into any session instantly.                       |
-| **OCR Import**         | Extract lyrics from images automatically using AI. No more manual typing from song sheets.                               |
-| **Video Backgrounds**  | Beautiful motion backgrounds included. Add your own videos for a professional worship atmosphere.                        |
-| **Custom Typography**  | Import any font. Fine-tune size, weight, shadow, and positioning to match your church's style.                           |
-| **Keyboard Shortcuts** | Navigate with arrow keys, blank with B, and control everything without touching the mouse.                               |
+|                            |                                                                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Dual-Window System**     | Control from your laptop while displaying on the projector. Real-time preview shows exactly what your congregation sees. |
+| **Songs & Smart Library**  | Build your permanent song collection. Search, organize, and drag songs into any session instantly.                       |
+| **Bible Verses**           | Display Scripture with built-in translations (KJV, ASV, and more). Search by book, chapter, and verse.                  |
+| **Notes & Announcements**  | Add custom text slides or overlay banners for announcements, liturgy, or any freeform content.                          |
+| **OCR Import**             | Extract lyrics from images and PDFs automatically using AI. No more manual typing from song sheets.                     |
+| **Video & Image Backgrounds** | Beautiful motion backgrounds and custom images. Adjustable dimming for readability.                                  |
+| **Custom Frames**          | Add decorative borders to your slides — image-based (9-slice) or CSS-styled with radius, shadow, and color.             |
+| **Advertisements**         | Display text or image ads as fullscreen slides or banner overlays with auto-rotation.                                   |
+| **Import / Export**        | Share songs, sessions, or your entire library as `.oworship` files with smart conflict resolution.                      |
+| **Custom Typography**      | Import any font. Fine-tune size, color, shadow, outline, and per-content-type styling.                                  |
+| **Slide Animations**       | Smooth transitions between slides — fade, slide up, or slide left.                                                     |
+| **Keyboard Shortcuts**     | Full keyboard control — navigate slides, jump sections, blank screen, undo/redo, and more.                              |
+| **Multilingual**           | English and Korean interface with full i18n support.                                                                    |
 
 <br>
 
@@ -55,7 +62,7 @@
 
 ```
 1. Create a Session    →  Your setlist for the service
-2. Add Songs           →  From library, manual entry, or OCR import
+2. Add Content         →  Songs, Bible verses, or announcements
 3. Open Projection     →  Display on your projector/screen
 4. Use arrow keys      →  Navigate through slides
 ```
@@ -107,15 +114,14 @@ A **session** is your worship setlist. Create one for each service.
 
 Sessions save automatically.
 
-### Adding Songs
+### Adding Content
 
-**Manual Entry**
+Click **"+ Add"** to insert content into your session. Three content types are supported:
 
-1. Click **"+ Add"**
-2. Type title and lyrics
-3. Save
+**Songs**
 
-Format your lyrics with blank lines to create new slides:
+1. Enter title and lyrics (or search the library)
+2. Separate slides with blank lines:
 
 ```
 First verse line one
@@ -124,6 +130,19 @@ First verse line two
 Second verse line one
 Second verse line two
 ```
+
+3. Use section markers like `[Verse]`, `[Chorus]`, `[Bridge]` for quick navigation
+
+**Bible Verses**
+
+1. Select a translation (KJV, ASV, BBE, and more available to download)
+2. Pick book, chapter, and verse range
+3. Choose display mode — one verse per slide or full range on one slide
+
+**Notes / Announcements**
+
+1. Enter custom text for announcements, liturgy, or readings
+2. Choose to display as full slides or as an overlay banner (top or bottom)
 
 **From Library**
 
@@ -134,31 +153,49 @@ Second verse line two
 **OCR Import**
 
 1. Click **"+ Add"** → **"Image Import"**
-2. Drop files or click to select
-3. AI extracts the lyrics
-4. Review, edit, save
+2. Drop images or PDFs — AI extracts the lyrics
+3. Review, edit, save
 
 > Requires OpenAI API key in Settings → API
 
+**Import from File**
+
+1. Click **"+ Add"** → **"Import"**
+2. Select a `.oworship` file
+3. Preview contents and choose how to handle duplicates (skip, overwrite, or create copy)
+
 ### Keyboard Controls
 
-| Key                   | Action                 |
-| --------------------- | ---------------------- |
-| `←` `→`               | Previous / Next slide  |
-| `↑` `↓`               | Previous / Next slide  |
-| `Page Up` `Page Down` | Previous / Next song   |
-| `Home` `End`          | First / Last slide     |
-| `B`                   | Blank screen           |
-| `V`                   | Toggle verse indicator |
-| `Esc`                 | Close projection       |
+| Key                    | Action                      |
+| ---------------------- | --------------------------- |
+| `Space` or `→`         | Next slide                  |
+| `←`                    | Previous slide              |
+| `↓`                    | Next song / item            |
+| `↑`                    | Previous song / item        |
+| `Tab`                  | Next section                |
+| `Shift+Tab`            | Previous section            |
+| `Home`                 | First slide                 |
+| `End`                  | Last slide                  |
+| `1` – `9`              | Jump to section (or slide)  |
+| `B`                    | Toggle blank screen         |
+| `V`                    | Toggle verse indicator      |
+| `.` or `Esc`           | Toggle blank                |
+| `Cmd/Ctrl+Z`           | Undo                        |
+| `Cmd/Ctrl+Shift+Z`     | Redo                        |
 
 ### Customization
 
 **Fonts** — Settings → Appearance. Supports `.ttf` `.otf` `.woff` `.woff2`
 
-**Video Backgrounds** — Settings → Display. Supports `.mp4` `.webm` `.mov`
+**Video & Image Backgrounds** — Settings → Display. Videos (`.mp4` `.webm` `.mov`) and images (`.png` `.jpg` `.gif` `.webp`). Adjustable background dimming.
 
-**Text Styling** — Adjust font size, weight, shadow, position, and line height.
+**Text Styling** — Per-content-type settings for font size, color, shadow, outline, alignment, padding, and line gap. Bible verses have separate reference text styling.
+
+**Frames** — Settings → Frames. Add decorative borders using 9-slice images or CSS styles (border, radius, shadow, background). Assign different frames per content type.
+
+**Slide Animations** — Settings → Display. Choose from none, fade, slide up, or slide left transitions.
+
+**Theme** — Settings → Appearance. Light, dark, or system theme.
 
 <br>
 
@@ -170,7 +207,7 @@ Second verse line two
 <br>
 
 1. Create session early in the week
-2. Add songs in worship order
+2. Add songs, Bible readings, and announcements in order
 3. Review slide breaks
 4. Test on actual display
 5. Ready before service starts
@@ -186,6 +223,7 @@ Second verse line two
 - Match natural song phrases
 - Avoid single-line slides (too fast)
 - Avoid 6+ lines (too crowded)
+- Use section markers (`[Verse]`, `[Chorus]`) for quick navigation during worship
 
 </details>
 
@@ -202,6 +240,17 @@ Second verse line two
 
 </details>
 
+<details>
+<summary>Sharing Content</summary>
+
+<br>
+
+- Export individual songs, entire sessions, or your full library as `.oworship` files
+- Share with other worship teams or back up your collection
+- Import with conflict resolution — skip, overwrite, or create copies
+
+</details>
+
 <br>
 
 ## Development
@@ -212,6 +261,7 @@ Second verse line two
 | `npm run build`   | Production build |
 | `npm run package` | Create installer |
 | `npm run lint`    | Lint code        |
+| `npm test`        | Run tests        |
 
 <details>
 <summary>Architecture</summary>
@@ -221,8 +271,13 @@ Second verse line two
 ```
 src/
 ├── main/              # Electron main process
-├── renderer/          # React UI (control + projection windows)
-└── shared/            # Shared types
+│   ├── ipc/           # IPC handlers (songs, sessions, bible, frames, etc.)
+│   └── services/      # Database, media, export, bible, advertisements
+├── renderer/
+│   ├── control/       # Control window (editor, library, settings)
+│   ├── projection/    # Projection window (fullscreen lyrics display)
+│   └── shared/        # i18n, utilities, shared components
+└── shared/            # TypeScript types shared across processes
 ```
 
 **Tech Stack** — Electron 35 · React 19 · TypeScript 5.8 · Tailwind CSS 4 · shadcn/ui · better-sqlite3 · OpenAI API

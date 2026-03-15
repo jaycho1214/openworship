@@ -176,6 +176,7 @@ const SlideItem = memo(function SlideItem({
           <button
             onClick={onClick}
             onDoubleClick={onOpenSettings}
+            data-testid="slide-btn"
             className={cn(
               'w-full text-left py-1.5 px-2 rounded transition-all duration-100',
               isActive ? 'bg-active' : 'hover:bg-muted/50',
@@ -505,6 +506,7 @@ const SortableItemGroup = memo(function SortableItemGroup({
         ref={setNodeRef}
         style={style}
         className={cn('mb-1 transition-all', isDragging && 'opacity-50')}
+        data-testid="setlist-item"
       >
         {headerRow}
         {/* Slide-mode notes: always show slides. Overlay notes: no slides. */}
@@ -549,6 +551,7 @@ const SortableItemGroup = memo(function SortableItemGroup({
         ref={setNodeRef}
         style={style}
         className={cn('mb-1 transition-all', isDragging && 'opacity-50')}
+        data-testid="setlist-item"
       >
         {headerRow}
         <CollapsibleContent>{slidesList}</CollapsibleContent>
@@ -766,6 +769,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      data-testid="setlist-drop-zone"
     >
       {/* Header - standardized h-12 */}
       <div className="h-12 px-4 border-b border-border flex items-center justify-between flex-shrink-0">
@@ -812,6 +816,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
                     ? t('collapseAll')
                     : t('expandAll')
                 }
+                data-testid="setlist-collapse-all-btn"
               >
                 {items.every((item) => openItemIds.has(item.id)) ? (
                   <ChevronsDownUp className="w-4 h-4" />
@@ -826,6 +831,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
               className="h-7 w-7"
               onClick={() => setIsAddContentOpen(true)}
               aria-label={t('addContent')}
+              data-testid="setlist-add-btn"
             >
               <Plus className="w-4 h-4" />
             </Button>
@@ -844,6 +850,7 @@ export default function UnifiedNavigator({ onBack }: UnifiedNavigatorProps) {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={`${t('searchSongs')} (${modKey}F)`}
               className="h-8 pl-8 pr-8 text-xs"
+              data-testid="setlist-search"
             />
             {searchQuery && (
               <button

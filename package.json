@@ -45,7 +45,11 @@
     "start:main": "concurrently -k -P \"cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --watch --config ./.erb/configs/webpack.config.main.dev.ts\" \"electronmon . -- {@}\" --",
     "start:preload": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
     "start:renderer": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack serve --config ./.erb/configs/webpack.config.renderer.dev.ts",
-    "test": "jest"
+    "test": "jest",
+    "test:e2e": "npm run build && npx playwright test",
+    "test:e2e:headed": "npm run build && cross-env HEADED=1 npx playwright test",
+    "test:e2e:only": "npx playwright test",
+    "test:e2e:headed:only": "cross-env HEADED=1 npx playwright test"
   },
   "browserslist": [
     "extends browserslist-config-erb"
@@ -141,6 +145,7 @@
     "@babel/core": "^7.29.0",
     "@electron/notarize": "^3.0.0",
     "@electron/rebuild": "^3.7.1",
+    "@playwright/test": "^1.58.2",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.15",
     "@svgr/webpack": "^8.1.0",
     "@tailwindcss/postcss": "^4.1.18",

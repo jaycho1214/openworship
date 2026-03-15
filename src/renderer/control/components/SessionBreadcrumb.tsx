@@ -60,6 +60,7 @@ export default function SessionBreadcrumb({
         size="sm"
         className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
         onClick={onBackToSessions}
+        data-testid="breadcrumb-sessions"
       >
         {t('sessions')}
       </Button>
@@ -72,6 +73,7 @@ export default function SessionBreadcrumb({
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-xs font-semibold text-foreground hover:bg-muted gap-1"
+            data-testid="breadcrumb-current"
           >
             {sessionName}
             <ChevronDown className="w-3 h-3 text-muted-foreground" />

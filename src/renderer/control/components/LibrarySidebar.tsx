@@ -209,7 +209,7 @@ export default function LibrarySidebar({
 
   // Add songs to library and optionally to a session
   const handleAddToLibrary = async (
-    songsToAdd: { title: string; lyrics: string }[],
+    songsToAdd: { title: string; lyrics: string; existingSongId?: string }[],
     sessionTarget: 'library-only' | 'new-session' | string,
     newSessionName?: string,
   ) => {
@@ -218,18 +218,23 @@ export default function LibrarySidebar({
     try {
       const addedSongIds: string[] = [];
 
-      // Add songs to library
+      // Add songs to library (or use existing IDs for linked entries)
       for (const song of songsToAdd) {
-        const result = await electron.library.add({
-          title: song.title,
-          lyrics: song.lyrics,
-          categories: [],
-          tags: [],
-        });
+        if (song.existingSongId) {
+          // Linked to existing library song — skip creation
+          addedSongIds.push(song.existingSongId);
+        } else {
+          const result = await electron.library.add({
+            title: song.title,
+            lyrics: song.lyrics,
+            categories: [],
+            tags: [],
+          });
 
-        // Collect the song ID if successfully added
-        if (result.success && result.data?.id) {
-          addedSongIds.push(result.data.id);
+          // Collect the song ID if successfully added
+          if (result.success && result.data?.id) {
+            addedSongIds.push(result.data.id);
+          }
         }
       }
 
@@ -288,6 +293,7 @@ export default function LibrarySidebar({
         <button
           onClick={onToggle}
           className="flex-shrink-0 border-r border-border bg-card/30 w-10 flex flex-col items-center py-4 hover:bg-muted/50 transition-colors cursor-pointer"
+          data-testid="library-sidebar-collapsed"
         >
           <ChevronRight className="w-4 h-4 text-muted-foreground" />
           <div className="mt-6 flex-1 flex items-start">
@@ -304,6 +310,7 @@ export default function LibrarySidebar({
           'flex-shrink-0 border-r border-border bg-card/30 transition-all duration-300 ease-in-out overflow-hidden',
           isOpen ? 'w-72' : 'w-0',
         )}
+        data-testid="library-sidebar"
       >
         <div className="w-72 flex flex-col h-full">
           {/* Header - standardized h-12 */}
@@ -323,6 +330,7 @@ export default function LibrarySidebar({
                 size="sm"
                 onClick={() => setIsAddDialogOpen(true)}
                 className="h-7 px-2 text-xs font-semibold"
+                data-testid="library-add-btn"
               >
                 <Plus className="w-3.5 h-3.5 mr-1" />
                 {t('add')}
@@ -347,6 +355,7 @@ export default function LibrarySidebar({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('searchLibrary')}
                 className="h-8 pl-8 pr-8 text-xs bg-muted/30"
+                data-testid="library-search"
               />
               {searchQuery && (
                 <button
@@ -402,6 +411,7 @@ export default function LibrarySidebar({
                                   ? 'opacity-50 bg-accent/20'
                                   : 'hover:bg-muted/70',
                               )}
+                              data-testid="library-song-item"
                             >
                               {/* Drag handle */}
                               <div className="flex-shrink-0 opacity-30 group-hover:opacity-100 transition-opacity">

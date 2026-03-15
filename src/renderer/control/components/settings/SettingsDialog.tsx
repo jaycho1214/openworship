@@ -83,6 +83,7 @@ export default function SettingsDialog({
         <button
           onClick={() => onOpenChange(true)}
           className="flex-shrink-0 border-l border-border bg-card/30 w-10 flex flex-col items-center py-4 hover:bg-muted/50 transition-colors cursor-pointer"
+          data-testid="settings-sidebar-collapsed"
         >
           <ChevronRight className="w-4 h-4 text-muted-foreground rotate-180" />
           <div className="mt-6 flex-1 flex items-start">
@@ -99,6 +100,7 @@ export default function SettingsDialog({
           'flex-shrink-0 border-l border-border bg-card/30 transition-all duration-300 ease-in-out overflow-hidden',
           open ? 'w-[420px]' : 'w-0',
         )}
+        data-testid="settings-panel"
       >
         <div className="w-[420px] flex flex-col h-full">
           {/* Header */}
@@ -111,6 +113,7 @@ export default function SettingsDialog({
               size="icon"
               onClick={() => onOpenChange(false)}
               className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              data-testid="settings-close-btn"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -125,6 +128,7 @@ export default function SettingsDialog({
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
+                  data-testid={`settings-tab-${item.id}`}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-2.5 text-[12px] font-medium whitespace-nowrap',
                     'transition-colors duration-150 border-b-2 -mb-px',

@@ -116,7 +116,7 @@ export default function LivePreview() {
   );
 
   return (
-    <div className="flex flex-col h-full bg-card/30">
+    <div className="flex flex-col h-full bg-card/30" data-testid="live-preview">
       {/* Header - standardized h-12 */}
       <div className="h-12 px-4 border-b border-border flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -125,7 +125,10 @@ export default function LivePreview() {
           </h2>
           {/* Current song/slide info inline */}
           {currentSong && (
-            <span className="text-xs text-muted-foreground font-medium">
+            <span
+              className="text-xs text-muted-foreground font-medium"
+              data-testid="live-preview-info"
+            >
               {currentSong.title} · {presentationState.currentSlideIndex + 1}/
               {currentSong.slides.length}
             </span>
@@ -215,7 +218,10 @@ export default function LivePreview() {
           {!isProjectionOpen && (
             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 z-50">
               <MonitorOff className="w-6 h-6 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground font-medium">
+              <p
+                className="text-xs text-muted-foreground font-medium"
+                data-testid="live-preview-closed"
+              >
                 {t('projectionClosed')}
               </p>
             </div>

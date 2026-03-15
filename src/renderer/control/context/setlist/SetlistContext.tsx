@@ -24,6 +24,7 @@ import {
 } from '../../../shared/utils/lyricsParser';
 import { getItemSlides as getItemSlidesFromItem } from '../../../shared/utils/setlistItemUtils';
 import { useSession } from '../session/SessionContext';
+import { useUndo } from '../undo/UndoContext';
 
 import { getElectron } from '../../../shared/hooks/useElectron';
 
@@ -118,6 +119,7 @@ function withSongSlides(
 
 export function SetlistProvider({ children }: SetlistProviderProps) {
   const { currentSessionId } = useSession();
+  const { pushAction } = useUndo();
   const [currentSetlist, setCurrentSetlist] = useState<UnifiedSetlist | null>(
     null,
   );
@@ -255,12 +257,69 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
             updatedAt: new Date(),
           };
         });
+
+        // Track for undo: removing the just-added item
+        const addedItemId = item.id;
+        const addedInput = input;
+        const sessionId = currentSessionId;
+        pushAction({
+          description: `Add ${item.type}`,
+          undo: async () => {
+            const el = getElectron();
+            if (!el?.sessionItem) return;
+            // Remove from DB
+            await el.sessionItem.delete(addedItemId);
+            // Remove from local state
+            setCurrentSetlist((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                items: prev.items.filter((i) => i.id !== addedItemId),
+                songs: isSongItem(item)
+                  ? prev.songs.filter((s) => s.id !== item.songId)
+                  : prev.songs,
+                updatedAt: new Date(),
+              };
+            });
+          },
+          redo: async () => {
+            const el = getElectron();
+            if (!el?.sessionItem || !sessionId) return;
+            const res = await el.sessionItem.add(sessionId, addedInput);
+            if (res.success && res.data) {
+              let reItem = res.data;
+              if (isSongItem(reItem) && reItem._song) {
+                reItem = {
+                  ...reItem,
+                  _song: {
+                    ...reItem._song,
+                    slides: resolveSectionReferences(
+                      parseLyricsToSlides(reItem._song.rawLyrics),
+                    ),
+                  },
+                };
+              }
+              setCurrentSetlist((prev) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  items: [...prev.items, reItem],
+                  songs:
+                    isSongItem(reItem) && reItem._song
+                      ? [...prev.songs, reItem._song]
+                      : prev.songs,
+                  updatedAt: new Date(),
+                };
+              });
+            }
+          },
+        });
       } catch (error) {
         console.error('Failed to add item:', error);
         toast.error('Failed to add item');
       }
     },
-    [currentSessionId],
+    [currentSessionId, pushAction],
   );
 
   // Update item
@@ -300,21 +359,27 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
     [],
   );
 
-  // Delete item
+  // Delete item (with undo support)
   const deleteItem = useCallback(
     (itemId: string) => {
       const electron = getElectron();
 
+      // Capture item data before deletion for undo
+      let deletedItem: SetlistItem | undefined;
+      let deletedPosition = -1;
+      const sessionId = currentSessionId;
+
       setCurrentSetlist((prev) => {
         if (!prev) return prev;
 
-        const itemToDelete = prev.items.find((i) => i.id === itemId);
+        deletedItem = prev.items.find((i) => i.id === itemId);
+        deletedPosition = prev.items.findIndex((i) => i.id === itemId);
         const newItems = prev.items.filter((i) => i.id !== itemId);
 
-        // Remove from songs array if it was a song
         let newSongs = prev.songs;
-        if (itemToDelete && isSongItem(itemToDelete)) {
-          newSongs = prev.songs.filter((s) => s.id !== itemToDelete.songId);
+        if (deletedItem && isSongItem(deletedItem)) {
+          const delSongId = deletedItem.songId;
+          newSongs = prev.songs.filter((s) => s.id !== delSongId);
         }
 
         return {
@@ -332,9 +397,97 @@ export function SetlistProvider({ children }: SetlistProviderProps) {
           toast.error('Failed to delete item');
         });
       }
+
+      // Track for undo: re-add the deleted item
+      if (deletedItem) {
+        const captured = deletedItem;
+        pushAction({
+          description: `Delete ${captured.type}`,
+          undo: async () => {
+            // Re-add to database
+            const el = getElectron();
+            if (!el?.sessionItem || !sessionId) return;
+            // Reconstruct the input from captured item data
+            let input: SetlistItemInput;
+            if (isSongItem(captured)) {
+              input = { type: 'song', songId: captured.songId };
+            } else if (captured.type === 'announcement') {
+              const ann = captured as any;
+              input = {
+                type: 'announcement',
+                title: ann.title || '',
+                content: ann.noteText || ann.content || '',
+                displayMode: ann.noteDisplayMode || ann.displayMode,
+              };
+            } else {
+              // Bible or other — skip undo for unsupported types
+              return;
+            }
+            const res = await el.sessionItem.add(sessionId, input);
+            if (res.success && res.data) {
+              let reItem = res.data;
+              if (isSongItem(reItem) && reItem._song) {
+                reItem = {
+                  ...reItem,
+                  _song: {
+                    ...reItem._song,
+                    slides: resolveSectionReferences(
+                      parseLyricsToSlides(reItem._song.rawLyrics),
+                    ),
+                  },
+                };
+              }
+              setCurrentSetlist((prev) => {
+                if (!prev) return prev;
+                const newItems = [...prev.items];
+                // Insert at original position
+                const insertAt = Math.min(deletedPosition, newItems.length);
+                newItems.splice(insertAt, 0, reItem);
+                return {
+                  ...prev,
+                  items: newItems,
+                  songs:
+                    isSongItem(reItem) && reItem._song
+                      ? [...prev.songs, reItem._song]
+                      : prev.songs,
+                  updatedAt: new Date(),
+                };
+              });
+            }
+          },
+          redo: async () => {
+            // Re-delete
+            const el = getElectron();
+            setCurrentSetlist((prev) => {
+              if (!prev) return prev;
+              // Find by songId or type match since ID changes on re-add
+              const itemToRemove = prev.items.find(
+                (i) =>
+                  (isSongItem(i) &&
+                    isSongItem(captured) &&
+                    i.songId === captured.songId) ||
+                  i.id === captured.id,
+              );
+              if (!itemToRemove) return prev;
+              return {
+                ...prev,
+                items: prev.items.filter((i) => i.id !== itemToRemove.id),
+                songs: isSongItem(itemToRemove)
+                  ? prev.songs.filter((s) => s.id !== itemToRemove.songId)
+                  : prev.songs,
+                updatedAt: new Date(),
+              };
+            });
+            if (el?.sessionItem) {
+              // Find current ID to delete from DB
+              el.sessionItem.delete(captured.id).catch(() => {});
+            }
+          },
+        });
+      }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- currentSessionId is read from ref-like state
-    [currentSessionId],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentSessionId, pushAction],
   );
 
   // Reorder items

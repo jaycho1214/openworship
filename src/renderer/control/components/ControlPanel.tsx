@@ -47,14 +47,12 @@ export default function ControlPanel() {
   const { t } = useTranslation();
   const { currentSetlist } = useSetlist();
   const {
-    currentItemIndex,
     currentItemSlides,
     presentationState,
     nextSlide,
     prevSlide,
     nextSong,
     prevSong,
-    goToItem,
   } = usePresentation();
   const { isBlank, isVerseHidden, toggleBlank, toggleVerseHidden } =
     useProjection();
@@ -71,67 +69,21 @@ export default function ControlPanel() {
     selectImage,
     backgroundColor,
   } = useMedia();
-  const { canUndo, canRedo, undo, redo, pushState } = useUndo();
+  const { canUndo, canRedo, undo, redo } = useUndo();
   const colorInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle undo action
   const handleUndo = () => {
-    if (!canUndo) return;
-    const state = undo();
-    if (state) {
-      goToItem(state.itemIndex, state.slideIndex);
-    }
+    if (canUndo) undo();
   };
 
-  // Handle redo action
   const handleRedo = () => {
-    if (!canRedo) return;
-    const state = redo();
-    if (state) {
-      goToItem(state.itemIndex, state.slideIndex);
-    }
+    if (canRedo) redo();
   };
 
-  // Push state before navigation actions from buttons
-  const handlePrevSlide = () => {
-    pushState({
-      itemIndex: currentItemIndex,
-      slideIndex: presentationState.currentSlideIndex,
-      isBlank,
-      isVerseHidden,
-    });
-    prevSlide();
-  };
-
-  const handleNextSlide = () => {
-    pushState({
-      itemIndex: currentItemIndex,
-      slideIndex: presentationState.currentSlideIndex,
-      isBlank,
-      isVerseHidden,
-    });
-    nextSlide();
-  };
-
-  const handlePrevSong = () => {
-    pushState({
-      itemIndex: currentItemIndex,
-      slideIndex: presentationState.currentSlideIndex,
-      isBlank,
-      isVerseHidden,
-    });
-    prevSong();
-  };
-
-  const handleNextSong = () => {
-    pushState({
-      itemIndex: currentItemIndex,
-      slideIndex: presentationState.currentSlideIndex,
-      isBlank,
-      isVerseHidden,
-    });
-    nextSong();
-  };
+  const handlePrevSlide = () => prevSlide();
+  const handleNextSlide = () => nextSlide();
+  const handlePrevSong = () => prevSong();
+  const handleNextSong = () => nextSong();
 
   // Use unified item slides for navigation (works for songs, bible, announcements)
   const canNavigate = currentItemSlides.length > 0;
@@ -217,6 +169,7 @@ export default function ControlPanel() {
                 disabled={!canUndo}
                 className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40"
                 aria-label={`${t('undo')} (${modKey}Z)`}
+                data-testid="btn-undo"
               >
                 <Undo2 className="w-4 h-4" />
               </Button>
@@ -237,6 +190,7 @@ export default function ControlPanel() {
                 disabled={!canRedo}
                 className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40"
                 aria-label={`${t('redo')} (${modKey}${shiftKey}Z)`}
+                data-testid="btn-redo"
               >
                 <Redo2 className="w-4 h-4" />
               </Button>
@@ -264,6 +218,7 @@ export default function ControlPanel() {
                 disabled={isPrevDisabled}
                 className="h-10 w-10 bg-muted border-border disabled:opacity-40"
                 aria-label={`${t('prev')} (←)`}
+                data-testid="btn-prev-slide"
               >
                 <ChevronLeft className="w-5 h-5" />
               </Button>
@@ -282,6 +237,7 @@ export default function ControlPanel() {
                 disabled={isNextDisabled}
                 className="h-10 w-10 bg-muted border-border disabled:opacity-40"
                 aria-label={`${t('next')} (→)`}
+                data-testid="btn-next-slide"
               >
                 <ChevronRight className="w-5 h-5" />
               </Button>
@@ -303,6 +259,7 @@ export default function ControlPanel() {
                 disabled={isPrevSongDisabled}
                 className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40"
                 aria-label={`${t('prevSong')} (↑)`}
+                data-testid="btn-prev-song"
               >
                 <ChevronsLeft className="w-4 h-4" />
               </Button>
@@ -321,6 +278,7 @@ export default function ControlPanel() {
                 disabled={isNextSongDisabled}
                 className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-40"
                 aria-label={`${t('nextSong')} (↓)`}
+                data-testid="btn-next-song"
               >
                 <ChevronsRight className="w-4 h-4" />
               </Button>
@@ -351,6 +309,7 @@ export default function ControlPanel() {
                   isBlank ? `${t('showScreen')} (B)` : `${t('blankScreen')} (B)`
                 }
                 aria-pressed={isBlank}
+                data-testid="btn-blank"
               >
                 {isBlank ? (
                   <Eye className="w-4 h-4" />
@@ -387,6 +346,7 @@ export default function ControlPanel() {
                     : `${t('hideVerse')} (V)`
                 }
                 aria-pressed={isVerseHidden}
+                data-testid="btn-verse-hide"
               >
                 {isVerseHidden ? (
                   <Eye className="w-4 h-4" />
@@ -413,6 +373,7 @@ export default function ControlPanel() {
                   <Button
                     variant="outline"
                     className="h-10 gap-2 px-3 max-w-[200px] bg-muted border-border"
+                    data-testid="bg-selector"
                   >
                     <BackgroundIcon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
                     <span className="text-xs truncate">

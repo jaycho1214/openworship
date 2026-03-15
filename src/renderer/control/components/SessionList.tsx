@@ -175,7 +175,11 @@ export default function SessionList({
           <h2 className="text-xs font-semibold text-foreground uppercase tracking-wider">
             {t('sessions')}
           </h2>
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+          <Badge
+            variant="secondary"
+            className="text-[10px] px-1.5 py-0"
+            data-testid="session-count"
+          >
             {sessions.length}
           </Badge>
         </div>
@@ -184,6 +188,7 @@ export default function SessionList({
           size="sm"
           className="h-7 px-2.5 text-xs font-semibold text-foreground hover:text-foreground hover:bg-muted border-border"
           onClick={() => setIsCreating(true)}
+          data-testid="session-new-btn"
         >
           <Plus className="w-3.5 h-3.5 mr-1" />
           {t('new')}
@@ -200,6 +205,7 @@ export default function SessionList({
               placeholder={t('sessionNamePlaceholder')}
               className="h-8 text-xs flex-1"
               autoFocus
+              data-testid="session-name-input"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleCreateSession();
                 if (e.key === 'Escape') {
@@ -214,6 +220,7 @@ export default function SessionList({
               className="h-8 w-8 text-green-500 hover:text-green-400"
               onClick={handleCreateSession}
               aria-label={t('confirm')}
+              data-testid="session-create-confirm"
             >
               <Check className="w-4 h-4" />
             </Button>
@@ -253,6 +260,7 @@ export default function SessionList({
                 size="sm"
                 className="text-xs font-medium border-border bg-muted text-foreground hover:text-white hover:bg-accent"
                 onClick={() => setIsCreating(true)}
+                data-testid="session-create-first"
               >
                 <Plus className="w-4 h-4 mr-1.5" />
                 {t('createFirstSession')}
@@ -272,6 +280,7 @@ export default function SessionList({
                           : 'hover:bg-muted border-2 border-transparent hover:border-border',
                       )}
                       onClick={() => onSelectSession(session.id)}
+                      data-testid="session-item"
                     >
                       <FolderOpen
                         className={cn(
@@ -289,6 +298,7 @@ export default function SessionList({
                               onChange={(e) => setEditingName(e.target.value)}
                               className="h-6 text-xs py-0"
                               autoFocus
+                              data-testid="session-rename-input"
                               onClick={(e) => e.stopPropagation()}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') handleSaveRename();
@@ -329,6 +339,7 @@ export default function SessionList({
                                   ? 'text-active-foreground font-semibold'
                                   : 'text-foreground font-medium',
                               )}
+                              data-testid="session-item-name"
                             >
                               {session.name}
                             </p>
@@ -358,6 +369,7 @@ export default function SessionList({
                               handleStartRename(session);
                             }}
                             aria-label={t('rename')}
+                            data-testid="session-rename-btn"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </Button>
@@ -370,6 +382,7 @@ export default function SessionList({
                               setSessionToDelete(session.id);
                             }}
                             aria-label={t('delete')}
+                            data-testid="session-delete-btn"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>

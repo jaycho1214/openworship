@@ -31,3 +31,8 @@ npm-debug.log.*
 *.css.d.ts
 *.sass.d.ts
 *.scss.d.ts
+
+# E2E test artifacts
+e2e-results/
+playwright-report/
+test-results/

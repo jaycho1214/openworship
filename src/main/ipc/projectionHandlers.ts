@@ -27,6 +27,13 @@ export const registerProjectionHandlers = (): void => {
         const settings = settingsService.getProjectionSettings();
         const displays = screen.getAllDisplays();
 
+        // In test mode, always force windowed to avoid fullscreen blocking
+        const isTestMode = !!process.env.OPENWORSHIP_TEST_USER_DATA;
+        if (isTestMode) {
+          createProjectionWindow('windowed');
+          return successResponse(true);
+        }
+
         // Warn if trying to open fullscreen with only one monitor
         if (settings.displayMode === 'fullscreen' && displays.length <= 1) {
           const parentWindow = getControlWindow();

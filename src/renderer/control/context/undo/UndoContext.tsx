@@ -9,21 +9,20 @@ import {
   useEffect,
 } from 'react';
 
-// Type for undoable projection state
-interface ProjectionStateSnapshot {
-  itemIndex: number;
-  slideIndex: number;
-  isBlank: boolean;
-  isVerseHidden: boolean;
+/** An undoable CRUD action (add/delete/reorder items, etc.) */
+export interface UndoableAction {
+  description: string;
+  undo: () => Promise<void> | void;
+  redo: () => Promise<void> | void;
   timestamp: number;
 }
 
 interface UndoContextType {
   canUndo: boolean;
   canRedo: boolean;
-  undo: () => ProjectionStateSnapshot | null;
-  redo: () => ProjectionStateSnapshot | null;
-  pushState: (state: Omit<ProjectionStateSnapshot, 'timestamp'>) => void;
+  undo: () => void;
+  redo: () => void;
+  pushAction: (action: Omit<UndoableAction, 'timestamp'>) => void;
   lastAction: string | null;
 }
 
@@ -44,54 +43,26 @@ interface UndoProviderProps {
 
 export function UndoProvider({
   children,
-  maxStackSize = 10,
+  maxStackSize = 20,
 }: UndoProviderProps) {
-  const [undoStack, setUndoStack] = useState<ProjectionStateSnapshot[]>([]);
-  const [redoStack, setRedoStack] = useState<ProjectionStateSnapshot[]>([]);
+  const [undoStack, setUndoStack] = useState<UndoableAction[]>([]);
+  const [redoStack, setRedoStack] = useState<UndoableAction[]>([]);
   const [lastAction, setLastAction] = useState<string | null>(null);
 
-  // Debounce to prevent rapid consecutive pushes from same action
-  const lastPushTimeRef = useRef<number>(0);
-  const DEBOUNCE_MS = 100;
-
-  const canUndo = undoStack.length > 1; // Need at least 2 states to undo
+  const canUndo = undoStack.length > 0;
   const canRedo = redoStack.length > 0;
 
-  const pushState = useCallback(
-    (state: Omit<ProjectionStateSnapshot, 'timestamp'>) => {
-      const now = Date.now();
-      if (now - lastPushTimeRef.current < DEBOUNCE_MS) {
-        return;
-      }
-      lastPushTimeRef.current = now;
-
-      const snapshot: ProjectionStateSnapshot = {
-        ...state,
-        timestamp: now,
-      };
-
+  const pushAction = useCallback(
+    (action: Omit<UndoableAction, 'timestamp'>) => {
+      const entry: UndoableAction = { ...action, timestamp: Date.now() };
       setUndoStack((prev) => {
-        // Don't push if the state is identical to the last one
-        const last = prev[prev.length - 1];
-        if (
-          last &&
-          last.itemIndex === state.itemIndex &&
-          last.slideIndex === state.slideIndex &&
-          last.isBlank === state.isBlank &&
-          last.isVerseHidden === state.isVerseHidden
-        ) {
-          return prev;
-        }
-
-        const newStack = [...prev, snapshot];
-        // Keep stack size limited
+        const newStack = [...prev, entry];
         if (newStack.length > maxStackSize) {
           return newStack.slice(-maxStackSize);
         }
         return newStack;
       });
-
-      // Clear redo stack when new action is performed
+      // New action clears redo stack
       setRedoStack([]);
       setLastAction(null);
     },
@@ -103,31 +74,30 @@ export function UndoProvider({
   const redoStackRef = useRef(redoStack);
   redoStackRef.current = redoStack;
 
-  const undo = useCallback((): ProjectionStateSnapshot | null => {
+  const undo = useCallback(() => {
     const stack = undoStackRef.current;
-    if (stack.length <= 1) return null;
+    if (stack.length === 0) return;
 
-    const currentState = stack[stack.length - 1];
-    const previousState = stack[stack.length - 2];
-
+    const action = stack[stack.length - 1];
     setUndoStack((prev) => prev.slice(0, -1));
-    setRedoStack((prev) => [...prev, currentState]);
+    setRedoStack((prev) => [...prev, action]);
     setLastAction('undo');
 
-    return previousState;
+    // Execute the undo callback
+    Promise.resolve(action.undo()).catch(console.error);
   }, []);
 
-  const redo = useCallback((): ProjectionStateSnapshot | null => {
+  const redo = useCallback(() => {
     const stack = redoStackRef.current;
-    if (stack.length === 0) return null;
+    if (stack.length === 0) return;
 
-    const nextState = stack[stack.length - 1];
-
+    const action = stack[stack.length - 1];
     setRedoStack((prev) => prev.slice(0, -1));
-    setUndoStack((prev) => [...prev, nextState]);
+    setUndoStack((prev) => [...prev, action]);
     setLastAction('redo');
 
-    return nextState;
+    // Execute the redo callback
+    Promise.resolve(action.redo()).catch(console.error);
   }, []);
 
   // Clear last action notification after a delay
@@ -144,10 +114,10 @@ export function UndoProvider({
       canRedo,
       undo,
       redo,
-      pushState,
+      pushAction,
       lastAction,
     }),
-    [canUndo, canRedo, undo, redo, pushState, lastAction],
+    [canUndo, canRedo, undo, redo, pushAction, lastAction],
   );
 
   return (

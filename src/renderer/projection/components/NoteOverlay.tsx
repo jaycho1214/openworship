@@ -30,6 +30,7 @@ export default function NoteOverlay({
 
   return (
     <div
+      data-testid="projection-note-overlay"
       className="absolute left-0 right-0 z-40 pointer-events-none"
       style={{
         transition: 'opacity 300ms ease-in-out, transform 300ms ease-in-out',
