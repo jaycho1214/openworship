@@ -87,6 +87,7 @@ export function DataSettingsTab() {
           size="sm"
           onClick={handleExportLibrary}
           disabled={isExporting}
+          data-testid="export-library-btn"
         >
           {isExporting ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -105,6 +106,7 @@ export function DataSettingsTab() {
           variant="outline"
           size="sm"
           onClick={() => setIsImportDialogOpen(true)}
+          data-testid="import-file-btn"
         >
           <Upload className="w-4 h-4 mr-2" />
           {t('importFile')}

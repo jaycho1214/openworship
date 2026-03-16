@@ -397,6 +397,7 @@ export default function SessionList({
                     </ContextMenuItem>
                     <ContextMenuItem
                       onClick={() => handleExportSession(session.id)}
+                      data-testid="session-export-btn"
                     >
                       <Upload className="w-4 h-4 mr-2" />
                       {t('exportSession')}

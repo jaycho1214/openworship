@@ -230,7 +230,10 @@ export default function ImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] bg-background border-border p-0 overflow-hidden gap-0 flex flex-col">
+      <DialogContent
+        data-testid="import-dialog"
+        className="max-w-2xl max-h-[85vh] bg-background border-border p-0 overflow-hidden gap-0 flex flex-col"
+      >
         <DialogHeader className="px-6 py-4 border-b border-border/50 pr-12 shrink-0">
           <DialogTitle className="text-foreground flex items-center gap-2">
             <Download className="w-4 h-4 text-foreground" />
@@ -263,7 +266,10 @@ export default function ImportDialog({
 
         {/* Success Result */}
         {result && (
-          <div className="flex-1 flex flex-col items-center justify-center py-12 px-6">
+          <div
+            data-testid="import-success"
+            className="flex-1 flex flex-col items-center justify-center py-12 px-6"
+          >
             <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">
               {t('importSuccess')}
@@ -318,7 +324,10 @@ export default function ImportDialog({
                       setConflictResolution(v as ConflictResolution)
                     }
                   >
-                    <SelectTrigger className="w-40 h-7 text-xs">
+                    <SelectTrigger
+                      className="w-40 h-7 text-xs"
+                      data-testid="conflict-resolution-trigger"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -512,6 +521,7 @@ export default function ImportDialog({
                   onClick={handleImport}
                   disabled={!canImport || isImporting || isLoading}
                   className="bg-foreground text-background hover:bg-foreground/90 font-semibold"
+                  data-testid="import-execute-btn"
                 >
                   {isImporting ? (
                     <Loader2 className="w-4 h-4 mr-1 animate-spin" />
